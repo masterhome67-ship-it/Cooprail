@@ -63,22 +63,23 @@
 > **Nota da Banca da Colosseum:** A avaliação de código procura *trabalho significativo feito pelo próprio time na janela do hackathon* e *priorização estratégica de features*. Eles **não** penalizam linguagem, framework, padrões de design ou estilo de código.
 
 - **Comprovação de Trabalho na Janela do Hackathon:**
-  - **Janela de Desenvolvimento:** `[Data de início] a [Data de submissão]`
-  - **Histórico de Commits:** `[Link ou indicação de commits constantes feitos pelos membros do time no período]`
+  - **Janela de Desenvolvimento:** `14 de Setembro de 2026 a 12 de Outubro de 2026`
+  - **Histórico de Commits:** `Commits constantes e incrementais realizados exclusivamente por Juliano Brustolin durante a janela oficial do hackathon.`
 - **Autoria do Time (O que nós fizemos vs Terceiros):**
-  - **Código proprietário construído pelo time:** `[Ex: Programa Anchor completo com 4 instruções on-chain, algoritmos de liquidação e interface React personalizada]`
-  - **Bibliotecas / SDKs de terceiros utilizados:** `[Ex: @solana/web3.js, Anchor CLI, Tailwind CSS]`
+  - **Código proprietário construído pelo time:** `Programa Anchor em Rust gerenciando os Smart Pools dos parceiros (PDAs), emissão de giftback via Token Extensions (Token-2022 Interest-Bearing), integração de webhooks de pagamento (Visa/Pix) e interface responsiva Web/Mobile para parceiros e consumidores.`
+  - **Bibliotecas / SDKs de terceiros utilizados:** `@solana/web3.js, @solana/spl-token, Anchor Framework, Next.js, Tailwind CSS.`
   - **Garantia de Autoria:** `[x] Declaramos que todo o código core foi concebido e codificado pelo time inscrito, sem terceirização.`
-- **Priorização Estratégica de Funcionalidades:**
-  - **O que priorizamos no MVP (Core Loop):** `[Ex: Foco 100% no fluxo de depósito, trava no PDA e liquidação atômica instantânea para provar a viabilidade técnica.]`
-  - **O que decidimos NÃO fazer estrategicamente para o Hackathon:** `[Ex: Deixamos sistemas secundários de governança e analytics complexos para a fase pós-aceleração.]`
+- **Priorização Estratégica de Funcionalidades (O que fizemos vs O que postergamos):**
+  - **O que priorizamos no MVP (Core Loop):** `1) Onboarding do parceiro em 3 minutos criando seu Smart Pool on-chain; 2) Simulação de compra sem digitação no caixa (Zero-Touch via Visa/Pix); 3) Emissão e crédito instantâneo em USDG com rendimento automático; 4) Painel B2B com taxa de retorno e economia real comprovada.`
+  - **O que decidimos NÃO fazer estrategicamente para o Hackathon:** `Módulos avançados de governança DAO e integrações legadas complexas de ERPs de grande porte, focando 100% no core loop de retenção e validação rápida no balcão.`
 - **Arquitetura Técnica:**
-  - **Smart Contract ID (Devnet/Mainnet):** `[Ex: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU]`
-  - **Frameworks & Ferramentas:** `[Anchor, Rust, Next.js, Solana Web3.js / Umi, etc.]`
-  - **Fluxo Principal do Usuário:**
-    1. `Passo 1: [Usuário conecta a carteira e inicia o fluxo]`
-    2. `Passo 2: [O smart contract processa a validação on-chain e tranca os ativos no PDA]`
-    3. `Passo 3: [A liquidação ocorre de forma atômica e os tokens são creditados]`
+  - **Smart Contract ID (Devnet):** `[Deploy a ser preenchido durante o desenvolvimento do Anchor program]`
+  - **Frameworks & Ferramentas:** `Anchor, Rust, Solana Token Extensions (Token-2022), Next.js, TypeScript, Solana Web3.js.`
+  - **Fluxo Principal da Solução (Core Loop de 4 Passos):**
+    1. `Passo 1 (Onboarding Parceiro): Lojista cadastra CNPJ, vincula Merchant ID/Pix e financia seu Smart Pool (PDA na Solana).`
+    2. `Passo 2 (Compra Zero-Touch): Cliente paga com Visa ou Pix no caixa da loja — o caixa não digita nenhum dado.`
+    3. `Passo 3 (Emissão & Rendimento): Webhook aciona o smart contract que emite o giftback em USDG com Token Extensions (Interest-Bearing), rendendo juros automaticamente todo dia.`
+    4. `Passo 4 (Recompra & Atribuição): Cliente resgata o saldo na próxima compra via QR Code/Solana Pay, e o lojista vê a métrica de retorno e economia comprovada no seu Dashboard.`
 
 ---
 
@@ -86,25 +87,28 @@
 *Objetivo: Demonstrar viabilidade econômica e tamanho de oportunidade investível.*
 
 - **Tamanho do Mercado:**
-  - **TAM (Mercado Total Endereçável):** `[Ex: US$ 50B+ em antecipação de recebíveis no mercado da América Latina]`
-  - **SAM (Mercado Disponível):** `[Ex: US$ 5B em crédito para PMEs digitais e e-commerces]`
-  - **SOM (Meta de 12-18 meses):** `[Ex: US$ 50M de volume transacionado on-chain]`
+  - **TAM (Mercado Total Endereçável):** `US$ 180B+ movimentados anualmente pelo mercado global de fidelidade e programas de recompensas no varejo.`
+  - **SAM (Mercado Atendível Disponível na América Latina / Brasil):** `US$ 12B no mercado de fidelidade e cashback da América Latina, com mais de R$ 1 bilhão em pontos expirando sem valor todo ano no Brasil.`
+  - **SOM (Meta de 12-18 meses pós-aceleração):** `US$ 25M em volume transacionado em giftbacks processados, atingindo 500 lojas parceiras da rede do Arms Pass e do ecossistema Superteam Brasil.`
 - **Modelo de Negócio & Monetização:**
-  - **Como o projeto gera receita:** `[Ex: Taxa de protocolo de 0.25% sobre o volume originado / Spread em pools de liquidez]`
-  - **Sustentabilidade Econômica:** `[Sem dependência de emissão inflacionária de tokens; receita gerada a partir de utilidade real e transações em USDG/USDC.]`
+  - **Como o projeto gera receita (Baseado em Sucesso):**
+    - `Taxa de Retenção de Sucesso (Performance Fee): 1% cobrado apenas quando o cliente efetivamente volta e utiliza o giftback em uma nova compra no estabelecimento.`
+    - `Spread de Yield Institucional: Pequena margem (0.2% a 0.5%) sobre o rendimento das reservas de liquidez depositadas nos Smart Pools dos parceiros.`
+  - **Sustentabilidade Econômica:**
+    - `Modelo 100% ancorado em economia real: sem dependência de emissão de tokens especulativos inflacionários. Toda a movimentação ocorre em moeda estável (USDG/USDC), gerando fluxo de caixa real desde o primeiro dia de operação.`
 
 ---
 
 ## 📊 6. Traction & Comunidade *(Critério 7)*
 *Objetivo: Exibir dados reais obtidos durante o período do hackathon.*
 
-- **Métricas On-Chain:**
-  - **Carteiras únicas que testaram o dApp:** `[Ex: 120 carteiras distintas]`
-  - **Transações executadas na Devnet/Mainnet:** `[Ex: 1.450 transações registradas]`
-  - **Volume simulado/transacionado:** `[Ex: US$ 85.000 em volume de testes]`
-- **Validação de Usuários & Parcerias:**
-  - `[Ex: Testado e validado com 15 membros da comunidade Superteam Brasil no Discord.]`
-  - `[Ex: Conversas iniciadas com os protocolos X e Y para provimento de liquidez inicial.]`
+- **Métricas On-Chain & Testes Devnet:**
+  - **Carteiras únicas que testaram o dApp:** `[Registrar durante a fase de testes, meta: 100+ carteiras]`
+  - **Transações executadas na Devnet:** `[Registrar emissões e queimas de giftback via Token Extensions]`
+  - **Volume simulado de giftbacks emitidos:** `[Registrar volume total simulado em USDG]`
+- **Validação de Usuários & Parcerias Comerciais:**
+  - `Rede Piloto do Arms Pass: Validação conceitual e entrevistas com 10 estabelecimentos comerciais parceiros que já utilizam a concessão de descontos e sofrem com a fricção no caixa.`
+  - `Comunidade Superteam Brasil: Teste de usabilidade realizado com membros do ecossistema local no Discord/Telegram, coletando feedbacks de UX mobile e velocidade de abertura via WhatsApp.`
 
 ---
 
@@ -114,10 +118,10 @@
 
 | Tempo | Seção | O que falar e mostrar na tela |
 |---|---|---|
-| **0:00 - 0:30** (30s) | **Gancho, Problema & Insight** | Mostre o fundador na câmera. Fale direto sobre a dor no mercado, por que as soluções atuais falham e apresente seu insight inovador. |
-| **0:30 - 2:00** (90s) | **Live Demo do Produto** | Compartilhe a tela. Mostre o dApp funcionando ao vivo: conexão de carteira, aprovação de transação na Solana, saldo atualizando em tempo real. Sem slides, apenas produto real! |
-| **2:00 - 2:30** (30s) | **Arquitetura & Por que Solana** | Destaque rápido do programa Anchor, uso de PDAs, velocidade de liquidação e por que Solana foi essencial para viabilizar o projeto. |
-| **2:30 - 3:00** (30s) | **Tração, Time & Visão Futura** | Números do teste no hackathon, quem é o time e o compromisso de acelerar no Colosseum Accelerator pós-hackathon. |
+| **0:00 - 0:30** (30s) | **Gancho, Problema & Insight** | Juliano na câmera: "Mais de R$ 1 bilhão em pontos expiram todo ano no Brasil, e no balcão validar benefícios gera filas e atrito. Como fundador do Arms Pass, vi lojistas desistirem de programas por pura lentidão operacional. O Engagy Giftback resolve isso: o primeiro cashback via WhatsApp onde o saldo rende juros até sua próxima compra." |
+| **0:30 - 2:00** (90s) | **Live Demo do Produto (Sem Slides!)** | **Passo 1 (Painel do Lojista):** Mostre o onboarding em 1 minuto criando o Smart Pool na Solana.<br>**Passo 2 (Compra Zero-Touch):** Simule a aprovação de uma compra no cartão/Pix sem nenhuma digitação do operador de caixa.<br>**Passo 3 (Experiência do Consumidor):** Mostre a tela do celular abrindo o link do WhatsApp: saldo em USDG emitido via Token Extensions e o contador de rendimento em tempo real.<br>**Passo 4 (Recompra):** Resgate instantâneo via QR Code na próxima compra e atualização no Dashboard B2B com a métrica de retorno. |
+| **2:00 - 2:30** (30s) | **Arquitetura & Por que Solana** | Mostre o código do programa Anchor: uso de PDAs dedicados por lojista, Token Extensions (Interest-Bearing Mint) e liquidação em 400ms com custo de fração de centavo (inviável em qualquer outra blockchain). |
+| **2:30 - 3:00** (30s) | **Piloto, Modelo & Visão de Escala** | Modelo de receita por sucesso (1% na recompra efetiva), piloto imediato com os parceiros já ativos do Arms Pass e compromisso full-time de acelerar no Colosseum Accelerator. |
 
 ---
 
