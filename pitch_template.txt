@@ -1,3 +1,4 @@
+
 # 🚀 Template Oficial de Submissão & Pitch — Colosseum Solana Hackathon
 
 > **Instruções:** Este arquivo está pronto para edição. Substitua os campos entre colchetes `[exemplo]` pelas informações do seu projeto. O template está 100% alinhado às **4 perguntas fundamentais da banca da Colosseum** e ao formato oficial exigido na plataforma.
@@ -12,33 +13,33 @@
 
 ## 📌 1. Visão Geral do Projeto (Meta Informações)
 
-- **Nome do Projeto:** `[Ex: SolStream / PixLend / Aura]`
-- **Tagline (One-Liner de alto impacto):** `[Ex: Liquidez instantânea para recebíveis na Solana com custo zero e liquidação em 400ms.]`
-- **Categoria Principal da Colosseum:** `[Selecione: DeFi | Payments | DePIN | AI & Agents | Consumer | Infrastructure | Gaming]`
+- **Nome do Projeto:** `[Engagy Giftback]`
+- **Tagline (One-Liner de alto impacto):** `[O primeiro programa de recompensas via WhatsApp na Solana onde o cashback não expira — ele rende juros até sua próxima compra.]`
+- **Categoria Principal da Colosseum:** `Consumer` (Fidelidade, Comércio & Pagamentos)
 - **Side Tracks Inscritos:**
   - `[x] Side Track Superteam Brasil (US$ 10,000 USDG)`
-  - `[ ] [Outro Side Track, se aplicável, ex: Visa, Tether, Umbra, LI.FI, etc.]`
+  - `[x] Visa Frontier Hackathon Track (US$ 10,000 USDG)`
+  - `[x] theMiracle — In-Wallet Brand Activation (US$ 10,000 USDC)`
 - **Links Essenciais:**
-  - 🌐 **Live Demo (dApp funcional):** `[https://seu-projeto.vercel.app]`
-  - 💻 **Repositório GitHub (Open Source):** `[https://github.com/seu-usuario/seu-repositorio]`
+  - 🌐 **Live Demo (dApp funcional):** `[https://engagy-giftback.vercel.app]`
+  - 💻 **Repositório GitHub (Open Source):** `[https://github.com/julianobrustolin/engagy-giftback]`
   - 🎥 **Vídeo Demo (YouTube/Loom público, máx. 3 min):** `[https://youtu.be/seu-video]`
-  - 🐦 **Twitter/X do Projeto:** `[@seu_projeto]`
-  - 💬 **Contato Principal (Telegram / Discord):** `[@seu_handle]`
+  - 🐦 **Twitter/X do Projeto:** `[@engagygiftback]`
+  - 💬 **Contato Principal (Telegram / Discord):** `[@julianobrustolin]`
 
 ---
 
 ## 👥 2. Founder + Market Fit *(Critério 1)*
 *Objetivo: Demonstrar por que este time é imbatível na execução dessa ideia.*
 
-- **Fundador 1 / Tech Lead:**
-  - **Nome e Função:** `[Nome, ex: Desenvolvedor Full-Stack / Rust Engineer]`
-  - **Histórico Relevante:** `[Ex: 4 anos desenvolvendo em Rust/Solana, ex-engenheiro na Empresa X, participante ativo da Superteam Brasil.]`
-  - **Por que este problema importa para você:** `[Ex: Vivenciei a dor de antecipação de crédito cara e lenta no Brasil por 3 anos no mercado financeiro.]`
-- **Fundador 2 / Growth & Product (se houver):**
-  - **Nome e Função:** `[Nome, ex: Product Manager / Growth Lead]`
-  - **Histórico Relevante:** `[Ex: Ex-growth em fintech brasileira com 100k+ MAU, especialista em UX Web3.]`
+- **Fundador (Solo Founder & Full-Stack Builder):**
+  - **Nome e Função:** `Juliano Brustolin (Fundador, Produto & Engenharia)`
+  - **Histórico Relevante:** `Desenvolvedor e empreendedor com experiência prática em plataformas de benefícios e programas de fidelidade. Criador do aplicativo Arms Pass, membro ativo da comunidade Superteam Brasil.`
+  - **Por que este problema importa para você:** `Sou o criador do Arms Pass, aplicativo em produção que opera concessão de descontos para usuários. Na operação direta com lojistas e estabelecimentos parceiros, senti na pele a maior dor do setor: a fricção operacional imensa para o caixa validar pontos manualmente, a falta de transparência contábil e a dificuldade de comprovar a economia real gerada para o cliente final. O Engagy Giftback é a evolução direta dessa vivência para eliminar esse atrito usando a infraestrutura instantânea da Solana.`
 - **Compromisso Pós-Hackathon:**
-  - `[ ] Temos intenção de continuar o projeto em tempo integral e aplicar para o Colosseum Accelerator.`
+  - `[x] Aplicação formal para o Colosseum Accelerator e dedicação em tempo integral ao Engagy Giftback.`
+  - **Piloto Imediato nos primeiros 60 dias:** Plugar o protocolo do Engagy Giftback como a camada de fidelidade e liquidação on-chain nos parceiros comerciais já existentes do Arms Pass, validando a velocidade de validação no caixa e a reação dos consumidores ao saldo rendendo.
+  - **Lançamento em Mainnet:** Deploy oficial na Solana Mainnet integrando a stablecoin USDG para os lojistas do ecossistema Superteam Brasil e expansão do modelo para o varejo físico e e-commerces.
 
 ---
 
@@ -46,13 +47,13 @@
 *Objetivo: Mostrar a constatação não-óbvia que sustenta a sua tese.*
 
 - **O Problema Real:**
-  `[Descreva a dor específica em 2 ou 3 frases. Ex: Hoje, 70% das PMEs brasileiras perdem até 12% da margem em taxas de antecipação de recebíveis, esperando até 30 dias para liquidar.]`
+  `Em programas de benefícios e fidelidade, validar pontos no balcão é um pesadelo operacional: lojistas e operadores de caixa sofrem com processos lentos e manuais que geram filas, atrito e desconfiança. Pior ainda: o comércio não tem como comprovar ao cliente de forma transparente e imediata a economia real gerada, enquanto o consumidor vê seus pontos expirarem em sistemas fechados e burocráticos.`
 - **O que os concorrentes fazem de errado / Tentativas anteriores:**
-  `[Ex: As soluções Web2 mantêm monopólios bancários fechados, e as soluções Web3 em EVM sofrem com taxas altas de gás e UX confusa.]`
+  `Sistemas de CRM e fidelidade Web2 continuam presos a painéis engessados e checagens manuais no PDV que os funcionários evitam usar. Já as tentativas anteriores em Web3 tentaram forçar carteiras complexas (Metamask/EVM) e taxas de gás inviáveis, que tornam impossível uma validação em menos de 2 segundos no caixa da loja.`
 - **O Insight Não-Óbvio (A Virada de Chave):**
-  `[Qual é o segredo que só vocês viram? Ex: Com as Token Extensions e a finalidade sub-segundo da Solana, podemos tokenizar recebíveis e liquidá-los em moeda estável USDG instantaneamente com taxas imperceptíveis para o usuário final.]`
+  `A validação de benefícios não pode exigir nenhum esforço do caixa e o saldo precisa crescer com o tempo para que a economia seja matematicamente comprovada e irrefutável. Ao transformar o giftback em um saldo na Solana entregue por link direto no WhatsApp, a validação no caixa acontece em 400ms via bip de QR Code, e o saldo do cliente rende juros on-chain automaticamente todo dia. O lojista ganha retenção sem atrito no caixa, e o cliente vê seu dinheiro crescendo até a próxima compra.`
 - **Por que Solana? (Por que NÃO outra blockchain):**
-  `[Ex: Finalidade de bloco de 400ms, micropagamentos viáveis via sub-penny fees e liquidez global em stablecoins.]`
+  `Finalidade de bloco de 400ms (não trava a fila do caixa), taxas de US$ 0,0002 por transação (micropagamentos viáveis em compras do dia a dia) e o recurso nativo de Token Extensions (Token-2022 Interest-Bearing), que permite que o cashback renda juros automaticamente sem a necessidade de contratos pesados de staking ou yield.`
 
 ---
 
