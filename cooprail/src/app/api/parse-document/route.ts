@@ -1,0 +1,163 @@
+import { NextRequest, NextResponse } from 'next/server';
+// @ts-ignore
+import pdfParse from 'pdf-parse-fork';
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+
+export async function POST(req: NextRequest) {
+  try {
+    const formData = await req.formData();
+    const file = formData.get('file') as File | null;
+
+    if (!file) {
+      return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 });
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Data = buffer.toString('base64');
+    const fileName = file.name.toLowerCase();
+
+    let mimeType = file.type || 'application/pdf';
+    if (fileName.endsWith('.pdf')) mimeType = 'application/pdf';
+    else if (fileName.endsWith('.png')) mimeType = 'image/png';
+    else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) mimeType = 'image/jpeg';
+    else if (fileName.endsWith('.csv') || fileName.endsWith('.txt')) mimeType = 'text/plain';
+
+    // Também extraímos texto localmente caso o modelo precise
+    let localText = '';
+    if (mimeType === 'application/pdf') {
+      try {
+        const parsed = await pdfParse(buffer);
+        localText = parsed.text || '';
+      } catch (e) {
+        console.error('pdfParse local error:', e);
+      }
+    } else if (mimeType === 'text/plain') {
+      localText = buffer.toString('utf-8');
+    }
+
+    // Se temos a chave oficial do Gemini, usamos o modelo multimodal Gemini 2.5 Flash
+    if (GEMINI_API_KEY) {
+      const prompt = `Você é o Agente de Auditoria e Leitura de Cotações da plataforma Cooprail.
+Analise detalhadamente este documento de compras/proposta comercial (anexo e texto complementar).
+
+REGRA DE COMPLIANCE ESTREITO:
+- NUNCA invente, estime ou deduza números, valores ou informações ausentes.
+- Se o valor total não estiver expresso no documento, retorne 0.0.
+- Se o prazo de entrega não estiver claro, retorne 0.
+- Se o CNPJ ou fornecedor não constar, retorne "Não identificado no documento".
+- Se houver tabela de itens, extraia EXATAMENTE as linhas presentes no documento com seus respectivos valores unitários reais.
+
+Texto extraído complementar:
+"""
+${localText.slice(0, 15000)}
+"""
+
+Retorne OBRIGATORIAMENTE um JSON estrito:
+{
+  "supplierName": "Razão social ou nome exato do fornecedor no documento",
+  "rfqTitle": "Objeto ou título da proposta conforme descrito no documento",
+  "quoteCode": "Número de controle/proposta no documento (ou 'Não informado')",
+  "totalAmount": 0.0, // Valor total líquido da proposta em formato float. Se não houver, coloque 0.0
+  "leadTimeDays": 0, // Prazo de entrega em dias corridos se informado. Se não houver, coloque 0
+  "paymentTerms": "Condições de pagamento explícitas no documento (ou 'Não informado')",
+  "validUntil": "Prazo de validade da proposta (ou 'Não informado')",
+  "items": [
+    {
+      "item_name": "Nome exato do item",
+      "specification": "Especificação técnica descrita",
+      "quantity": 1,
+      "unit": "un / m / kg",
+      "target_unit_price": 0.0,
+      "total_price": 0.0
+    }
+  ],
+  "aiScore": 8.5, // Nota de 0 a 10 de conformidade técnica
+  "aiAnalysisSummary": "Parecer objetivo da IA sobre o documento: conformidade técnica, itens cotados, completude e o que faltou informar."
+}`;
+
+      const parts: any[] = [{ text: prompt }];
+
+      if (mimeType === 'application/pdf' || mimeType.startsWith('image/')) {
+        parts.push({
+          inlineData: {
+            mimeType: mimeType,
+            data: base64Data,
+          },
+        });
+      }
+
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+      const geminiRes = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.0,
+          },
+        }),
+      });
+
+      if (!geminiRes.ok) {
+        const errorText = await geminiRes.text();
+        console.error('Erro na chamada Gemini:', errorText);
+        throw new Error(`Falha na API do Gemini: ${geminiRes.statusText}`);
+      }
+
+      const geminiJson = await geminiRes.json();
+      const rawResponseText =
+        geminiJson.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
+      let extractedData: any = {};
+      try {
+        extractedData = JSON.parse(rawResponseText);
+      } catch (parseErr) {
+        console.error('Erro ao fazer JSON.parse do Gemini:', parseErr, rawResponseText);
+        extractedData = {};
+      }
+
+      return NextResponse.json({
+        success: true,
+        isAIAgentActive: true,
+        aiModel: 'Gemini 2.5 Flash (Oficial)',
+        rawText: localText.slice(0, 4000) || 'Documento analisado diretamente via visão multimodal.',
+        extracted: {
+          rfqTitle: extractedData.rfqTitle || `Cotação: ${file.name}`,
+          supplierName: extractedData.supplierName || 'Fornecedor no Documento',
+          quoteCode: extractedData.quoteCode || 'Não informado',
+          totalAmount: Number(extractedData.totalAmount) || 0,
+          leadTimeDays: Number(extractedData.leadTimeDays) || 0,
+          paymentTerms: extractedData.paymentTerms || 'Não informado',
+          validUntil: extractedData.validUntil || 'Não informado',
+          items: extractedData.items || [],
+          aiScore: Number(extractedData.aiScore) || 8.0,
+          aiAnalysisSummary: extractedData.aiAnalysisSummary || 'Auditoria documental realizada pelo Agente de IA.',
+        },
+      });
+    }
+
+    // Caso não haja chave (fallback sem chutes)
+    return NextResponse.json({
+      success: true,
+      isAIAgentActive: false,
+      rawText: localText.slice(0, 3000),
+      extracted: {
+        rfqTitle: `Cotação: ${file.name}`,
+        supplierName: 'Não identificado',
+        totalAmount: 0,
+        leadTimeDays: 0,
+        paymentTerms: 'Não informado',
+        items: [],
+        aiScore: 0,
+        aiAnalysisSummary: 'Chave de API não detectada.',
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro em parse-document:', error);
+    return NextResponse.json({ error: error.message || 'Erro ao processar' }, { status: 500 });
+  }
+}
