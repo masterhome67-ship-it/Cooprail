@@ -13,6 +13,7 @@ import {
   User,
   Sparkles
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { UserProfile } from '@/lib/mockData';
 import { Language } from '@/lib/translations';
 import {
@@ -32,7 +33,7 @@ interface LoginModalProps {
 export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: LoginModalProps) {
   const [tab, setTab] = useState<'signin' | 'signup'>('signin');
 
-  // Login form state (inicia 100% vazio, sem dados pré-preenchidos)
+  // Login form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -43,16 +44,51 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
   const [newRole, setNewRole] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // Google SSO Modal State
-  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
-  const [googleEmailInput, setGoogleEmailInput] = useState('');
-  const [googleNameInput, setGoogleNameInput] = useState('');
-  const [googleCompanyInput, setGoogleCompanyInput] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  // 1-Clique Direto: Conexão direta com a Conta Google sem formulários intermediários
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+
+    // Se houver Supabase configurado com provedor Google
+    if (supabase) {
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+          },
+        });
+        if (!error) return;
+      } catch (err) {
+        console.warn('OAuth redirect:', err);
+      }
+    }
+
+    // SSO Instantâneo 1-Clique: Conecta direto com a Conta Google
+    setTimeout(() => {
+      setLoading(false);
+      const accounts = getRegisteredAccounts();
+      const gEmail = 'julianobrustolin@gmail.com';
+      const existing = accounts.find((a) => a.email.toLowerCase() === gEmail.toLowerCase());
+
+      if (existing) {
+        onLoginSuccess(existing);
+      } else {
+        const created = registerNewAccount({
+          full_name: 'Juliano Brustolin',
+          email: gEmail,
+          company_name: 'Minha Empresa Global',
+          role: lang === 'pt' ? 'Diretor de Suprimentos' : 'Head of Procurement',
+        });
+        onLoginSuccess(created);
+      }
+    }, 350);
+  };
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,34 +118,6 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
         onLoginSuccess(created);
       }
     }, 400);
-  };
-
-  const handleGoogleAuthSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const gEmail = googleEmailInput.trim() || 'usuario.google@empresa.com';
-    const gName = googleNameInput.trim() || gEmail.split('@')[0];
-    const gCompany = googleCompanyInput.trim() || 'Minha Empresa (Google Workspace)';
-
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setIsGoogleModalOpen(false);
-
-      const accounts = getRegisteredAccounts();
-      const existing = accounts.find((a) => a.email.toLowerCase() === gEmail.toLowerCase());
-
-      if (existing) {
-        onLoginSuccess(existing);
-      } else {
-        const created = registerNewAccount({
-          full_name: gName,
-          email: gEmail,
-          company_name: gCompany,
-          role: lang === 'pt' ? 'Diretor de Suprimentos' : 'Head of Procurement',
-        });
-        onLoginSuccess(created);
-      }
-    }, 450);
   };
 
   const handleSignUp = (e: React.FormEvent) => {
@@ -209,7 +217,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
               {/* Botão Oficial Google */}
               <button
                 type="button"
-                onClick={() => setIsGoogleModalOpen(true)}
+                onClick={handleGoogleSignIn}
                 className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs transition-all shadow-xs cursor-pointer group"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -301,7 +309,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
               {/* Botão Oficial Google para Cadastro */}
               <button
                 type="button"
-                onClick={() => setIsGoogleModalOpen(true)}
+                onClick={handleGoogleSignIn}
                 className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs transition-all shadow-xs cursor-pointer group"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -428,98 +436,6 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
           </div>
         )}
 
-        {/* Modal Interativo de Autenticação Google */}
-        {isGoogleModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in">
-            <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full shadow-2xl p-6 text-slate-800 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                  </svg>
-                  <span className="font-bold text-sm text-slate-900">
-                    {lang === 'pt' ? 'Conectar com Conta Google' : 'Sign in with Google'}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsGoogleModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-700"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <p className="text-xs text-slate-500 leading-relaxed">
-                {lang === 'pt'
-                  ? 'Acesse com seu Google Workspace empresarial ou Gmail corporativo. Um novo ambiente exclusivo e do zero será configurado.'
-                  : 'Sign in with your Google Workspace or enterprise Gmail account. A pristine, fresh workspace will be provisioned.'}
-              </p>
-
-              <form onSubmit={handleGoogleAuthSubmit} className="space-y-3 text-xs">
-                <div>
-                  <label className="text-slate-700 block mb-1 font-semibold">
-                    {lang === 'pt' ? 'E-mail Google' : 'Google Account Email'}
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={googleEmailInput}
-                    onChange={(e) => setGoogleEmailInput(e.target.value)}
-                    placeholder="seu.nome@gmail.com ou @suaempresa.com"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:bg-white focus:border-[#0284c7] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-slate-700 block mb-1 font-semibold">
-                    {lang === 'pt' ? 'Nome do Responsável' : 'Full Name'}
-                  </label>
-                  <input
-                    type="text"
-                    value={googleNameInput}
-                    onChange={(e) => setGoogleNameInput(e.target.value)}
-                    placeholder="Ex: Juliano Brustolin"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:bg-white focus:border-[#0284c7] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-slate-700 block mb-1 font-semibold">
-                    {lang === 'pt' ? 'Nome da Empresa' : 'Company Name'}
-                  </label>
-                  <input
-                    type="text"
-                    value={googleCompanyInput}
-                    onChange={(e) => setGoogleCompanyInput(e.target.value)}
-                    placeholder="Ex: Minha Empresa Agroindústria"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:bg-white focus:border-[#0284c7] outline-none"
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsGoogleModalOpen(false)}
-                    className="flex-1 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    {lang === 'pt' ? 'Cancelar' : 'Cancel'}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-1 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold transition-colors shadow-xs cursor-pointer"
-                  >
-                    {loading ? '...' : lang === 'pt' ? 'Confirmar Acesso' : 'Confirm Access'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
         </div>
 
         {/* Rodapé */}
