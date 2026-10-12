@@ -147,6 +147,27 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
     }
   };
 
+  const handleQuickLogin = (emailToUse: string, companyToUse: string) => {
+    setLoading(true);
+    setErrorMsg(null);
+    setTimeout(() => {
+      setLoading(false);
+      const accounts = getRegisteredAccounts();
+      const existing = accounts.find((a) => a.email.toLowerCase() === emailToUse.toLowerCase());
+      if (existing) {
+        onLoginSuccess(existing);
+      } else {
+        const created = registerNewAccount({
+          full_name: emailToUse.split('@')[0],
+          email: emailToUse,
+          company_name: companyToUse,
+          role: lang === 'pt' ? 'Diretor de Suprimentos' : 'Head of Procurement',
+        });
+        onLoginSuccess(created);
+      }
+    }, 250);
+  };
+
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
@@ -286,6 +307,21 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 <span>{lang === 'pt' ? 'Continuar com o Google' : 'Continue with Google'}</span>
               </button>
 
+              {/* Acesso Direto masterhome67@gmail.com */}
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('masterhome67@gmail.com', 'MasterHome 67 Global')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-sky-200 bg-sky-50/70 hover:bg-sky-50 text-xs font-semibold text-[#0369a1] transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-[#0284c7] text-white flex items-center justify-center text-[10px] font-bold">
+                    M
+                  </div>
+                  <span>Entrar como masterhome67@gmail.com</span>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-[#0284c7]" />
+              </button>
+
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-200"></div>
                 <span className="flex-shrink mx-3 text-[10px] text-slate-400 uppercase font-mono">
@@ -376,6 +412,21 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
                 <span>{lang === 'pt' ? 'Cadastrar com o Google' : 'Sign Up with Google'}</span>
+              </button>
+
+              {/* Cadastro Direto masterhome67@gmail.com */}
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('masterhome67@gmail.com', 'MasterHome 67 Global')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-sky-200 bg-sky-50/70 hover:bg-sky-50 text-xs font-semibold text-[#0369a1] transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-[#0284c7] text-white flex items-center justify-center text-[10px] font-bold">
+                    M
+                  </div>
+                  <span>Iniciar do zero como masterhome67@gmail.com</span>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-[#0284c7]" />
               </button>
 
               <div className="relative flex py-1 items-center">
