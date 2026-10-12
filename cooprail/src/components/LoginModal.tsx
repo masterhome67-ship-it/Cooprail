@@ -30,6 +30,30 @@ interface LoginModalProps {
   lang?: Language;
 }
 
+// Carregador assíncrono garantido da biblioteca Google Identity Services (GIS)
+function loadGoogleScript(): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') return reject();
+    const g = (window as any).google;
+    if (g?.accounts?.oauth2) return resolve(g);
+
+    const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve((window as any).google));
+      existing.addEventListener('error', reject);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve((window as any).google);
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+}
+
 export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: LoginModalProps) {
   const [tab, setTab] = useState<'signin' | 'signup'>('signin');
 
@@ -49,7 +73,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
 
   if (!isOpen) return null;
 
-  // Autenticação Real com a API do Google (OAuth 2.0)
+  // Autenticação Real com a API do Google (Google Identity Services Oficial)
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setErrorMsg(null);
@@ -58,11 +82,10 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
       '1055689936073-mh4d40hb2rch5cs3h81g5sbk138t64e0.apps.googleusercontent.com';
 
-    // 1. Tentar via Google Identity Services oficial (GIS)
-    const anyWindow = typeof window !== 'undefined' ? (window as any) : null;
-    if (anyWindow && anyWindow.google?.accounts?.oauth2) {
-      try {
-        const client = anyWindow.google.accounts.oauth2.initTokenClient({
+    try {
+      const google = await loadGoogleScript();
+      if (google?.accounts?.oauth2) {
+        const client = google.accounts.oauth2.initTokenClient({
           client_id: googleClientId,
           scope: 'openid email profile',
           callback: async (tokenResponse: any) => {
@@ -95,6 +118,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                       email: googleProfile.email,
                       company_name: 'Minha Empresa Global',
                       role: lang === 'pt' ? 'Diretor de Suprimentos' : 'Head of Procurement',
+                      avatar_url: googleProfile.picture || '',
                     });
                     onLoginSuccess(created);
                   }
@@ -111,18 +135,15 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
 
         client.requestAccessToken({ prompt: 'select_account' });
         return;
-      } catch (err) {
-        console.warn('Erro ao inicializar Google GIS token client:', err);
       }
-    }
-
-    // 2. Redirecionamento oficial Google OAuth 2.0
-    if (typeof window !== 'undefined') {
-      const redirectUri = window.location.origin;
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&response_type=token&scope=openid%20email%20profile&prompt=select_account`;
-      window.location.href = authUrl;
+    } catch (err) {
+      console.error('Falha ao inicializar Google GIS:', err);
+      setLoading(false);
+      setErrorMsg(
+        lang === 'pt'
+          ? 'Não foi possível carregar a janela oficial da Google. Verifique o bloqueador de popups.'
+          : 'Could not load official Google authentication dialog.'
+      );
     }
   };
 
