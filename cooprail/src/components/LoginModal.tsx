@@ -49,45 +49,81 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
 
   if (!isOpen) return null;
 
-  // 1-Clique Direto: Conexão direta com a Conta Google sem formulários intermediários
+  // Autenticação Real com a API do Google (OAuth 2.0)
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setErrorMsg(null);
 
-    // Se houver Supabase configurado com provedor Google
-    if (supabase) {
+    const googleClientId =
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+      '1055689936073-mh4d40hb2rch5cs3h81g5sbk138t64e0.apps.googleusercontent.com';
+
+    // 1. Tentar via Google Identity Services oficial (GIS)
+    const anyWindow = typeof window !== 'undefined' ? (window as any) : null;
+    if (anyWindow && anyWindow.google?.accounts?.oauth2) {
       try {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        const client = anyWindow.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'openid email profile',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse?.error) {
+              setLoading(false);
+              setErrorMsg(
+                lang === 'pt' ? 'Autenticação Google cancelada.' : 'Google authentication cancelled.'
+              );
+              return;
+            }
+
+            if (tokenResponse?.access_token) {
+              try {
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+                });
+                const googleProfile = await res.json();
+
+                if (googleProfile?.email) {
+                  const accounts = getRegisteredAccounts();
+                  const existing = accounts.find(
+                    (a) => a.email.toLowerCase() === googleProfile.email.toLowerCase()
+                  );
+
+                  if (existing) {
+                    onLoginSuccess(existing);
+                  } else {
+                    const created = registerNewAccount({
+                      full_name: googleProfile.name || googleProfile.email.split('@')[0],
+                      email: googleProfile.email,
+                      company_name: 'Minha Empresa Global',
+                      role: lang === 'pt' ? 'Diretor de Suprimentos' : 'Head of Procurement',
+                    });
+                    onLoginSuccess(created);
+                  }
+                  setLoading(false);
+                  return;
+                }
+              } catch (err) {
+                console.error('Erro ao ler perfil do Google:', err);
+              }
+            }
+            setLoading(false);
           },
         });
-        if (!error) return;
+
+        client.requestAccessToken({ prompt: 'select_account' });
+        return;
       } catch (err) {
-        console.warn('OAuth redirect:', err);
+        console.warn('Erro ao inicializar Google GIS token client:', err);
       }
     }
 
-    // SSO Instantâneo 1-Clique: Conecta direto com a Conta Google
-    setTimeout(() => {
-      setLoading(false);
-      const accounts = getRegisteredAccounts();
-      const gEmail = 'julianobrustolin@gmail.com';
-      const existing = accounts.find((a) => a.email.toLowerCase() === gEmail.toLowerCase());
-
-      if (existing) {
-        onLoginSuccess(existing);
-      } else {
-        const created = registerNewAccount({
-          full_name: 'Juliano Brustolin',
-          email: gEmail,
-          company_name: 'Minha Empresa Global',
-          role: lang === 'pt' ? 'Diretor de Suprimentos' : 'Head of Procurement',
-        });
-        onLoginSuccess(created);
-      }
-    }, 350);
+    // 2. Redirecionamento oficial Google OAuth 2.0
+    if (typeof window !== 'undefined') {
+      const redirectUri = window.location.origin;
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(
+        redirectUri
+      )}&response_type=token&scope=openid%20email%20profile&prompt=select_account`;
+      window.location.href = authUrl;
+    }
   };
 
   const handleSignIn = (e: React.FormEvent) => {

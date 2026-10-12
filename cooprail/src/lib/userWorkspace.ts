@@ -45,6 +45,7 @@ export function registerNewAccount(account: {
   email: string;
   company_name: string;
   role: string;
+  avatar_url?: string;
   password?: string;
 }): RegisteredAccount {
   const accounts = getRegisteredAccounts();
@@ -59,7 +60,7 @@ export function registerNewAccount(account: {
     full_name: account.full_name.trim(),
     company_name: account.company_name.trim() || 'Minha Empresa Global',
     role: account.role.trim() || 'Gestor de Suprimentos',
-    avatar_url: '',
+    avatar_url: account.avatar_url || '',
     preferred_language: 'Português (BR)',
     password: account.password,
   };

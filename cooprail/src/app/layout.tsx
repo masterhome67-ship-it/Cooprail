@@ -17,12 +17,17 @@ export const metadata: Metadata = {
   description: "Plataforma corporativa de suprimentos com mapeamento de prestadores in-loco, governança de chamados de campo e pagamentos garantidos.",
 };
 
+import Script from "next/script";
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { DecisionStream } from '@/components/DecisionStream';
@@ -26,6 +26,7 @@ import {
   getActiveSessionUserId,
   setActiveSessionUserId,
   getRegisteredAccounts,
+  registerNewAccount,
 } from '@/lib/userWorkspace';
 import {
   initialOrganization,
@@ -102,44 +103,7 @@ export default function Home() {
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Restaura sessão existente ao carregar
-  useEffect(() => {
-    const activeUserId = getActiveSessionUserId();
-    if (activeUserId) {
-      const accounts = getRegisteredAccounts();
-      const user = accounts.find((a) => a.id === activeUserId);
-      if (user) {
-        setCurrentUser(user);
-        const ws = loadUserWorkspace(user);
-        setOrganization(ws.organization);
-        setTasks(ws.tasks);
-        setRfqs(ws.rfqs);
-        setOrders(ws.orders);
-        setSectors(ws.sectors);
-        setChatMessages(ws.chatMessages);
-        setIsNewUser(ws.isNewUser);
-        setIsAuthenticated(true);
-      }
-    }
-  }, []);
-
-  // Salva no workspace isolado do usuário ativo sempre que houver alteração
-  useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      saveUserWorkspace(currentUser.id, {
-        organization,
-        user: currentUser,
-        tasks,
-        rfqs,
-        orders,
-        sectors,
-        chatMessages,
-        isNewUser: sectors.length === 0 && rfqs.length === 0,
-      });
-    }
-  }, [tasks, rfqs, orders, sectors, chatMessages, organization, isAuthenticated, currentUser]);
-
-  const handleLoginSuccess = (account: RegisteredAccount) => {
+  const handleLoginSuccess = useCallback((account: RegisteredAccount) => {
     setCurrentUser(account);
     setActiveSessionUserId(account.id);
     const ws = loadUserWorkspace(account);
@@ -158,7 +122,78 @@ export default function Home() {
         ? `Bem-vindo, ${account.full_name}! Workspace de ${account.company_name} conectado.`
         : `Welcome, ${account.full_name}! Connected to ${account.company_name} workspace.`
     );
-  };
+  }, [lang]);
+
+  // Restaura sessão existente ou processa retorno OAuth oficial do Google
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      if (accessToken) {
+        fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+          .then((res) => res.json())
+          .then((googleProfile) => {
+            if (googleProfile?.email) {
+              const accounts = getRegisteredAccounts();
+              const matched = accounts.find(
+                (a) => a.email.toLowerCase() === googleProfile.email.toLowerCase()
+              );
+              if (matched) {
+                handleLoginSuccess(matched);
+              } else {
+                const created = registerNewAccount({
+                  full_name: googleProfile.name || googleProfile.email.split('@')[0],
+                  email: googleProfile.email,
+                  company_name: 'Minha Empresa Global',
+                  role: lang === 'pt' ? 'Diretor de Suprimentos' : 'Head of Procurement',
+                  avatar_url: googleProfile.picture || '',
+                });
+                handleLoginSuccess(created);
+              }
+              window.history.replaceState(null, '', window.location.pathname);
+            }
+          })
+          .catch((err) => console.error('Erro ao processar Google OAuth token:', err));
+        return;
+      }
+    }
+
+    const activeUserId = getActiveSessionUserId();
+    if (activeUserId) {
+      const accounts = getRegisteredAccounts();
+      const user = accounts.find((a) => a.id === activeUserId);
+      if (user) {
+        setCurrentUser(user);
+        const ws = loadUserWorkspace(user);
+        setOrganization(ws.organization);
+        setTasks(ws.tasks);
+        setRfqs(ws.rfqs);
+        setOrders(ws.orders);
+        setSectors(ws.sectors);
+        setChatMessages(ws.chatMessages);
+        setIsNewUser(ws.isNewUser);
+        setIsAuthenticated(true);
+      }
+    }
+  }, [handleLoginSuccess, lang]);
+
+  // Salva no workspace isolado do usuário ativo sempre que houver alteração
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      saveUserWorkspace(currentUser.id, {
+        organization,
+        user: currentUser,
+        tasks,
+        rfqs,
+        orders,
+        sectors,
+        chatMessages,
+        isNewUser: sectors.length === 0 && rfqs.length === 0,
+      });
+    }
+  }, [tasks, rfqs, orders, sectors, chatMessages, organization, isAuthenticated, currentUser]);
 
   const handleLogout = () => {
     setActiveSessionUserId(null);
