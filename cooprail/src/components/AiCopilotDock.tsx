@@ -76,13 +76,14 @@ export function AiCopilotDock({
     if (!inputText.trim()) return;
 
     let slashCmd: string | undefined;
-    if (inputText.startsWith('/busca')) slashCmd = '/busca';
-    else if (inputText.startsWith('/controle')) slashCmd = '/controle';
-    else if (inputText.startsWith('/pedido')) slashCmd = '/pedido';
-    else if (inputText.startsWith('/demandas')) slashCmd = '/demandas';
-    else if (inputText.startsWith('/rfq')) slashCmd = '/rfq';
-    else if (inputText.startsWith('/compare')) slashCmd = '/compare';
-    else if (inputText.startsWith('/negotiate')) slashCmd = '/negotiate';
+    const lower = inputText.toLowerCase();
+    if (lower.startsWith('/busca') || lower.startsWith('/agente de busca')) slashCmd = '/busca';
+    else if (lower.startsWith('/controle') || lower.startsWith('/agente de controle')) slashCmd = '/controle';
+    else if (lower.startsWith('/pedido') || lower.startsWith('/agente de pedido')) slashCmd = '/pedido';
+    else if (lower.startsWith('/demandas') || lower.startsWith('/agente de organizacao de demandas') || lower.startsWith('/agente de demandas')) slashCmd = '/demandas';
+    else if (lower.startsWith('/rfq')) slashCmd = '/rfq';
+    else if (lower.startsWith('/compare')) slashCmd = '/compare';
+    else if (lower.startsWith('/negotiate')) slashCmd = '/negotiate';
 
     onSendMessage(inputText, slashCmd);
     setInputText('');

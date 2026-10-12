@@ -81,7 +81,23 @@ function getWorkspaceStorageKey(userId: string): string {
   return `cooprail_workspace_tenant_${userId}`;
 }
 
+export function getHelpAgentInitialMessage(): ChatMessage {
+  return {
+    id: `msg-help-init`,
+    sender_role: 'assistant',
+    content: `Sou o seu Agente de Ajuda Operacional. Estou aqui para auxiliar você na navegação e nos fluxos de compras industriais da plataforma.
+
+Você pode me fazer perguntas diretas ou utilizar os comandos especializados:
+• /busca [termo ou cidade] — Agente de Busca: pesquisa materiais, fornecedores homologados e empresas mobilizadas no canteiro.
+• /controle — Agente de Controle: audita status orçamentário, centros de custo e conformidade da esteira de compras.
+• /pedido — Agente de Pedidos: instruções para emissão de ordens formais (PO) e liquidação via Smart Escrow on-chain.
+• /demandas — Agente de Organização de Demandas: ajuda a consolidar necessidades técnicas dos setores para novas RFQs.`,
+    timestamp: 'Agora',
+  };
+}
+
 // Inicializa workspace 100% limpo para usuário novo
+
 function initializeCleanWorkspace(user: RegisteredAccount): UserWorkspaceData {
   const cleanOrg: Organization = {
     id: `org-${user.id}`,
@@ -95,12 +111,7 @@ function initializeCleanWorkspace(user: RegisteredAccount): UserWorkspaceData {
     },
   };
 
-  const initialWelcomeMessage: ChatMessage = {
-    id: `msg-welcome-${Date.now()}`,
-    sender_role: 'assistant',
-    content: `Olá, ${user.full_name}! Bem-vindo ao ambiente corporativo exclusivo da ${user.company_name}. Este workspace foi criado do zero e é totalmente isolado. Para começar, cadastre suas unidades operacionais no menu "Unidades & Setores" ou crie sua primeira requisição de compras (RFQ).`,
-    timestamp: 'Agora',
-  };
+  const initialWelcomeMessage = getHelpAgentInitialMessage();
 
   const cleanData: UserWorkspaceData = {
     organization: cleanOrg,
@@ -130,7 +141,7 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
       rfqs: [],
       orders: [],
       sectors: [],
-      chatMessages: [],
+      chatMessages: [getHelpAgentInitialMessage()],
       isNewUser: true,
     };
   }
@@ -140,7 +151,21 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
 
   if (raw) {
     try {
-      return JSON.parse(raw);
+      const parsed: UserWorkspaceData = JSON.parse(raw);
+      // Se a primeira mensagem ainda for a de boas-vindas antiga, atualiza para o agente de ajuda com comandos
+      if (parsed.chatMessages && parsed.chatMessages.length > 0) {
+        if (
+          parsed.chatMessages[0].content.includes('Bem-vindo ao ambiente corporativo exclusivo') ||
+          parsed.chatMessages[0].content.includes('Este workspace foi criado do zero')
+        ) {
+          parsed.chatMessages[0] = getHelpAgentInitialMessage();
+          localStorage.setItem(key, JSON.stringify(parsed));
+        }
+      } else {
+        parsed.chatMessages = [getHelpAgentInitialMessage()];
+        localStorage.setItem(key, JSON.stringify(parsed));
+      }
+      return parsed;
     } catch (e) {
       console.error('Erro ao ler workspace:', e);
     }
