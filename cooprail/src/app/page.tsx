@@ -422,6 +422,26 @@ export default function Home() {
     showToast(`Ordem liquidada on-chain com sucesso no cluster Solana!`);
   };
 
+  const handleCreateTestOrder = () => {
+    const testPo: PurchaseOrderRecord = {
+      id: `po-test-${Date.now()}`,
+      po_code: `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      supplier_name: 'Metalúrgica Ferro & Aço Nacional S.A.',
+      supplier_cnpj: '18.234.567/0001-90',
+      rfq_code: 'RFQ-2026-IND-01',
+      total_amount_brl: 45000.0,
+      delivery_days: 7,
+      created_at: 'Hoje',
+      status: 'pending_approval',
+      sector_name: 'Divisão de Infraestrutura & Via Permanente - Corredor Oeste',
+      cost_center: 'CC-4200',
+      is_existing_contractor: true,
+      approval_notes: 'Empresa já mobilizada no canteiro da Unidade Oeste. Homologada sem custo adicional de frete.',
+    };
+    setOrders((prev) => [testPo, ...prev]);
+    showToast('Ordem de compra de teste criada! Agora você pode simular a liquidação.');
+  };
+
   // Envio de Mensagem no Chat do Assistente Operacional
   const handleSendMessage = async (text: string, slashCommand?: string) => {
     const now = new Date();
@@ -764,8 +784,15 @@ export default function Home() {
                   <ShoppingBag className="w-8 h-8 text-slate-500 mx-auto opacity-60" />
                   <p className="text-xs font-medium text-slate-300">Nenhuma ordem de compra emitida</p>
                   <p className="text-xs text-slate-500">
-                    Aprove uma proposta no comparador de cotações para emitir uma nova ordem.
+                    Aprove uma proposta no comparador de cotações ou gere uma ordem para simulação imediata de liquidação.
                   </p>
+                  <button
+                    onClick={handleCreateTestOrder}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-md transition-all cursor-pointer mx-auto mt-2"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Gerar Ordem para Simular Pagamento On-Chain</span>
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
