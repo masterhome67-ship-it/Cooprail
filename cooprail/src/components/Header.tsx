@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Plus, UploadCloud, Command, LogOut, Globe } from 'lucide-react';
+import { Search, Plus, UploadCloud, Command, LogOut, Globe, Sparkles } from 'lucide-react';
 import { Language, translations } from '@/lib/translations';
 
 interface HeaderProps {
@@ -73,6 +73,15 @@ export function Header({
             EN
           </button>
         </div>
+
+        <button
+          onClick={onOpenSimulator}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-purple-950/80 to-[#132338] hover:from-purple-900/90 hover:to-[#1a2f4a] border border-purple-700/60 text-purple-300 hover:text-white text-xs font-semibold transition-all cursor-pointer shadow-sm"
+          title="Simular Fluxo Completo (RFQ -> Fornecedores -> Comparador -> Ordem -> Solana)"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+          <span>Simular Fluxo Completo</span>
+        </button>
 
         <button
           onClick={onOpenUploadDoc}

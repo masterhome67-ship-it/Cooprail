@@ -58,7 +58,10 @@ import {
   ShieldCheck,
   MapPin,
   Zap,
-  Sparkles
+  Sparkles,
+  Search,
+  Scale,
+  ArrowRight
 } from 'lucide-react';
 
 const initialOrders: PurchaseOrderRecord[] = [
@@ -102,6 +105,8 @@ export default function Home() {
   const [selectedOrderForSettlement, setSelectedOrderForSettlement] = useState<PurchaseOrderRecord | null>(null);
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState<'all' | 'nearby' | 'mobilized'>('all');
 
   const handleLoginSuccess = useCallback((account: RegisteredAccount) => {
     setCurrentUser(account);
@@ -255,56 +260,50 @@ export default function Home() {
 
     const newTask: Task = {
       id: `task-rfq-${Date.now()}`,
-      title: `Disparar solicitação de cotação para ${newRFQ.code} (${newRFQ.title})`,
-      description: `Pedido de orçamento publicado no mercado. Motor de qualificação identificou fornecedores aptos cadastrados. Aguardando recebimento de propostas comerciais.`,
-      status: 'waiting_others',
-      priority: 'medium',
-      category: 'rfq_review',
+      title: `Decisão de Compra: Comparar propostas para ${newRFQ.code}`,
+      description: `${newRFQ.quotes.length} propostas comerciais recebidas de fornecedores próximos homologados. Avalie as cotações concorrentes e emita a Ordem de Compra.`,
+      status: 'needs_you',
+      priority: 'high',
+      category: 'quote_decision',
       due_date: newRFQ.deadline,
-      badge_text: 'Aguardando Fornecedores',
+      badge_text: `${newRFQ.quotes.length} Cotações Prontas`,
     };
     setTasks((prev) => [newTask, ...prev]);
 
-    showToast(`Pedido de Orçamento ${newRFQ.code} publicado! Aguardando cotações.`);
-    setActiveTab('rfqs');
+    showToast(`Pedido ${newRFQ.code} emitido! ${newRFQ.quotes.length} cotações recebidas dos fornecedores próximos.`);
+    setActiveTab('comparator');
 
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const rfqChatMsg: ChatMessage = {
       id: `msg-rfq-${Date.now()}`,
       sender_role: 'assistant',
-      content: `O pedido de orçamento ${newRFQ.code} ("${newRFQ.title}") foi publicado. O motor de qualificação identificou as empresas homologadas para este escopo. Quando receber as propostas em PDF, clique em "Ler Proposta (PDF)" para auditá-las.`,
-      timestamp: timeStr,
-    };
-    setChatMessages((prev) => [...prev, rfqChatMsg]);
-  };
-
-  const handleCompleteSimulation = (newRFQ: RFQ, newTask: Task) => {
-    setRfqs((prev) => [newRFQ, ...prev]);
-    setTasks((prev) => [newTask, ...prev]);
-    showToast('Projeto simulado! RFQ-2026-002 e decisão gerados pelos 4 agentes.');
-
-    const now = new Date();
-    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    const autoLogMsg: ChatMessage = {
-      id: `sim-log-${Date.now()}`,
-      sender_role: 'assistant',
-      content:
-        'Pipeline dos 4 Agentes finalizado para o projeto RFQ-2026-002 (Molas Helicoidais). A recomendação da Molas Sul Industrial (R$ 39.800,00) foi inserida na sua aba "Precisa de você".',
+      content: `O pedido de orçamento ${newRFQ.code} ("${newRFQ.title}") foi disparado para os fornecedores próximos. Recebemos ${newRFQ.quotes.length} propostas comerciais. Navegue no Comparador de Cotações para avaliar os preços, prazos e emitir a Ordem de Compra.`,
       timestamp: timeStr,
       action_card: {
         type: 'quote_recommendation',
-        title: 'Recomendação: Molas Sul Industrial Ltda',
+        title: `Propostas Recebidas: ${newRFQ.code}`,
         metrics: [
-          { label: 'Valor', value: 'R$ 39.800,00' },
-          { label: 'Economia', value: 'R$ 5.200,00 (-11.5%)' },
-          { label: 'Entrega', value: '12 dias' },
-          { label: 'Score IA', value: '9.4 / 10' },
+          { label: 'Propostas', value: `${newRFQ.quotes.length} fornecedores` },
+          { label: 'Teto', value: newRFQ.estimated_budget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
         ],
         actions: [{ label: 'Ver no Comparador', action: 'inspect' }],
       },
     };
-    setChatMessages((prev) => [...prev, autoLogMsg]);
+    setChatMessages((prev) => [...prev, rfqChatMsg]);
+  };
+
+  const handleCompleteSimulation = (newRFQ: RFQ, newTask: Task, newOrder?: PurchaseOrderRecord) => {
+    setRfqs((prev) => [newRFQ, ...prev]);
+    setTasks((prev) => [newTask, ...prev]);
+    if (newOrder) {
+      setOrders((prev) => [newOrder, ...prev]);
+      setActiveTab('orders');
+      showToast(`Fluxo completo simulado com sucesso! Ordem ${newOrder.po_code} emitida no sistema.`);
+    } else {
+      setActiveTab('comparator');
+      showToast('Simulação concluída! Veja o comparador de propostas.');
+    }
   };
 
   // Escuta atalho Cmd+K / Ctrl+K
@@ -602,6 +601,98 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              {/* Banner Interativo: Esteira de Compras Ponta a Ponta */}
+              <div className="p-4 rounded-xl border border-[#203046] bg-gradient-to-r from-[#0d1624] via-[#0f1d2f] to-[#0b131f] shadow-lg space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0284c7]/20 text-[#38bdf8] font-bold border border-[#0284c7]/40 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-[#38bdf8]" />
+                        ESTEIRA INTEGRADA DE SUPRIMENTOS
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-bold text-white">
+                      Fluxo de Compras: Pedido ➔ Fornecedores Próximos ➔ Aceite ➔ Ordem ➔ Pagamento Solana
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setIsSimulatorOpen(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-900 to-indigo-900 hover:from-purple-800 hover:to-indigo-800 text-purple-200 hover:text-white border border-purple-600/50 text-xs font-semibold shadow-md transition-all cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Simular Ciclo Completo</span>
+                    </button>
+                    <button
+                      onClick={() => setIsCreateRFQOpen(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Nova Requisição (RFQ)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Os 5 Passos Visuais Interativos */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-1 text-xs">
+                  <div
+                    onClick={() => setIsCreateRFQOpen(true)}
+                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-1.5 text-[#38bdf8] font-semibold text-[11px] mb-1">
+                      <FileText className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      <span>1. Pedido (RFQ)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">Especificar itens, quantidades e teto de gastos</p>
+                  </div>
+
+                  <div
+                    onClick={() => setActiveTab('suppliers')}
+                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-1.5 text-purple-400 font-semibold text-[11px] mb-1">
+                      <MapPin className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      <span>2. Fornecedores</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">Localizar próximos (Cascavel/Oeste) e frete zero</p>
+                  </div>
+
+                  <div
+                    onClick={() => setActiveTab('comparator')}
+                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px] mb-1">
+                      <Scale className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      <span>3. Comparação & Aceite</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">Comparar propostas lado a lado e dar o aceite</p>
+                  </div>
+
+                  <div
+                    onClick={() => setActiveTab('orders')}
+                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-1.5 text-amber-400 font-semibold text-[11px] mb-1">
+                      <ShoppingBag className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      <span>4. Ordem (PO)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">Emissão formal com centro de custo e contrato</p>
+                  </div>
+
+                  <div
+                    onClick={() => setActiveTab('orders')}
+                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-1.5 text-cyan-400 font-semibold text-[11px] mb-1">
+                      <Lock className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      <span>5. Pagamento Solana</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">Liquidação via Smart Escrow e SPL Memo imutável</p>
+                  </div>
+                </div>
+              </div>
 
               {/* Métricas Operacionais Resumidas */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -920,80 +1011,179 @@ export default function Home() {
             />
           )}
 
-          {/* Visão: Fornecedores Homologados */}
-          {activeTab === 'suppliers' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-base font-bold text-white">Fornecedores Homologados & Aptos</h1>
-                  <p className="text-xs text-slate-400">
-                    Base cadastral com CNPJ, conformidade técnica, certificações e especialidades atendidas.
-                  </p>
-                </div>
-                <span className="text-xs text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-800 font-medium">
-                  {qualifiedSuppliers.length} Empresas Qualificadas
-                </span>
-              </div>
+          {/* Visão: Fornecedores Homologados & Próximos */}
+          {activeTab === 'suppliers' && (() => {
+            const filteredSuppliers = qualifiedSuppliers.filter((sup) => {
+              const q = supplierSearchQuery.toLowerCase().trim();
+              const matchesSearch =
+                !q ||
+                sup.name.toLowerCase().includes(q) ||
+                sup.location.toLowerCase().includes(q) ||
+                sup.categories.some((c) => c.toLowerCase().includes(q));
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {qualifiedSuppliers.map((sup) => (
-                  <div
-                    key={sup.id}
-                    className="p-4 rounded border border-[#1c2636] bg-[#111722] space-y-2.5"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="text-sm font-semibold text-white">{sup.name}</h4>
-                        <p className="text-[11px] font-mono text-slate-400 mt-0.5">CNPJ: {sup.cnpj}</p>
-                      </div>
-                      <span className="text-[10px] bg-emerald-950/80 text-emerald-400 font-semibold px-2 py-0.5 rounded border border-emerald-800/60 shrink-0">
-                        {sup.status === 'homologado' ? 'Homologado' : 'Em Auditoria'}
-                      </span>
-                    </div>
+              if (!matchesSearch) return false;
 
-                    <div className="text-xs text-slate-300 space-y-1 bg-[#0b0f17] p-2.5 rounded border border-[#1a2536]">
-                      <p>
-                        <span className="text-slate-400">Contato: </span>
-                        {sup.contact_name} • {sup.email} • {sup.phone}
-                      </p>
-                      <p>
-                        <span className="text-slate-400">Prazo Médio: </span>
-                        {sup.lead_time_avg_days} dias corridos • Faturamento: {sup.payment_terms_standard}
-                      </p>
-                    </div>
+              if (supplierFilter === 'mobilized') return sup.is_mobilized_on_site;
+              if (supplierFilter === 'nearby') {
+                return (
+                  sup.location.includes('PR') ||
+                  sup.location.includes('Oeste') ||
+                  sup.location.includes('Cascavel') ||
+                  sup.location.includes('Toledo') ||
+                  sup.is_mobilized_on_site
+                );
+              }
+              return true;
+            });
 
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-semibold mb-1">Especialidades:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {sup.categories.map((cat, i) => (
-                          <span
-                            key={i}
-                            className="text-[10px] bg-[#162335] text-[#38bdf8] px-2 py-0.5 rounded border border-[#1f334d]"
-                          >
-                            {cat}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-semibold mb-1">Certificações:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {sup.certifications.map((cert, i) => (
-                          <span
-                            key={i}
-                            className="text-[10px] bg-[#18202c] text-slate-300 px-2 py-0.5 rounded border border-[#232f3f]"
-                          >
-                            {cert}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <h1 className="text-base font-bold text-white">
+                      Busca de Fornecedores Próximos & Homologados
+                    </h1>
+                    <p className="text-xs text-slate-400">
+                      Localize fornecedores por proximidade regional (Cascavel, Toledo, Corredor Ferroviário Oeste) ou selecione empresas já mobilizadas no canteiro com frete zero.
+                    </p>
                   </div>
-                ))}
+                  <button
+                    onClick={() => setIsCreateRFQOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Novo Pedido de Orçamento (RFQ)</span>
+                  </button>
+                </div>
+
+                {/* Barra de Busca e Filtros Rápidos */}
+                <div className="flex flex-col md:flex-row items-center gap-2.5 bg-[#101722] p-2.5 rounded-lg border border-[#1b2636]">
+                  <div className="relative flex-1 w-full">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nome, cidade (ex: Cascavel, Toledo) ou material (ex: Tubos, Aço)..."
+                      value={supplierSearchQuery}
+                      onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                      className="w-full bg-[#0a0f17] border border-[#202e42] rounded px-8 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0284c7]"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto w-full md:w-auto">
+                    <button
+                      onClick={() => setSupplierFilter('all')}
+                      className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                        supplierFilter === 'all'
+                          ? 'bg-[#0284c7] text-white font-semibold'
+                          : 'bg-[#141d2a] text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Todos ({qualifiedSuppliers.length})
+                    </button>
+                    <button
+                      onClick={() => setSupplierFilter('nearby')}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                        supplierFilter === 'nearby'
+                          ? 'bg-[#0284c7] text-white font-semibold'
+                          : 'bg-[#141d2a] text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <MapPin className="w-3 h-3 text-[#38bdf8]" />
+                      <span>📍 Próximos (Cascavel / Toledo / Oeste)</span>
+                    </button>
+                    <button
+                      onClick={() => setSupplierFilter('mobilized')}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                        supplierFilter === 'mobilized'
+                          ? 'bg-emerald-600 text-white font-semibold'
+                          : 'bg-[#141d2a] text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Zap className="w-3 h-3 text-emerald-400 fill-emerald-400" />
+                      <span>⚡ Mobilizados no Canteiro (Frete Zero)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid de Fornecedores */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredSuppliers.map((sup) => (
+                    <div
+                      key={sup.id}
+                      className={`p-4 rounded-lg border transition-all ${
+                        sup.is_mobilized_on_site
+                          ? 'bg-[#0c1620] border-emerald-600/70 ring-1 ring-emerald-500/20'
+                          : 'bg-[#111722] border-[#1c2636]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-semibold text-white">{sup.name}</h4>
+                            {sup.is_mobilized_on_site && (
+                              <span className="flex items-center gap-1 text-[10px] bg-emerald-950 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-800">
+                                <Zap className="w-3 h-3 fill-emerald-300" /> Mobilizado no Canteiro (Frete Zero)
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] font-mono text-slate-400">CNPJ: {sup.cnpj}</p>
+                        </div>
+
+                        <span className="text-[10px] bg-emerald-950/80 text-emerald-400 font-semibold px-2 py-0.5 rounded border border-emerald-800/60 shrink-0">
+                          {sup.status === 'homologado' ? 'Homologado' : 'Em Auditoria'}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-slate-300 space-y-1 bg-[#0b0f17] p-2.5 rounded border border-[#1a2536] my-2.5">
+                        <p className="flex items-center gap-1.5 text-[#38bdf8] font-medium">
+                          <MapPin className="w-3.5 h-3.5" /> Localização: {sup.location}
+                        </p>
+                        <p>
+                          <span className="text-slate-400">Contato: </span>
+                          {sup.contact_name} • {sup.email} • {sup.phone}
+                        </p>
+                        <p>
+                          <span className="text-slate-400">Prazo Médio: </span>
+                          {sup.lead_time_avg_days} dias corridos • Faturamento: {sup.payment_terms_standard}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-semibold mb-1">Especialidades:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {sup.categories.map((cat, i) => (
+                            <span
+                              key={i}
+                              className="text-[10px] bg-[#162335] text-[#38bdf8] px-2 py-0.5 rounded border border-[#1f334d]"
+                            >
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-[#1a2536] mt-3 flex items-center justify-between">
+                        <div className="flex items-center gap-1 text-xs text-amber-400 font-medium">
+                          <span>★ {sup.rating} / 5.0</span>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            showToast(`Abrindo solicitação de cotação para ${sup.name}...`);
+                            setIsCreateRFQOpen(true);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#132338] hover:bg-[#1a2f4a] border border-[#1e3c5e] text-[#38bdf8] text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+                        >
+                          <Zap className="w-3 h-3 text-[#38bdf8]" />
+                          <span>Solicitar Cotação / Abrir RFQ</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Visão: Configurações */}
           {activeTab === 'settings' && (
@@ -1074,6 +1264,7 @@ export default function Home() {
         isOpen={isCreateRFQOpen}
         onClose={() => setIsCreateRFQOpen(false)}
         onCreateRFQ={handleCreateRFQ}
+        sectors={sectors}
       />
 
       {/* 8. Modal de Upload e Conferência de Documentos */}

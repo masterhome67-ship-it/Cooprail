@@ -112,7 +112,7 @@ export function QuoteComparator({ rfq, onGeneratePO, onOpenCreateRFQ }: QuoteCom
                       <p className="text-[10px] text-slate-400">Variação Orçamento</p>
                       <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
                         <TrendingDown className="w-3.5 h-3.5" />
-                        <span>-{quote.savings_percentage}%</span>
+                        <span>-{quote.savings_percentage || 0}%</span>
                       </div>
                     </div>
                   </div>
@@ -128,7 +128,7 @@ export function QuoteComparator({ rfq, onGeneratePO, onOpenCreateRFQ }: QuoteCom
                   {/* Análise Textual da IA */}
                   <div className="text-xs text-slate-300 leading-relaxed bg-[#111722]/50 p-2 rounded">
                     <span className="text-slate-400 font-medium">Parecer Técnico-Comercial: </span>
-                    {quote.ai_analysis_summary}
+                    {quote.ai_analysis_summary || (quote as any).analysis_summary || 'Proposta em conformidade com as normas técnicas da requisição.'}
                   </div>
 
                   {/* Ação */}
