@@ -146,27 +146,6 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
     }
   };
 
-  const handleQuickLogin = (emailToUse: string, companyToUse: string) => {
-    setLoading(true);
-    setErrorMsg(null);
-    setTimeout(() => {
-      setLoading(false);
-      const accounts = getRegisteredAccounts();
-      const existing = accounts.find((a) => a.email.toLowerCase() === emailToUse.toLowerCase());
-      if (existing) {
-        onLoginSuccess(existing);
-      } else {
-        const created = registerNewAccount({
-          full_name: emailToUse.split('@')[0],
-          email: emailToUse,
-          company_name: companyToUse,
-          role: lang === 'pt' ? 'Diretor de Suprimentos' : 'Head of Procurement',
-        });
-        onLoginSuccess(created);
-      }
-    }, 250);
-  };
-
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
@@ -184,7 +163,6 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
       if (matched) {
         onLoginSuccess(matched);
       } else {
-        // Cria novo acesso corporativo do zero
         const created = registerNewAccount({
           full_name: email.split('@')[0],
           email: email.trim(),
@@ -247,7 +225,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
           </button>
         </div>
 
-        {/* Abas: Entrar vs Nova Conta */}
+        {/* Abas: Entrar vs Criar Conta */}
         <div className="flex border-b border-slate-200 bg-slate-100/60 text-xs font-semibold">
           <button
             onClick={() => {
@@ -274,7 +252,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>{lang === 'pt' ? 'Nova Empresa (Do Zero)' : 'New Company (From Scratch)'}</span>
+            <span>{lang === 'pt' ? 'Criar Conta' : 'Sign Up'}</span>
           </button>
         </div>
 
@@ -302,21 +280,6 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
                 <span>{lang === 'pt' ? 'Continuar com o Google' : 'Continue with Google'}</span>
-              </button>
-
-              {/* Acesso Direto masterhome67@gmail.com */}
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('masterhome67@gmail.com', 'MasterHome 67 Global')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-sky-200 bg-sky-50/70 hover:bg-sky-50 text-xs font-semibold text-[#0369a1] transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-[#0284c7] text-white flex items-center justify-center text-[10px] font-bold">
-                    M
-                  </div>
-                  <span>Entrar como masterhome67@gmail.com</span>
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-[#0284c7]" />
               </button>
 
               <div className="relative flex py-1 items-center">
@@ -384,18 +347,6 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
           {/* TAB 2: SIGN UP */}
           {tab === 'signup' && (
             <div className="space-y-3.5 text-xs">
-              <div className="p-3 rounded-lg bg-sky-50 border border-sky-200 text-[11px] space-y-1">
-                <p className="font-bold flex items-center gap-1.5 text-[#0369a1]">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#0284c7]" />
-                  {lang === 'pt' ? 'Novo Ambiente 100% Exclusivo' : 'Private Isolated Workspace'}
-                </p>
-                <p className="text-slate-600 leading-relaxed">
-                  {lang === 'pt'
-                    ? 'Sua organização começará totalmente do zero (sem cotações ou setores pré-existentes), sem qualquer compartilhamento de dados com outros usuários.'
-                    : 'Your workspace starts completely fresh with zero sample records and zero data sharing with other users.'}
-                </p>
-              </div>
-
               {/* Botão Oficial Google para Cadastro */}
               <button
                 type="button"
@@ -411,21 +362,6 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 <span>{lang === 'pt' ? 'Cadastrar com o Google' : 'Sign Up with Google'}</span>
               </button>
 
-              {/* Cadastro Direto masterhome67@gmail.com */}
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('masterhome67@gmail.com', 'MasterHome 67 Global')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-sky-200 bg-sky-50/70 hover:bg-sky-50 text-xs font-semibold text-[#0369a1] transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-[#0284c7] text-white flex items-center justify-center text-[10px] font-bold">
-                    M
-                  </div>
-                  <span>Iniciar do zero como masterhome67@gmail.com</span>
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-[#0284c7]" />
-              </button>
-
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-200"></div>
                 <span className="flex-shrink mx-3 text-[10px] text-slate-400 uppercase font-mono">
@@ -435,112 +371,110 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
               </div>
 
               <form onSubmit={handleSignUp} className="space-y-3.5 text-xs">
-
-              <div>
-                <label className="text-slate-700 block mb-1 font-semibold">
-                  {lang === 'pt' ? 'Nome Completo' : 'Full Name'} *
-                </label>
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
-                  <User className="w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                    placeholder="Ex: Carlos Oliveira"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1 font-semibold">
-                  {lang === 'pt' ? 'E-mail Corporativo' : 'Corporate Email'} *
-                </label>
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
-                  <Mail className="w-4 h-4 text-slate-400" />
-                  <input
-                    type="email"
-                    required
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                    placeholder="carlos@empresa.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1 font-semibold">
-                  {lang === 'pt' ? 'Nome da Empresa / Organização' : 'Company / Organization Name'} *
-                </label>
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
-                  <Building2 className="w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    value={newCompany}
-                    onChange={(e) => setNewCompany(e.target.value)}
-                    className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                    placeholder="Ex: PetroIndústria Global S.A."
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-slate-700 block mb-1 font-semibold">
-                    {lang === 'pt' ? 'Cargo / Função' : 'Job Title'}
+                    {lang === 'pt' ? 'Nome Completo' : 'Full Name'} *
                   </label>
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
-                    <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
+                    <User className="w-4 h-4 text-slate-400" />
                     <input
                       type="text"
-                      value={newRole}
-                      onChange={(e) => setNewRole(e.target.value)}
+                      required
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
                       className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                      placeholder="Ex: Diretor de Compras"
+                      placeholder="Ex: Carlos Oliveira"
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="text-slate-700 block mb-1 font-semibold">
-                    {lang === 'pt' ? 'Senha' : 'Password'}
+                    {lang === 'pt' ? 'E-mail Corporativo' : 'Corporate Email'} *
                   </label>
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
-                    <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
+                    <Mail className="w-4 h-4 text-slate-400" />
                     <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      type="email"
+                      required
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
                       className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                      placeholder="••••••••"
+                      placeholder="carlos@empresa.com"
                     />
                   </div>
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50 mt-1"
-              >
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>
-                      {lang === 'pt' ? 'Criar Workspace & Iniciar do Zero' : 'Create Workspace (From Scratch)'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        )}
+                <div>
+                  <label className="text-slate-700 block mb-1 font-semibold">
+                    {lang === 'pt' ? 'Nome da Empresa / Organização' : 'Company / Organization Name'} *
+                  </label>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
+                    <Building2 className="w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      value={newCompany}
+                      onChange={(e) => setNewCompany(e.target.value)}
+                      className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
+                      placeholder="Ex: PetroIndústria Global S.A."
+                    />
+                  </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-slate-700 block mb-1 font-semibold">
+                      {lang === 'pt' ? 'Cargo / Função' : 'Job Title'}
+                    </label>
+                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
+                      <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <input
+                        type="text"
+                        value={newRole}
+                        onChange={(e) => setNewRole(e.target.value)}
+                        className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
+                        placeholder="Ex: Diretor de Compras"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-700 block mb-1 font-semibold">
+                      {lang === 'pt' ? 'Senha' : 'Password'}
+                    </label>
+                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
+                      <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50 mt-1"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>
+                        {lang === 'pt' ? 'Criar Conta Corporativa' : 'Create Corporate Account'}
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* Rodapé */}
