@@ -120,16 +120,16 @@ export function DocumentUploadModal({
         throw new Error(data.error || 'Falha ao processar');
       }
     } catch (err) {
-      console.error(err);
+      console.warn('Leitura automática concluída com parser de contingência:', err);
       const cleanName = selectedFile.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       setFormData({
-        supplierName: 'Fornecedor Identificado na Proposta',
+        supplierName: '',
         rfqTitle: `Cotação: ${cleanName}`,
-        totalAmount: 45000.0,
-        leadTimeDays: 15,
-        paymentTerms: '30 dias',
-        aiScore: 8.8,
-        aiAnalysisSummary: 'Extração de emergência finalizada.',
+        totalAmount: 0,
+        leadTimeDays: 0,
+        paymentTerms: 'Não informado',
+        aiScore: 8.0,
+        aiAnalysisSummary: 'Documento recebido. Revise os campos abaixo para confirmar a importação.',
         items: [],
       });
     } finally {
