@@ -402,12 +402,9 @@ function SupplierPortalContent() {
       {/* 1. Header Corporativo Limpo */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 lg:px-12 h-16 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#0284c7] flex items-center justify-center font-bold text-white text-sm shadow-xs">
-            CR
-          </div>
-          <div>
+          <img src="/cooprail-logo.png" alt="COOPRAIL" className="h-7 md:h-8 w-auto object-contain" />
+          <div className="border-l border-slate-200 pl-3">
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm text-slate-900 tracking-tight">COOPRAIL</span>
               <span className="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded border border-slate-200 font-mono">
                 CADERNO TÉCNICO & PORTAL DO FORNECEDOR
               </span>

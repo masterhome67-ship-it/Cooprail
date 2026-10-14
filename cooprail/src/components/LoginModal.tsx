@@ -231,14 +231,12 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
         {/* Topo Off-White */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#0284c7] flex items-center justify-center font-bold text-white text-sm shadow-xs">
-              CR
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">
+            <img src="/cooprail-logo.png" alt="COOPRAIL" className="h-7 w-auto object-contain" />
+            <div className="border-l border-slate-200 pl-2.5">
+              <h3 className="text-xs font-bold text-slate-900">
                 {lang === 'pt' ? 'Acesso ao Portal Corporativo' : 'Enterprise Portal Access'}
               </h3>
-              <p className="text-[11px] text-slate-500">Cooprail Enterprise Procurement</p>
+              <p className="text-[10px] text-slate-500">Enterprise Procurement System</p>
             </div>
           </div>
           <button

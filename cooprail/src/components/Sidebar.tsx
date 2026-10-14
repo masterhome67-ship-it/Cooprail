@@ -56,10 +56,9 @@ export function Sidebar({
       <div>
         <div className="p-4 border-b border-slate-200">
           <div className="flex items-center gap-2.5 mb-3">
-            <img src="/logo_transparent.png" alt="COOPRAIL" className="w-7 h-7 object-contain" />
-            <span className="font-extrabold text-sm tracking-tight text-slate-900">COOPRAIL</span>
+            <img src="/cooprail-logo.png" alt="COOPRAIL" className="h-6 w-auto object-contain" />
             <span className="text-[10px] bg-sky-50 text-[#0284c7] border border-sky-200 font-bold px-1.5 py-0.5 rounded ml-auto">
-              PRO
+              ENTERPRISE
             </span>
           </div>
 
