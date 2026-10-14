@@ -11,7 +11,6 @@ import {
   UserPlus,
   Briefcase,
   User,
-  Sparkles
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { UserProfile } from '@/lib/mockData';
@@ -389,7 +388,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
             <div className="space-y-3.5 text-xs">
               <div className="p-3 rounded-lg bg-sky-50 border border-sky-200 text-[11px] space-y-1">
                 <p className="font-bold flex items-center gap-1.5 text-[#0369a1]">
-                  <Sparkles className="w-3.5 h-3.5 text-[#0284c7]" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#0284c7]" />
                   {lang === 'pt' ? 'Novo Ambiente 100% Exclusivo' : 'Private Isolated Workspace'}
                 </p>
                 <p className="text-slate-600 leading-relaxed">

@@ -5,7 +5,6 @@ import {
   X,
   UploadCloud,
   FileText,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   Building,
@@ -198,24 +197,24 @@ export function DocumentUploadModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="w-full max-w-2xl bg-[#0c1017] border border-[#223043] rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+      <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-800">
         {/* Topo */}
-        <div className="p-4 border-b border-[#1c2636] flex items-center justify-between bg-[#111722]">
+        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded bg-[#0284c7] flex items-center justify-center text-white">
+            <div className="w-8 h-8 rounded-lg bg-[#0284c7] flex items-center justify-center text-white shadow-xs">
               <UploadCloud className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white">
-                Upload & Leitura Real de Documentos (PDF / OCR)
+              <h2 className="text-sm font-bold text-slate-900">
+                Importação & Leitura de Documentos (PDF / Planilhas)
               </h2>
-              <p className="text-xs text-slate-400">
-                O Agente Leitor extrai o texto do PDF e identifica fornecedor, valores e prazos.
+              <p className="text-xs text-slate-500">
+                O sistema processa o documento e identifica fornecedor, valores e prazos.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -229,12 +228,12 @@ export function DocumentUploadModal({
             onDragOver={handleDrag}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-all ${
+            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
               dragActive
-                ? 'border-[#0284c7] bg-[#101b2a]'
+                ? 'border-[#0284c7] bg-sky-50'
                 : selectedFile
-                ? 'border-[#1f3045] bg-[#0e1622]'
-                : 'border-[#223043] bg-[#0d131c] hover:border-[#33465e]'
+                ? 'border-sky-300 bg-sky-50/40'
+                : 'border-slate-300 bg-slate-50 hover:bg-slate-100/70'
             }`}
           >
             <input
@@ -245,16 +244,16 @@ export function DocumentUploadModal({
               onChange={handleFileChange}
             />
 
-            <UploadCloud className="w-8 h-8 text-[#38bdf8] mx-auto mb-2 opacity-80" />
-            <p className="text-xs font-semibold text-slate-200">
-              {selectedFile ? selectedFile.name : 'Clique para selecionar seu PDF ou arraste aqui'}
+            <UploadCloud className="w-8 h-8 text-[#0284c7] mx-auto mb-2 opacity-90" />
+            <p className="text-xs font-bold text-slate-800">
+              {selectedFile ? selectedFile.name : 'Clique para selecionar seu documento ou arraste aqui'}
             </p>
-            <p className="text-[11px] text-slate-400 mt-1">
+            <p className="text-[11px] text-slate-500 mt-1">
               Formatos aceitos: PDF, Planilhas (.csv, .xlsx), Word (.docx) ou Texto (.txt)
             </p>
             {selectedFile && (
-              <p className="text-[10px] text-[#38bdf8] mt-2 font-mono">
-                Tamanho: {(selectedFile.size / 1024).toFixed(1)} KB • Pronto para leitura real
+              <p className="text-[10px] text-[#0284c7] mt-2 font-mono font-semibold">
+                Tamanho: {(selectedFile.size / 1024).toFixed(1)} KB • Arquivo carregado
               </p>
             )}
           </div>
@@ -263,22 +262,22 @@ export function DocumentUploadModal({
           {selectedFile && !formData.supplierName && !isProcessing && (
             <button
               onClick={handleProcessDocument}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold transition-colors shadow-sm cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold transition-colors shadow-xs cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Ler Conteúdo do Arquivo com Agente de OCR</span>
+              <FileText className="w-4 h-4" />
+              <span>Ler Conteúdo do Arquivo e Extrair Dados</span>
             </button>
           )}
 
           {/* Estado de Processamento */}
           {isProcessing && (
-            <div className="p-4 rounded border border-[#0284c7]/40 bg-[#0e1927] space-y-2 text-center">
-              <div className="flex items-center justify-center gap-2 text-white font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#38bdf8] animate-ping" />
-                <span>Lendo e extraindo o texto do documento...</span>
+            <div className="p-4 rounded-xl border border-sky-200 bg-sky-50 space-y-2 text-center">
+              <div className="flex items-center justify-center gap-2 text-slate-800 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] animate-ping" />
+                <span>Processando e conferindo dados do documento...</span>
               </div>
-              <p className="text-[11px] text-slate-300">
-                O Agente Leitor está decodificando o arquivo e localizando fornecedores, valores e prazos.
+              <p className="text-[11px] text-slate-600">
+                Identificando propostas, fornecedores homologados, valores e prazos de entrega.
               </p>
             </div>
           )}
@@ -286,105 +285,105 @@ export function DocumentUploadModal({
           {/* Resultado com Campos Editáveis e Verificação do Texto Real */}
           {formData.supplierName && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-emerald-400 font-semibold">
+              <div className="flex items-center justify-between text-emerald-700 font-bold">
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Documento Lido! Confira ou ajuste os dados extraídos:</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Documento Processado! Confira ou ajuste os dados extraídos:</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-normal">
+                <span className="text-[10px] text-slate-500 font-normal">
                   (Você pode editar qualquer campo abaixo)
                 </span>
               </div>
 
               {/* Formulário de Conferência / Edição */}
-              <div className="grid grid-cols-2 gap-3 bg-[#0b0f17] p-3.5 rounded border border-[#1b2738]">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <div className="col-span-2">
-                  <label className="text-[10px] text-slate-400 block mb-1">Título da Requisição</label>
+                  <label className="text-[10px] text-slate-600 font-bold block mb-1">Título da Requisição</label>
                   <input
                     type="text"
                     value={formData.rfqTitle}
                     onChange={(e) => setFormData({ ...formData, rfqTitle: e.target.value })}
-                    className="w-full bg-[#121924] border border-[#202d3f] rounded px-2.5 py-1.5 text-white text-xs outline-none focus:border-[#0284c7]"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 text-xs outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">Fornecedor Detectado</label>
+                  <label className="text-[10px] text-slate-600 font-bold block mb-1">Fornecedor Detectado</label>
                   <input
                     type="text"
                     value={formData.supplierName}
                     onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
-                    className="w-full bg-[#121924] border border-[#202d3f] rounded px-2.5 py-1.5 text-white text-xs outline-none focus:border-[#0284c7]"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 text-xs outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">Valor Total (R$)</label>
+                  <label className="text-[10px] text-slate-600 font-bold block mb-1">Valor Total (R$)</label>
                   <input
                     type="number"
                     value={formData.totalAmount || ''}
                     onChange={(e) => setFormData({ ...formData, totalAmount: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-[#121924] border border-[#202d3f] rounded px-2.5 py-1.5 text-emerald-400 font-semibold text-xs outline-none focus:border-[#0284c7]"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-emerald-700 font-bold text-xs outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">Prazo de Entrega (dias)</label>
+                  <label className="text-[10px] text-slate-600 font-bold block mb-1">Prazo de Entrega (dias)</label>
                   <input
                     type="number"
                     value={formData.leadTimeDays || ''}
                     onChange={(e) => setFormData({ ...formData, leadTimeDays: parseInt(e.target.value, 10) || 0 })}
-                    className="w-full bg-[#121924] border border-[#202d3f] rounded px-2.5 py-1.5 text-white text-xs outline-none focus:border-[#0284c7]"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 text-xs outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-slate-400 block mb-1">Condições de Pagamento</label>
+                  <label className="text-[10px] text-slate-600 font-bold block mb-1">Condições de Pagamento</label>
                   <input
                     type="text"
                     value={formData.paymentTerms}
                     onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
-                    className="w-full bg-[#121924] border border-[#202d3f] rounded px-2.5 py-1.5 text-white text-xs outline-none focus:border-[#0284c7]"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 text-xs outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
                   />
                 </div>
               </div>
 
-              {/* Parecer do Agente de IA */}
+              {/* Parecer Técnico do Documento */}
               {formData.aiAnalysisSummary && (
-                <div className="p-3 rounded bg-[#0b1422] border border-[#1b3452] space-y-1">
-                  <div className="flex items-center gap-1.5 text-[#38bdf8] font-semibold text-[11px]">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Parecer do Agente Leitor (Auditoria Comercial & Técnica)</span>
+                <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200 space-y-1">
+                  <div className="flex items-center gap-1.5 text-[#0284c7] font-bold text-[11px]">
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Parecer de Auditoria Comercial & Técnica</span>
                   </div>
-                  <p className="text-slate-200 text-[11px] leading-relaxed">
+                  <p className="text-slate-700 text-[11px] leading-relaxed">
                     {formData.aiAnalysisSummary}
                   </p>
                 </div>
               )}
 
-              {/* Tabela de Itens Extraídos pela IA */}
+              {/* Itens Identificados no Documento */}
               {formData.items && formData.items.length > 0 && (
-                <div className="border border-[#1e2a3b] rounded bg-[#0b0f17] p-2.5 space-y-1.5">
-                  <p className="text-[10px] font-semibold text-slate-300">
+                <div className="border border-slate-200 rounded-xl bg-white p-3 space-y-2 shadow-xs">
+                  <p className="text-[11px] font-bold text-slate-800">
                     Itens Identificados no Documento ({formData.items.length} itens)
                   </p>
-                  <div className="max-h-32 overflow-y-auto space-y-1">
+                  <div className="max-h-32 overflow-y-auto space-y-1.5">
                     {formData.items.map((it: any, idx: number) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-1.5 rounded bg-[#101724] border border-[#1a2537] text-[11px]"
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px]"
                       >
                         <div className="truncate flex-1 mr-2">
-                          <p className="font-semibold text-slate-200 truncate">{it.item_name}</p>
+                          <p className="font-bold text-slate-800 truncate">{it.item_name}</p>
                           {it.specification && (
-                            <p className="text-[10px] text-slate-400 truncate">{it.specification}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{it.specification}</p>
                           )}
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-slate-200 font-medium">
+                          <p className="text-slate-700 font-medium">
                             {it.quantity} {it.unit || 'un'}
                           </p>
-                          <p className="text-[10px] text-emerald-400 font-mono">
+                          <p className="text-[10px] text-emerald-700 font-bold font-mono">
                             {Number(it.target_unit_price || it.total_price || 0).toLocaleString('pt-BR', {
                               style: 'currency',
                               currency: 'BRL',
@@ -399,21 +398,21 @@ export function DocumentUploadModal({
 
               {/* Acordeão: Ver Texto Bruto Extraído do Arquivo */}
               {rawText && (
-                <div className="border border-[#1a2536] rounded bg-[#090d14] overflow-hidden">
+                <div className="border border-slate-200 rounded-xl bg-slate-50 overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setShowRawText(!showRawText)}
-                    className="w-full flex items-center justify-between p-2 text-[11px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-between p-2.5 text-[11px] text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-1.5">
-                      <Eye className="w-3.5 h-3.5 text-[#38bdf8]" />
+                    <div className="flex items-center gap-1.5 font-semibold">
+                      <Eye className="w-3.5 h-3.5 text-[#0284c7]" />
                       <span>Ver o texto original lido do seu arquivo ({rawText.length} caracteres)</span>
                     </div>
                     {showRawText ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                   </button>
 
                   {showRawText && (
-                    <div className="p-2.5 border-t border-[#1a2536] max-h-40 overflow-y-auto text-[10px] font-mono text-slate-300 whitespace-pre-wrap leading-relaxed bg-[#0b0e14]">
+                    <div className="p-3 border-t border-slate-200 max-h-40 overflow-y-auto text-[10px] font-mono text-slate-700 whitespace-pre-wrap leading-relaxed bg-white">
                       {rawText}
                     </div>
                   )}
@@ -423,7 +422,7 @@ export function DocumentUploadModal({
               {/* Botão de Importação */}
               <button
                 onClick={handleConfirmImport}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition-colors shadow-sm cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold transition-colors shadow-xs cursor-pointer"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Salvar & Importar Cotação para o Comparador</span>

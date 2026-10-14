@@ -83,29 +83,29 @@ export function SolanaSettlementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-[#0b1018] border border-[#1e2a3c] rounded-xl max-w-xl w-full shadow-2xl overflow-hidden flex flex-col text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+      <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden flex flex-col text-slate-800">
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1b2636] bg-[#0e141f]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded bg-[#0284c7]/20 border border-[#0284c7]/40 flex items-center justify-center text-[#38bdf8]">
+            <div className="w-8 h-8 rounded-lg bg-[#0284c7] flex items-center justify-center text-white shadow-xs">
               <Lock className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold tracking-tight text-white flex items-center gap-2">
+              <h3 className="text-sm font-bold tracking-tight text-slate-900 flex items-center gap-2">
                 Protocolo de Liquidação On-Chain
-                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-[#102438] text-[#38bdf8] border border-[#173e63]">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-50 text-[#0284c7] border border-sky-200">
                   Solana Settlement Layer
                 </span>
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Garantia e custódia financeira via Smart Contract vinculada à Ordem {order.po_code}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded hover:bg-[#182332] transition-colors"
+            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -116,44 +116,44 @@ export function SolanaSettlementModal({
           {step === 'review' && (
             <>
               {/* Card Resumo do Pedido */}
-              <div className="bg-[#0f1622] border border-[#1a2537] rounded-lg p-4 space-y-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
                       Ordem de Fornecimento
                     </span>
-                    <h4 className="text-sm font-semibold text-white mt-0.5">
+                    <h4 className="text-sm font-bold text-slate-900 mt-0.5">
                       {order.supplier_name}
                     </h4>
-                    <p className="text-[11px] text-slate-400">
-                      Identificador: <span className="font-mono text-slate-300">{order.po_code}</span>
+                    <p className="text-[11px] text-slate-500">
+                      Identificador: <span className="font-mono text-slate-800 font-semibold">{order.po_code}</span>
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
                       Total Faturado
                     </span>
-                    <p className="text-base font-bold text-white tracking-tight">
+                    <p className="text-base font-extrabold text-slate-900 tracking-tight">
                       {order.total_amount_brl.toLocaleString('pt-BR', {
                         style: 'currency',
                         currency: 'BRL',
                       })}
                     </p>
-                    <p className="text-[11px] font-mono text-[#38bdf8] font-medium">
+                    <p className="text-[11px] font-mono text-[#0284c7] font-bold">
                       ≈ {usdcAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#1a2536] text-xs">
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200 text-xs">
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Prazo Acordado:</span>
-                    <span className="text-slate-200 font-medium">{order.delivery_days} dias corridos</span>
+                    <span className="text-slate-500 block text-[11px] font-medium">Prazo Acordado:</span>
+                    <span className="text-slate-800 font-semibold">{order.delivery_days} dias corridos</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Modelo de Liquidação:</span>
-                    <span className="text-emerald-400 font-medium flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5" /> Smart Escrow Corporativo
+                    <span className="text-slate-500 block text-[11px] font-medium">Modelo de Liquidação:</span>
+                    <span className="text-emerald-700 font-bold flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Smart Escrow Corporativo
                     </span>
                   </div>
                 </div>
@@ -161,25 +161,25 @@ export function SolanaSettlementModal({
 
               {/* Parâmetros da Transação */}
               <div className="space-y-2">
-                <h5 className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">
+                <h5 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                   Especificações do Bloco de Liquidação
                 </h5>
-                <div className="bg-[#0c121a] border border-[#17212e] rounded-lg p-3 space-y-2 text-xs">
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs shadow-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Rede de Liquidação:</span>
-                    <span className="text-slate-200 font-mono font-medium">Solana Cluster (High-Throughput)</span>
+                    <span className="text-slate-500">Rede de Liquidação:</span>
+                    <span className="text-slate-900 font-mono font-bold">Solana Cluster (High-Throughput)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Taxa Estimada da Rede (Network Fee):</span>
-                    <span className="text-slate-200 font-mono">0.000005 SOL (~$0.0008 USD)</span>
+                    <span className="text-slate-500">Taxa Estimada da Rede (Network Fee):</span>
+                    <span className="text-slate-800 font-mono">0.000005 SOL (~$0.0008 USD)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Tempo de Finalização Estimado:</span>
-                    <span className="text-emerald-400 font-mono">~400 ms (Consenso PoH)</span>
+                    <span className="text-slate-500">Tempo de Finalização Estimado:</span>
+                    <span className="text-emerald-700 font-mono font-bold">~400 ms (Consenso PoH)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Garantia Contratual:</span>
-                    <span className="text-slate-300">Custódia On-Chain com liberação pós-aceite de entrega</span>
+                    <span className="text-slate-500">Garantia Contratual:</span>
+                    <span className="text-slate-800 font-medium">Custódia On-Chain com liberação pós-aceite de entrega</span>
                   </div>
                 </div>
               </div>
@@ -188,13 +188,13 @@ export function SolanaSettlementModal({
               <div className="pt-2">
                 <button
                   onClick={handleStartSettlement}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
                 >
                   <Lock className="w-4 h-4" />
                   <span>Assinar e Liquidar via Tesouraria On-Chain</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
-                <p className="text-[11px] text-center text-slate-400 mt-2">
+                <p className="text-[11px] text-center text-slate-500 mt-2">
                   A assinatura registra o compromisso de custódia diretamente no livro-razão auditável da Solana.
                 </p>
               </div>
@@ -205,12 +205,12 @@ export function SolanaSettlementModal({
             <div className="py-10 text-center space-y-4">
               <div className="w-12 h-12 border-3 border-[#0284c7] border-t-transparent rounded-full animate-spin mx-auto" />
               <div>
-                <h4 className="text-sm font-semibold text-white">Processando Liquidação On-Chain</h4>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                <h4 className="text-sm font-bold text-slate-900">Processando Liquidação On-Chain</h4>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                   Construindo transação criptográfica, alocando conta de garantia (PDA) e registrando assinatura no cluster Solana...
                 </p>
               </div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#101b2b] border border-[#1b2f4a] text-[11px] font-mono text-[#38bdf8]">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 border border-sky-200 text-[11px] font-mono text-[#0284c7] font-bold">
                 <span>Tempo médio de bloco: 400ms</span>
               </div>
             </div>
@@ -218,63 +218,63 @@ export function SolanaSettlementModal({
 
           {step === 'confirmed' && settlementResult && (
             <div className="space-y-4 animate-in fade-in duration-300">
-              <div className="p-4 rounded-lg bg-[#0c1817] border border-emerald-800/60 flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-semibold text-emerald-300">
+                  <h4 className="text-sm font-bold text-emerald-800">
                     Liquidação Confirmada no Registro On-Chain
                   </h4>
-                  <p className="text-xs text-emerald-400/80 mt-0.5 leading-relaxed">
+                  <p className="text-xs text-emerald-700 mt-0.5 leading-relaxed font-medium">
                     A ordem de pagamento foi registrada e custodiada com sucesso. Os fundos estão garantidos via Smart Escrow e vinculados à entrega.
                   </p>
                 </div>
               </div>
 
               {/* Detalhes Técnicos da Transação */}
-              <div className="bg-[#0b1118] border border-[#182332] rounded-lg p-3.5 space-y-2.5 text-xs">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 text-xs">
                 <div>
-                  <span className="text-[10px] uppercase font-mono text-slate-400 block mb-0.5">
+                  <span className="text-[10px] uppercase font-mono text-slate-500 font-bold block mb-1">
                     Assinatura da Transação (Transaction Hash)
                   </span>
-                  <div className="flex items-center gap-2 bg-[#080d14] p-2 rounded border border-[#15202e]">
-                    <span className="font-mono text-[11px] text-[#38bdf8] truncate select-all flex-1">
+                  <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-slate-200 shadow-xs">
+                    <span className="font-mono text-[11px] text-[#0284c7] font-semibold truncate select-all flex-1">
                       {settlementResult.signature}
                     </span>
                     <button
                       onClick={() => handleCopyHash(settlementResult.signature)}
-                      className="text-slate-400 hover:text-white p-1 rounded hover:bg-[#131d2b] transition-colors shrink-0"
+                      className="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
                       title="Copiar Hash"
                     >
-                      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#162232]">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
                   <div>
-                    <span className="text-[10px] text-slate-400 block">Conta Garantida (Escrow PDA):</span>
-                    <span className="font-mono text-[10px] text-slate-300 truncate block">
+                    <span className="text-[10px] text-slate-500 font-medium block">Conta Garantida (Escrow PDA):</span>
+                    <span className="font-mono text-[10px] text-slate-800 font-semibold truncate block">
                       {settlementResult.escrowPda.slice(0, 16)}...
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 block">Slot do Bloco / Confirmação:</span>
-                    <span className="font-mono text-[10px] text-emerald-400 font-semibold block">
+                    <span className="text-[10px] text-slate-500 font-medium block">Slot do Bloco / Confirmação:</span>
+                    <span className="font-mono text-[10px] text-emerald-700 font-bold block">
                       #{settlementResult.slot} (Confirmed)
                     </span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#162232]">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
                   <div>
-                    <span className="text-[10px] text-slate-400 block">Volume Custodiado:</span>
-                    <span className="font-mono text-xs text-white font-bold block">
+                    <span className="text-[10px] text-slate-500 font-medium block">Volume Custodiado:</span>
+                    <span className="font-mono text-xs text-slate-900 font-extrabold block">
                       {settlementResult.tokenAmountUsdc.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 block">Taxa Efetiva de Rede:</span>
-                    <span className="font-mono text-xs text-slate-300 block">
+                    <span className="text-[10px] text-slate-500 font-medium block">Taxa Efetiva de Rede:</span>
+                    <span className="font-mono text-xs text-slate-800 font-semibold block">
                       {settlementResult.networkFeeSol} SOL
                     </span>
                   </div>
@@ -287,14 +287,14 @@ export function SolanaSettlementModal({
                   href={`https://explorer.solana.com/tx/${settlementResult.signature}?cluster=devnet`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-[#141e2b] hover:bg-[#1a283a] border border-[#233348] text-slate-200 text-xs font-semibold transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold transition-colors shadow-xs"
                 >
                   <span>Auditar no Solana Explorer</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
                 </a>
                 <button
                   onClick={onClose}
-                  className="flex-1 py-2.5 px-3 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 px-3 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                 >
                   Concluir e Retornar às Ordens
                 </button>

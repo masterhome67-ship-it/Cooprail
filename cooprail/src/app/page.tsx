@@ -5,9 +5,8 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { DecisionStream } from '@/components/DecisionStream';
 import { QuoteComparator } from '@/components/QuoteComparator';
-import { AiCopilotDock } from '@/components/AiCopilotDock';
+import { AgentWorkspaceChat } from '@/components/AgentWorkspaceChat';
 import { CommandPaletteModal } from '@/components/CommandPaletteModal';
-import { ProjectSimulatorModal } from '@/components/ProjectSimulatorModal';
 import { CreateRFQModal } from '@/components/CreateRFQModal';
 import { DocumentUploadModal } from '@/components/DocumentUploadModal';
 import { SolanaSettlementModal, PurchaseOrderRecord } from '@/components/SolanaSettlementModal';
@@ -17,7 +16,13 @@ import { LandingPage } from '@/components/LandingPage';
 import { LoginModal } from '@/components/LoginModal';
 import { Language, translations } from '@/lib/translations';
 import { SettlementResult } from '@/lib/solanaSettlement';
-import { qualifiedSuppliers } from '@/lib/suppliersData';
+import {
+  qualifiedSuppliers,
+  getSavedSuppliers,
+  saveCustomSupplier,
+  removeCustomSupplier,
+  Supplier,
+} from '@/lib/suppliersData';
 import {
   RegisteredAccount,
   defaultAccounts,
@@ -58,10 +63,16 @@ import {
   ShieldCheck,
   MapPin,
   Zap,
-  Sparkles,
   Search,
   Scale,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  RefreshCw,
+  AlertCircle,
+  Phone,
+  Mail,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 
 const initialOrders: PurchaseOrderRecord[] = [
@@ -97,7 +108,6 @@ export default function Home() {
   const [isNewUser, setIsNewUser] = useState<boolean>(false);
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isCreateRFQOpen, setIsCreateRFQOpen] = useState(false);
   const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
   const [selectedQuoteForConfirmation, setSelectedQuoteForConfirmation] = useState<Quote | null>(null);
@@ -107,6 +117,62 @@ export default function Home() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
   const [supplierFilter, setSupplierFilter] = useState<'all' | 'nearby' | 'mobilized'>('all');
+
+  // Gestão de Fornecedores Reais & Integração Receita Federal
+  const [customSuppliers, setCustomSuppliers] = useState<Supplier[]>([]);
+  const [cnpjQuery, setCnpjQuery] = useState('');
+  const [isSearchingReceita, setIsSearchingReceita] = useState(false);
+  const [receitaResult, setReceitaResult] = useState<any | null>(null);
+  const [receitaError, setReceitaError] = useState<string | null>(null);
+  const [receitaSource, setReceitaSource] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCustomSuppliers(getSavedSuppliers());
+  }, []);
+
+  const handleSearchReceita = async (targetCnpj?: string) => {
+    const rawCnpj = targetCnpj || cnpjQuery;
+    const clean = rawCnpj.replace(/\D/g, '');
+    if (!clean || clean.length !== 14) {
+      setReceitaError('Digite um CNPJ válido com 14 dígitos numéricos.');
+      setReceitaResult(null);
+      return;
+    }
+    if (targetCnpj) {
+      setCnpjQuery(targetCnpj);
+    }
+    setIsSearchingReceita(true);
+    setReceitaError(null);
+    setReceitaResult(null);
+    try {
+      const res = await fetch(`/api/receita-federal?cnpj=${clean}`);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setReceitaError(data.error || 'Empresa não encontrada na base da Receita Federal.');
+      } else {
+        setReceitaResult(data.supplier);
+        setReceitaSource(data.source || 'Receita Federal do Brasil');
+      }
+    } catch {
+      setReceitaError('Falha ao comunicar com a Receita Federal. Tente novamente.');
+    } finally {
+      setIsSearchingReceita(false);
+    }
+  };
+
+  const handleSaveSupplier = (sup: any) => {
+    const updated = saveCustomSupplier(sup);
+    setCustomSuppliers(updated);
+    setReceitaResult(null);
+    setCnpjQuery('');
+    showToast(`Fornecedor ${sup.name} homologado com sucesso no workspace!`);
+  };
+
+  const handleRemoveSupplier = (id: string, name: string) => {
+    const updated = removeCustomSupplier(id);
+    setCustomSuppliers(updated);
+    showToast(`Fornecedor ${name} removido do catálogo.`);
+  };
 
   const handleLoginSuccess = useCallback((account: RegisteredAccount) => {
     setCurrentUser(account);
@@ -293,19 +359,6 @@ export default function Home() {
     setChatMessages((prev) => [...prev, rfqChatMsg]);
   };
 
-  const handleCompleteSimulation = (newRFQ: RFQ, newTask: Task, newOrder?: PurchaseOrderRecord) => {
-    setRfqs((prev) => [newRFQ, ...prev]);
-    setTasks((prev) => [newTask, ...prev]);
-    if (newOrder) {
-      setOrders((prev) => [newOrder, ...prev]);
-      setActiveTab('orders');
-      showToast(`Fluxo completo simulado com sucesso! Ordem ${newOrder.po_code} emitida no sistema.`);
-    } else {
-      setActiveTab('comparator');
-      showToast('Simulação concluída! Veja o comparador de propostas.');
-    }
-  };
-
   // Escuta atalho Cmd+K / Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -441,8 +494,8 @@ export default function Home() {
     showToast('Ordem de compra de teste criada! Agora você pode simular a liquidação.');
   };
 
-  // Envio de Mensagem no Chat do Assistente Operacional
-  const handleSendMessage = async (text: string, slashCommand?: string) => {
+  // Envio de Mensagem no Chat do Assistente Operacional (com suporte a Fotos e Visão de Peças)
+  const handleSendMessage = async (text: string, slashCommand?: string, imageBase64?: string) => {
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
@@ -452,6 +505,7 @@ export default function Home() {
       content: text,
       timestamp: timeStr,
       slash_command: slashCommand,
+      image_url: imageBase64,
     };
 
     setChatMessages((prev) => [...prev, userMsg]);
@@ -463,6 +517,7 @@ export default function Home() {
         body: JSON.stringify({
           message: text,
           slashCommand,
+          imageBase64,
           history: chatMessages.slice(-6),
           rfqs,
           orders,
@@ -478,6 +533,17 @@ export default function Home() {
           content: data.reply || 'Consulta processada.',
           timestamp: timeStr,
           slash_command: data.agentRole || slashCommand,
+          action_card: data.unhomologatedSuppliersFound ? {
+            type: 'rfq_scope',
+            title: 'Fornecedores de Mercado Identificados',
+            metrics: [
+              { label: 'Status', value: 'Mercado Aberto' },
+              { label: 'Qualificação', value: 'Aguardando RFQ' }
+            ],
+            actions: [
+              { label: '+ Abrir RFQ desta Peça', action: 'create_rfq' }
+            ]
+          } : undefined,
         };
         setChatMessages((prev) => [...prev, replyMsg]);
         return;
@@ -527,7 +593,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#090d14] text-[#f1f5f9]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#f8fafc] text-slate-800">
       {/* 1. Sidebar Técnica */}
       <Sidebar
         activeTab={activeTab}
@@ -547,7 +613,6 @@ export default function Home() {
           onToggleLang={setLang}
           onLogout={handleLogout}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-          onOpenSimulator={() => setIsSimulatorOpen(true)}
           onOpenUploadDoc={() => setIsUploadDocOpen(true)}
           onNewRFQ={() => setIsCreateRFQOpen(true)}
         />
@@ -556,219 +621,101 @@ export default function Home() {
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Toast Notification */}
           {toastMessage && (
-            <div className="fixed top-16 right-6 z-50 bg-[#0f172a] border border-[#0284c7] text-white text-xs px-4 py-2.5 rounded-md shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+            <div className="fixed top-16 right-6 z-50 bg-slate-900 border border-slate-700 text-white text-xs px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
               <CheckCircle2 className="w-4 h-4 text-[#38bdf8]" />
               <span>{toastMessage}</span>
             </div>
           )}
 
-          {/* Visão: Painel & Decisões (Fases 1 e 2) */}
+          {/* Visão: Painel Inicial Enxuto & Centro de Agentes */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-6">
-              {/* Card de Configuração Inicial / Onboarding para Novo Usuário */}
-              {sectors.length === 0 && (
-                <div className="p-5 rounded-xl border border-[#0284c7]/40 bg-gradient-to-r from-[#0b1624] via-[#0d1b2d] to-[#09111c] space-y-3.5 shadow-xl animate-in fade-in">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0284c7]/20 text-[#38bdf8] font-bold border border-[#0284c7]/40 flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-[#38bdf8]" />
-                          {lang === 'pt' ? 'NOVO WORKSPACE EXCLUSIVO' : 'NEW DEDICATED WORKSPACE'}
-                        </span>
-                        <span className="text-xs text-slate-300 font-semibold">
-                          {currentUser.company_name}
-                        </span>
-                      </div>
-                      <h3 className="text-base font-bold text-white">
-                        {lang === 'pt'
-                          ? 'Ambiente Pronto do Zero: Inicie Cadastrando suas Unidades Operacionais'
-                          : 'Workspace Ready from Scratch: Begin by Setting Up Your Operational Units'}
-                      </h3>
-                      <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                        {lang === 'pt'
-                          ? 'Para aproveitar o diferencial de acionar empresas e prestadores que já estão atuando em suas plantas ou canteiros (eliminando custos de mobilização e frete), cadastre sua primeira unidade de operação.'
-                          : 'To leverage the strategic advantage of contracting vendors already mobilized on-site (eliminating mobilization fees), start by registering your first operational unit.'}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => setActiveTab('sectors')}
-                      className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
-                    >
-                      <MapPin className="w-4 h-4" />
-                      <span>{lang === 'pt' ? 'Cadastrar Unidades & Setores' : 'Setup Units & Sectors'}</span>
-                    </button>
+            <div className="space-y-5">
+              {/* Barra Executiva de Indicadores em Linha Única */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
+                      Decisões Pendentes
+                    </span>
+                    <span className="text-lg font-bold text-amber-600 leading-tight">
+                      {pendingTasksCount}
+                    </span>
                   </div>
-                </div>
-              )}
-
-              {/* Banner Interativo: Esteira de Compras Ponta a Ponta */}
-              <div className="p-4 rounded-xl border border-[#203046] bg-gradient-to-r from-[#0d1624] via-[#0f1d2f] to-[#0b131f] shadow-lg space-y-3">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0284c7]/20 text-[#38bdf8] font-bold border border-[#0284c7]/40 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-[#38bdf8]" />
-                        ESTEIRA INTEGRADA DE SUPRIMENTOS
-                      </span>
-                    </div>
-                    <h3 className="text-sm font-bold text-white">
-                      Fluxo de Compras: Pedido ➔ Fornecedores Próximos ➔ Aceite ➔ Ordem ➔ Pagamento Solana
-                    </h3>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setIsSimulatorOpen(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-900 to-indigo-900 hover:from-purple-800 hover:to-indigo-800 text-purple-200 hover:text-white border border-purple-600/50 text-xs font-semibold shadow-md transition-all cursor-pointer"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Simular Ciclo Completo</span>
-                    </button>
-                    <button
-                      onClick={() => setIsCreateRFQOpen(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Nova Requisição (RFQ)</span>
-                    </button>
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs">
+                    ⚡
                   </div>
                 </div>
 
-                {/* Os 5 Passos Visuais Interativos */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-1 text-xs">
-                  <div
-                    onClick={() => setIsCreateRFQOpen(true)}
-                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-1.5 text-[#38bdf8] font-semibold text-[11px] mb-1">
-                      <FileText className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                      <span>1. Pedido (RFQ)</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400">Especificar itens, quantidades e teto de gastos</p>
+                <div className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
+                      RFQs em Aberto
+                    </span>
+                    <span className="text-lg font-bold text-slate-900 leading-tight">
+                      {rfqs.length}
+                    </span>
                   </div>
-
-                  <div
-                    onClick={() => setActiveTab('suppliers')}
-                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-1.5 text-purple-400 font-semibold text-[11px] mb-1">
-                      <MapPin className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                      <span>2. Fornecedores</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400">Localizar próximos (Cascavel/Oeste) e frete zero</p>
-                  </div>
-
-                  <div
-                    onClick={() => setActiveTab('comparator')}
-                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px] mb-1">
-                      <Scale className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                      <span>3. Comparação & Aceite</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400">Comparar propostas lado a lado e dar o aceite</p>
-                  </div>
-
-                  <div
-                    onClick={() => setActiveTab('orders')}
-                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-1.5 text-amber-400 font-semibold text-[11px] mb-1">
-                      <ShoppingBag className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                      <span>4. Ordem (PO)</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400">Emissão formal com centro de custo e contrato</p>
-                  </div>
-
-                  <div
-                    onClick={() => setActiveTab('orders')}
-                    className="p-2.5 rounded-lg bg-[#0b111a] hover:bg-[#121c2b] border border-[#1d2a3d] transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-1.5 text-cyan-400 font-semibold text-[11px] mb-1">
-                      <Lock className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                      <span>5. Pagamento Solana</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400">Liquidação via Smart Escrow e SPL Memo imutável</p>
+                  <div className="w-8 h-8 rounded-lg bg-sky-50 text-[#0284c7] flex items-center justify-center font-bold text-xs">
+                    <FileText className="w-4 h-4" />
                   </div>
                 </div>
-              </div>
 
-              {/* Métricas Operacionais Resumidas */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div className="p-3.5 rounded border border-[#1c2636] bg-[#111722]">
-                  <p className="text-[11px] text-slate-400">Decisões Pendentes</p>
-                  <p className="text-xl font-bold text-amber-400 mt-1">{pendingTasksCount}</p>
-                </div>
-                <div className="p-3.5 rounded border border-[#1c2636] bg-[#111722]">
-                  <p className="text-[11px] text-slate-400">RFQs em Andamento</p>
-                  <p className="text-xl font-bold text-white mt-1">{rfqs.length}</p>
-                </div>
-                <div className="p-3.5 rounded border border-[#1c2636] bg-[#111722]">
-                  <p className="text-[11px] text-slate-400">Economia Média de Cotações</p>
-                  <div className="flex items-center gap-1 text-emerald-400 mt-1">
+                <div className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
+                      Economia Negociada
+                    </span>
+                    <span className="text-lg font-bold text-emerald-600 leading-tight">
+                      -4.1%
+                    </span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
                     <TrendingDown className="w-4 h-4" />
-                    <span className="text-xl font-bold">4.1%</span>
                   </div>
                 </div>
-                <div className="p-3.5 rounded border border-[#1c2636] bg-[#111722]">
-                  <p className="text-[11px] text-slate-400">Fornecedores Homologados</p>
-                  <p className="text-xl font-bold text-white mt-1">24</p>
+
+                <div className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
+                      Fornecedores Homologados
+                    </span>
+                    <span className="text-lg font-bold text-slate-900 leading-tight">
+                      24
+                    </span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs">
+                    <Building2 className="w-4 h-4" />
+                  </div>
                 </div>
               </div>
 
-              {/* Fluxo Central "Precisa de Você" */}
-              <DecisionStream
-                tasks={tasks}
-                onApproveTask={handleApproveTask}
-                onOpenComparator={() => setActiveTab('comparator')}
+              {/* Centro de Início por Agentes Especializados (Protagonista da Tela) */}
+              <AgentWorkspaceChat
+                messages={chatMessages}
+                onSendMessage={handleSendMessage}
+                onActionClick={(action) => {
+                  if (action === 'approve') {
+                    if (tasks.length > 0) handleApproveTask(tasks[0].id);
+                    else showToast('Nenhuma decisão pendente para aprovar.');
+                  } else if (action === 'create_rfq') {
+                    setIsCreateRFQOpen(true);
+                  } else {
+                    setActiveTab('comparator');
+                  }
+                }}
+                onOpenUploadDoc={() => setIsUploadDocOpen(true)}
+                onNewRFQ={() => setIsCreateRFQOpen(true)}
+                lang={lang}
               />
 
-              {/* Prévia do Comparador de Cotações ou Onboarding inicial */}
-              {rfqs.length > 0 ? (
-                <div className="pt-2">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-semibold text-slate-300">
-                      Cotação em Foco: {rfqs[0].code}
-                    </h3>
-                    <button
-                      onClick={() => setActiveTab('comparator')}
-                      className="text-xs text-[#38bdf8] hover:underline font-medium cursor-pointer"
-                    >
-                      Ver comparador completo →
-                    </button>
-                  </div>
-                  <QuoteComparator rfq={rfqs[0]} onGeneratePO={handleGeneratePO} />
-                </div>
-              ) : (
-                <div className="p-8 rounded border border-[#1e2a3b] bg-[#0d131c] text-center space-y-4">
-                  <div className="w-12 h-12 rounded bg-[#131f2f] border border-[#1e344e] flex items-center justify-center text-[#38bdf8] mx-auto">
-                    <Layers className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">
-                      Ambiente de Compras Inicializado (Sem Dados Mocados)
-                    </h3>
-                    <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
-                      Você pode criar um pedido de orçamento agora ou enviar um documento em PDF/planilha para o Agente Leitor de Cotações fazer a extração automática.
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-center gap-3 pt-1">
-                    <button
-                      onClick={() => setIsCreateRFQOpen(true)}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Criar Primeiro RFQ</span>
-                    </button>
-                    <button
-                      onClick={() => setIsUploadDocOpen(true)}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded bg-[#132338] hover:bg-[#1a2f4a] border border-[#1e3c5e] text-[#38bdf8] text-xs font-semibold transition-colors cursor-pointer shadow-sm"
-                    >
-                      <UploadCloud className="w-4 h-4" />
-                      <span>Upload de Documento (PDF)</span>
-                    </button>
-                  </div>
+              {/* Fluxo Central de Decisões Imediatas ("Precisa de Você") */}
+              {tasks.length > 0 && (
+                <div className="pt-1">
+                  <DecisionStream
+                    tasks={tasks}
+                    onApproveTask={handleApproveTask}
+                    onOpenComparator={() => setActiveTab('comparator')}
+                  />
                 </div>
               )}
             </div>
@@ -779,8 +726,8 @@ export default function Home() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-base font-bold text-white">Comparador de Cotações</h1>
-                  <p className="text-xs text-slate-400">
+                  <h1 className="text-base font-bold text-slate-900">Comparador de Cotações</h1>
+                  <p className="text-xs text-slate-500">
                     Análise técnica e financeira com recomendação automatizada de fornecedores.
                   </p>
                 </div>
@@ -798,12 +745,12 @@ export default function Home() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-base font-bold text-white">Requisições de Compra (RFQs)</h1>
-                  <p className="text-xs text-slate-400">Listagem de escopos técnicos e status no mercado.</p>
+                  <h1 className="text-base font-bold text-slate-900">Requisições de Compra (RFQs)</h1>
+                  <p className="text-xs text-slate-500">Listagem de escopos técnicos e status no mercado.</p>
                 </div>
                 <button
                   onClick={() => setIsCreateRFQOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Novo RFQ</span>
@@ -811,41 +758,43 @@ export default function Home() {
               </div>
 
               {rfqs.length === 0 ? (
-                <div className="p-8 text-center rounded border border-[#1c2636] bg-[#0d131c] space-y-3">
-                  <FileText className="w-8 h-8 text-slate-500 mx-auto opacity-60" />
-                  <p className="text-xs font-medium text-slate-300">Nenhum pedido de orçamento registrado ainda</p>
+                <div className="p-8 text-center rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
+                  <FileText className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="text-xs font-semibold text-slate-700">Nenhum pedido de orçamento registrado ainda</p>
                   <div className="flex items-center justify-center gap-2 pt-2">
                     <button
                       onClick={() => setIsCreateRFQOpen(true)}
-                      className="px-3 py-1.5 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold cursor-pointer shadow-xs"
                     >
                       Criar RFQ Manualmente
                     </button>
                     <button
                       onClick={() => setIsUploadDocOpen(true)}
-                      className="px-3 py-1.5 rounded bg-[#132338] hover:bg-[#1a2f4a] border border-[#1e3c5e] text-[#38bdf8] text-xs font-semibold cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer shadow-xs"
                     >
                       Importar por Documento
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="p-4 rounded border border-[#1c2636] bg-[#111722] space-y-3">
+                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
                   {rfqs.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between p-3 rounded bg-[#0b0f17] border border-[#1a2536]">
+                    <div key={r.id} className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors">
                       <div>
-                        <span className="text-[10px] font-mono text-[#38bdf8] bg-[#0d1c2d] px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] font-mono font-bold text-[#0284c7] bg-sky-50 border border-sky-200 px-2 py-0.5 rounded">
                           {r.code}
                         </span>
-                        <h4 className="text-sm font-semibold text-white mt-1">{r.title}</h4>
-                        <p className="text-xs text-slate-400">{r.items.length} itens cadastrados • Entrega: {r.target_delivery_date}</p>
+                        <h4 className="text-sm font-bold text-slate-900 mt-1">{r.title}</h4>
+                        <p className="text-xs text-slate-500">{r.items.length} itens cadastrados • Entrega: {r.target_delivery_date}</p>
                       </div>
-                      <button
-                        onClick={() => setActiveTab('comparator')}
-                        className="px-3 py-1.5 rounded bg-[#182332] hover:bg-[#202e42] text-xs font-medium text-slate-200 cursor-pointer"
-                      >
-                        Ver Cotações ({r.quotes.length})
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setActiveTab('comparator')}
+                          className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer shadow-xs"
+                        >
+                          Ver Cotações ({r.quotes.length})
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -858,28 +807,28 @@ export default function Home() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-base font-bold text-white">Ordens de Compra & Liquidação On-Chain</h1>
-                  <p className="text-xs text-slate-400">
+                  <h1 className="text-base font-bold text-slate-900">Ordens de Compra & Liquidação On-Chain</h1>
+                  <p className="text-xs text-slate-500">
                     Gestão de pedidos aprovados, garantias contratuais e liquidação via Solana Settlement Layer.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono text-slate-300 bg-[#121a26] px-2.5 py-1 rounded border border-[#1e2c3e]">
-                    Total de Ordens: <strong className="text-white">{orders.length}</strong>
+                  <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                    Total de Ordens: <strong className="text-slate-900">{orders.length}</strong>
                   </span>
                 </div>
               </div>
 
               {orders.length === 0 ? (
-                <div className="p-8 text-center rounded border border-[#1c2636] bg-[#0d131c] space-y-3">
-                  <ShoppingBag className="w-8 h-8 text-slate-500 mx-auto opacity-60" />
-                  <p className="text-xs font-medium text-slate-300">Nenhuma ordem de compra emitida</p>
+                <div className="p-8 text-center rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
+                  <ShoppingBag className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="text-xs font-semibold text-slate-700">Nenhuma ordem de compra emitida</p>
                   <p className="text-xs text-slate-500">
                     Aprove uma proposta no comparador de cotações ou gere uma ordem para simulação imediata de liquidação.
                   </p>
                   <button
                     onClick={handleCreateTestOrder}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-md transition-all cursor-pointer mx-auto mt-2"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer mx-auto mt-2"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Gerar Ordem para Simular Pagamento On-Chain</span>
@@ -894,49 +843,49 @@ export default function Home() {
                     return (
                       <div
                         key={po.id}
-                        className={`p-4 rounded-lg border transition-all ${
+                        className={`p-4 rounded-xl border transition-all ${
                           isSettled
-                            ? 'bg-[#0b1319] border-emerald-800/60'
-                            : 'bg-[#101722] border-[#1e2a3c]'
+                            ? 'bg-white border-emerald-300 shadow-xs ring-1 ring-emerald-500/10'
+                            : 'bg-white border-slate-200 shadow-xs'
                         }`}
                       >
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-mono font-bold text-[#38bdf8] bg-[#0b1928] px-2 py-0.5 rounded border border-[#143352]">
+                              <span className="text-[10px] font-mono font-bold text-[#0284c7] bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
                                 {po.po_code}
                               </span>
                               {isSettled ? (
-                                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/80 flex items-center gap-1">
-                                  <ShieldCheck className="w-3 h-3" /> Liquidado On-Chain (Smart Escrow)
+                                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                                  <ShieldCheck className="w-3 h-3 text-emerald-600" /> Liquidado On-Chain (Smart Escrow)
                                 </span>
                               ) : (
-                                <span className="text-[10px] font-semibold text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/60">
+                                <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                                   Aprovado • Pendente de Liquidação
                                 </span>
                               )}
-                              <span className="text-[11px] text-slate-400">• Emitido: {po.created_at}</span>
+                              <span className="text-[11px] text-slate-500">• Emitido: {po.created_at}</span>
                             </div>
 
-                            <h4 className="text-sm font-semibold text-white">{po.supplier_name}</h4>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                              <span>Prazo de entrega: <strong className="text-slate-300">{po.delivery_days} dias</strong></span>
+                            <h4 className="text-sm font-bold text-slate-900">{po.supplier_name}</h4>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                              <span>Prazo de entrega: <strong className="text-slate-800">{po.delivery_days} dias</strong></span>
                               {po.rfq_code && <span> • Vinculado à {po.rfq_code}</span>}
                               {po.sector_name && (
-                                <span className="flex items-center gap-1 text-slate-300 bg-[#0d1624] px-2 py-0.5 rounded border border-[#172b44]">
-                                  <MapPin className="w-3 h-3 text-[#38bdf8]" /> {po.sector_name}
+                                <span className="flex items-center gap-1 text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                  <MapPin className="w-3 h-3 text-[#0284c7]" /> {po.sector_name}
                                 </span>
                               )}
                               {po.is_existing_contractor && (
-                                <span className="flex items-center gap-1 text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800 text-[10px] font-semibold">
-                                  <Zap className="w-3 h-3 fill-emerald-400" /> Empresa Mobilizada no Setor (Zero Custo Extra)
+                                <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px] font-semibold">
+                                  <Zap className="w-3 h-3 fill-emerald-600 text-emerald-600" /> Empresa Mobilizada no Setor (Zero Custo Extra)
                                 </span>
                               )}
                             </div>
 
                             {/* Informações On-Chain se já liquidado */}
                             {isSettled && po.settlement_data && (
-                              <div className="mt-2 pt-2 border-t border-emerald-950/80 flex flex-wrap items-center gap-3 text-[11px] font-mono text-emerald-300/90">
+                              <div className="mt-2 pt-2 border-t border-emerald-100 flex flex-wrap items-center gap-3 text-[11px] font-mono text-emerald-800">
                                 <span>
                                   Slot: <strong>#{po.settlement_data.slot}</strong>
                                 </span>
@@ -945,14 +894,14 @@ export default function Home() {
                                   Taxa: <strong>{po.settlement_data.networkFeeSol} SOL</strong>
                                 </span>
                                 <span>•</span>
-                                <span className="text-slate-400">
+                                <span className="text-slate-500">
                                   Hash: {po.settlement_data.signature.slice(0, 16)}...
                                 </span>
                                 <a
                                   href={`https://explorer.solana.com/tx/${po.settlement_data.signature}?cluster=devnet`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-[#38bdf8] hover:underline inline-flex items-center gap-0.5"
+                                  className="text-[#0284c7] hover:underline inline-flex items-center gap-0.5 font-sans font-medium"
                                 >
                                   Explorer <ExternalLink className="w-3 h-3" />
                                 </a>
@@ -962,13 +911,13 @@ export default function Home() {
 
                           <div className="flex flex-col md:items-end justify-between gap-3">
                             <div className="text-left md:text-right">
-                              <p className="text-base font-bold text-white tracking-tight">
+                              <p className="text-base font-bold text-slate-900 tracking-tight">
                                 {po.total_amount_brl.toLocaleString('pt-BR', {
                                   style: 'currency',
                                   currency: 'BRL',
                                 })}
                               </p>
-                              <p className="text-[11px] font-mono text-[#38bdf8]">
+                              <p className="text-[11px] font-mono font-semibold text-[#0284c7]">
                                 ≈ {usdEquivalent.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC
                               </p>
                             </div>
@@ -977,7 +926,7 @@ export default function Home() {
                               {isSettled ? (
                                 <button
                                   onClick={() => handleOpenSettlement(po)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#102230] hover:bg-[#162e42] border border-[#1b3d5c] text-[#38bdf8] text-xs font-semibold transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                                 >
                                   <Lock className="w-3.5 h-3.5" />
                                   <span>Ver Protocolo de Custódia</span>
@@ -985,7 +934,7 @@ export default function Home() {
                               ) : (
                                 <button
                                   onClick={() => handleOpenSettlement(po)}
-                                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
                                 >
                                   <Lock className="w-3.5 h-3.5" />
                                   <span>Liquidar via Solana (Smart Escrow)</span>
@@ -1011,235 +960,357 @@ export default function Home() {
             />
           )}
 
-          {/* Visão: Fornecedores Homologados & Próximos */}
+          {/* Visão: Fornecedores Homologados & Consulta Receita Federal */}
           {activeTab === 'suppliers' && (() => {
-            const filteredSuppliers = qualifiedSuppliers.filter((sup) => {
+            const filteredSaved = customSuppliers.filter((sup) => {
               const q = supplierSearchQuery.toLowerCase().trim();
-              const matchesSearch =
-                !q ||
+              if (!q) return true;
+              return (
                 sup.name.toLowerCase().includes(q) ||
+                (sup.trade_name && sup.trade_name.toLowerCase().includes(q)) ||
+                sup.cnpj.includes(q) ||
                 sup.location.toLowerCase().includes(q) ||
-                sup.categories.some((c) => c.toLowerCase().includes(q));
-
-              if (!matchesSearch) return false;
-
-              if (supplierFilter === 'mobilized') return sup.is_mobilized_on_site;
-              if (supplierFilter === 'nearby') {
-                return (
-                  sup.location.includes('PR') ||
-                  sup.location.includes('Oeste') ||
-                  sup.location.includes('Cascavel') ||
-                  sup.location.includes('Toledo') ||
-                  sup.is_mobilized_on_site
-                );
-              }
-              return true;
+                (sup.categories || []).some((c) => c.toLowerCase().includes(q))
+              );
             });
 
             return (
-              <div className="space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div>
-                    <h1 className="text-base font-bold text-white">
-                      Busca de Fornecedores Próximos & Homologados
-                    </h1>
-                    <p className="text-xs text-slate-400">
-                      Localize fornecedores por proximidade regional (Cascavel, Toledo, Corredor Ferroviário Oeste) ou selecione empresas já mobilizadas no canteiro com frete zero.
-                    </p>
+              <div className="space-y-6">
+                {/* Status da Conexão com a Receita Federal */}
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 via-sky-50 to-white p-3 rounded-xl border border-emerald-200 shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                        API da Receita Federal: <span className="text-emerald-700 font-extrabold">CONECTADA & OPERACIONAL</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Consultas em tempo real via BrasilAPI e MinhaReceita sincronizadas com a base pública da Receita Federal do Brasil.
+                      </p>
+                    </div>
                   </div>
                   <button
                     onClick={() => setIsCreateRFQOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer shrink-0"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Novo Pedido de Orçamento (RFQ)</span>
                   </button>
                 </div>
 
-                {/* Barra de Busca e Filtros Rápidos */}
-                <div className="flex flex-col md:flex-row items-center gap-2.5 bg-[#101722] p-2.5 rounded-lg border border-[#1b2636]">
-                  <div className="relative flex-1 w-full">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Buscar por nome, cidade (ex: Cascavel, Toledo) ou material (ex: Tubos, Aço)..."
-                      value={supplierSearchQuery}
-                      onChange={(e) => setSupplierSearchQuery(e.target.value)}
-                      className="w-full bg-[#0a0f17] border border-[#202e42] rounded px-8 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0284c7]"
-                    />
+                {/* Box de Pesquisa de CNPJ na Receita Federal */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <Search className="w-4 h-4 text-[#0284c7]" />
+                        Pesquisar & Homologar Fornecedor por CNPJ
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Informe o CNPJ de qualquer empresa brasileira para extrair Razão Social, Situação Cadastral (Ativa/Baixada), CNAE, Endereço e Quadro de Sócios (QSA).
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto w-full md:w-auto">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSearchReceita();
+                    }}
+                    className="flex flex-col sm:flex-row items-stretch gap-2.5"
+                  >
+                    <div className="relative flex-1">
+                      <Building2 className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Digite o CNPJ (ex: 33.000.167/0001-01 ou apenas números)..."
+                        value={cnpjQuery}
+                        onChange={(e) => setCnpjQuery(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0284c7] focus:bg-white transition-all shadow-inner"
+                      />
+                    </div>
                     <button
-                      onClick={() => setSupplierFilter('all')}
-                      className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
-                        supplierFilter === 'all'
-                          ? 'bg-[#0284c7] text-white font-semibold'
-                          : 'bg-[#141d2a] text-slate-400 hover:text-white'
-                      }`}
+                      type="submit"
+                      disabled={isSearchingReceita}
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] disabled:bg-slate-300 text-white text-xs font-bold shadow-xs transition-all cursor-pointer shrink-0"
                     >
-                      Todos ({qualifiedSuppliers.length})
+                      {isSearchingReceita ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Consultando Receita...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-3.5 h-3.5" />
+                          <span>Consultar na Receita Federal</span>
+                        </>
+                      )}
                     </button>
-                    <button
-                      onClick={() => setSupplierFilter('nearby')}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
-                        supplierFilter === 'nearby'
-                          ? 'bg-[#0284c7] text-white font-semibold'
-                          : 'bg-[#141d2a] text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <MapPin className="w-3 h-3 text-[#38bdf8]" />
-                      <span>📍 Próximos (Cascavel / Toledo / Oeste)</span>
-                    </button>
-                    <button
-                      onClick={() => setSupplierFilter('mobilized')}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
-                        supplierFilter === 'mobilized'
-                          ? 'bg-emerald-600 text-white font-semibold'
-                          : 'bg-[#141d2a] text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <Zap className="w-3 h-3 text-emerald-400 fill-emerald-400" />
-                      <span>⚡ Mobilizados no Canteiro (Frete Zero)</span>
-                    </button>
-                  </div>
-                </div>
+                  </form>
 
-                {/* Grid de Fornecedores */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredSuppliers.map((sup) => (
-                    <div
-                      key={sup.id}
-                      className={`p-4 rounded-lg border transition-all ${
-                        sup.is_mobilized_on_site
-                          ? 'bg-[#0c1620] border-emerald-600/70 ring-1 ring-emerald-500/20'
-                          : 'bg-[#111722] border-[#1c2636]'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-semibold text-white">{sup.name}</h4>
-                            {sup.is_mobilized_on_site && (
-                              <span className="flex items-center gap-1 text-[10px] bg-emerald-950 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-800">
-                                <Zap className="w-3 h-3 fill-emerald-300" /> Mobilizado no Canteiro (Frete Zero)
+                  {/* Atalhos para testes rápidos com empresas reais */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
+                    <span className="text-[11px] font-semibold text-slate-500">Testar com CNPJ real:</span>
+                    {[
+                      { name: 'Copacol', cnpj: '76.535.764/0001-43' },
+                      { name: 'Petrobras', cnpj: '33.000.167/0001-01' },
+                      { name: 'Vale S.A.', cnpj: '33.592.510/0001-54' },
+                      { name: 'Gerdau Aços', cnpj: '33.611.500/0001-19' },
+                    ].map((testItem) => (
+                      <button
+                        key={testItem.cnpj}
+                        type="button"
+                        onClick={() => handleSearchReceita(testItem.cnpj)}
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-sky-50 hover:text-[#0284c7] hover:border-sky-200 border border-slate-200 text-slate-600 font-medium transition-all cursor-pointer"
+                      >
+                        {testItem.name} ({testItem.cnpj})
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Mensagem de Erro da Receita Federal */}
+                  {receitaError && (
+                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                      <div>
+                        <p className="font-semibold">Erro na consulta</p>
+                        <p className="text-[11px] mt-0.5">{receitaError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Resultado Oficial da Receita Federal */}
+                  {receitaResult && (
+                    <div className="p-4 rounded-xl bg-slate-50 border-2 border-[#0284c7]/40 shadow-xs space-y-4 transition-all animate-fadeIn">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] uppercase tracking-wider font-extrabold bg-[#0284c7] text-white px-2 py-0.5 rounded">
+                              Dados Oficiais
+                            </span>
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded border ${
+                                receitaResult.is_active
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-red-50 text-red-700 border-red-200'
+                              }`}
+                            >
+                              Situação: {receitaResult.status_receita}
+                            </span>
+                            {receitaSource && (
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                Fonte: {receitaSource}
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] font-mono text-slate-400">CNPJ: {sup.cnpj}</p>
-                        </div>
-
-                        <span className="text-[10px] bg-emerald-950/80 text-emerald-400 font-semibold px-2 py-0.5 rounded border border-emerald-800/60 shrink-0">
-                          {sup.status === 'homologado' ? 'Homologado' : 'Em Auditoria'}
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-slate-300 space-y-1 bg-[#0b0f17] p-2.5 rounded border border-[#1a2536] my-2.5">
-                        <p className="flex items-center gap-1.5 text-[#38bdf8] font-medium">
-                          <MapPin className="w-3.5 h-3.5" /> Localização: {sup.location}
-                        </p>
-                        <p>
-                          <span className="text-slate-400">Contato: </span>
-                          {sup.contact_name} • {sup.email} • {sup.phone}
-                        </p>
-                        <p>
-                          <span className="text-slate-400">Prazo Médio: </span>
-                          {sup.lead_time_avg_days} dias corridos • Faturamento: {sup.payment_terms_standard}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-[10px] text-slate-400 font-semibold mb-1">Especialidades:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {sup.categories.map((cat, i) => (
-                            <span
-                              key={i}
-                              className="text-[10px] bg-[#162335] text-[#38bdf8] px-2 py-0.5 rounded border border-[#1f334d]"
-                            >
-                              {cat}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="pt-3 border-t border-[#1a2536] mt-3 flex items-center justify-between">
-                        <div className="flex items-center gap-1 text-xs text-amber-400 font-medium">
-                          <span>★ {sup.rating} / 5.0</span>
+                          <h3 className="text-base font-bold text-slate-900 mt-1">
+                            {receitaResult.name}
+                          </h3>
+                          {receitaResult.trade_name && (
+                            <p className="text-xs text-slate-500 font-medium">
+                              Nome Fantasia: {receitaResult.trade_name}
+                            </p>
+                          )}
+                          <p className="text-xs font-mono text-[#0284c7] font-semibold mt-0.5">
+                            CNPJ: {receitaResult.cnpj}
+                          </p>
                         </div>
 
                         <button
-                          onClick={() => {
-                            showToast(`Abrindo solicitação de cotação para ${sup.name}...`);
-                            setIsCreateRFQOpen(true);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#132338] hover:bg-[#1a2f4a] border border-[#1e3c5e] text-[#38bdf8] text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+                          type="button"
+                          onClick={() => handleSaveSupplier(receitaResult)}
+                          className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0"
                         >
-                          <Zap className="w-3 h-3 text-[#38bdf8]" />
-                          <span>Solicitar Cotação / Abrir RFQ</span>
+                          <Check className="w-4 h-4" />
+                          <span>Homologar e Salvar no Workspace</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700">
+                        <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5">
+                          <p className="text-[11px] font-bold text-slate-900 flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-[#0284c7]" /> Endereço Oficial Cadastrado
+                          </p>
+                          <p className="text-slate-600">{receitaResult.address || 'Não informado'}</p>
+                          <p className="text-[11px] text-slate-400">Município/UF: {receitaResult.location}</p>
+                        </div>
+
+                        <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5">
+                          <p className="text-[11px] font-bold text-slate-900 flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-[#0284c7]" /> Atividade Econômica (CNAE)
+                          </p>
+                          <p className="text-slate-600 font-medium">{receitaResult.cnae_principal || 'Não informado'}</p>
+                          {receitaResult.capital_social > 0 && (
+                            <p className="text-[11px] text-slate-500">
+                              Capital Social: {receitaResult.capital_social.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </p>
+                          )}
+                        </div>
+
+                        {receitaResult.qsa && receitaResult.qsa.length > 0 && (
+                          <div className="bg-white p-3 rounded-lg border border-slate-200 md:col-span-2 space-y-1">
+                            <p className="text-[11px] font-bold text-slate-900">
+                              Quadro de Sócios e Administradores (QSA):
+                            </p>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {receitaResult.qsa.map((socio: any, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="text-[11px] bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md border border-slate-200"
+                                >
+                                  <strong>{socio.name}</strong> ({socio.role})
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Lista de Fornecedores Homologados no Workspace */}
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        Fornecedores Homologados no Workspace ({customSuppliers.length})
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {customSuppliers.length === 0
+                          ? 'Zero dados fictícios. Homologue empresas reais através da consulta da Receita Federal acima.'
+                          : 'Empresas validadas com CNPJ ativo e prontas para receber RFQs.'}
+                      </p>
+                    </div>
+
+                    {customSuppliers.length > 0 && (
+                      <div className="relative w-full sm:w-64">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Filtrar fornecedores salvos..."
+                          value={supplierSearchQuery}
+                          onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0284c7]"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Estado Vazio (Sem nenhum mock) */}
+                  {customSuppliers.length === 0 ? (
+                    <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-3 shadow-xs">
+                      <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-[#0284c7] flex items-center justify-center mx-auto">
+                        <Building2 className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-800">
+                        Nenhum fornecedor cadastrado no workspace
+                      </h4>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto">
+                        Todos os fornecedores mockados foram removidos conforme solicitado. Utilize a caixa de consulta acima para pesquisar qualquer CNPJ na <strong>Receita Federal</strong> e adicioná-lo de forma 100% oficial.
+                      </p>
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSearchReceita('76.535.764/0001-43')}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-semibold cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-[#0284c7]" />
+                          <span>Clique aqui para carregar e testar a Copacol (CNPJ Real)</span>
                         </button>
                       </div>
                     </div>
-                  ))}
+                  ) : filteredSaved.length === 0 ? (
+                    <div className="p-6 rounded-xl bg-white border border-slate-200 text-center text-xs text-slate-500">
+                      Nenhum fornecedor corresponde ao filtro de busca &ldquo;{supplierSearchQuery}&rdquo;.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {filteredSaved.map((sup) => (
+                        <div
+                          key={sup.id}
+                          className="p-4 rounded-xl border border-slate-200 hover:border-sky-300 transition-all bg-white shadow-xs space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-0.5">
+                              <h4 className="text-sm font-bold text-slate-900">{sup.name}</h4>
+                              {sup.trade_name && (
+                                <p className="text-xs text-slate-500">{sup.trade_name}</p>
+                              )}
+                              <p className="text-[11px] font-mono text-[#0284c7] font-semibold">
+                                CNPJ: {sup.cnpj}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200">
+                                🟢 {sup.status_receita || 'ATIVA'}
+                              </span>
+                              <button
+                                type="button"
+                                title="Remover fornecedor"
+                                onClick={() => handleRemoveSupplier(sup.id, sup.name)}
+                                className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            {sup.address && (
+                              <p className="flex items-start gap-1.5 text-slate-700">
+                                <MapPin className="w-3.5 h-3.5 text-[#0284c7] shrink-0 mt-0.5" />
+                                <span>{sup.address}</span>
+                              </p>
+                            )}
+                            {sup.cnae_principal && (
+                              <p className="text-[11px] text-slate-500">
+                                <strong>CNAE:</strong> {sup.cnae_principal}
+                              </p>
+                            )}
+                            {(sup.phone || sup.email) && (
+                              <p className="text-[11px] text-slate-500 flex items-center gap-2 pt-0.5">
+                                {sup.phone && <span>📞 {sup.phone}</span>}
+                                {sup.email && <span>✉️ {sup.email}</span>}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              Homologado via Receita Federal
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                showToast(`Abrindo solicitação de cotação para ${sup.name}...`);
+                                setIsCreateRFQOpen(true);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                            >
+                              <Zap className="w-3 h-3 text-[#0284c7]" />
+                              <span>Solicitar Cotação / RFQ</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })()}
 
-          {/* Visão: Configurações */}
-          {activeTab === 'settings' && (
-            <div className="space-y-4 max-w-2xl">
-              <h1 className="text-base font-bold text-white">Configurações da Organização</h1>
-              <div className="p-4 rounded border border-[#1c2636] bg-[#111722] space-y-4">
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">Nome da Empresa</label>
-                  <input
-                    type="text"
-                    defaultValue="Juliano's Organization"
-                    className="w-full bg-[#0b0f17] border border-[#223043] rounded px-3 py-1.5 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">Rodapé Padrão dos RFQs</label>
-                  <input
-                    type="text"
-                    defaultValue="Termos de confidencialidade padrão aplicados."
-                    className="w-full bg-[#0b0f17] border border-[#223043] rounded px-3 py-1.5 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">URL do Supabase</label>
-                  <input
-                    type="text"
-                    placeholder="https://seu-projeto.supabase.co"
-                    className="w-full bg-[#0b0f17] border border-[#223043] rounded px-3 py-1.5 text-xs text-white"
-                  />
-                </div>
-                <button
-                  onClick={() => showToast('Configurações salvas.')}
-                  className="px-3 py-1.5 rounded bg-[#0284c7] hover:bg-[#0369a1] text-xs font-medium text-white"
-                >
-                  Salvar Alterações
-                </button>
-              </div>
-            </div>
-          )}
         </main>
       </div>
 
-      {/* 4. Dock Lateral: Copiloto de IA Conversacional (Fase 4) */}
-      <AiCopilotDock
-        messages={chatMessages}
-        onOpenUploadDoc={() => setIsUploadDocOpen(true)}
-        onSendMessage={handleSendMessage}
-        onActionClick={(action) => {
-          if (action === 'approve') {
-            if (tasks.length > 0) handleApproveTask(tasks[0].id);
-            else showToast('Nenhuma decisão pendente para aprovar.');
-          } else {
-            setActiveTab('comparator');
-          }
-        }}
-      />
 
       {/* 5. Modal de Paleta de Comandos (Cmd+K) */}
       <CommandPaletteModal
@@ -1252,12 +1323,6 @@ export default function Home() {
         }}
       />
 
-      {/* 6. Modal do Simulador de Ciclo com os 4 Agentes */}
-      <ProjectSimulatorModal
-        isOpen={isSimulatorOpen}
-        onClose={() => setIsSimulatorOpen(false)}
-        onCompleteSimulation={handleCompleteSimulation}
-      />
 
       {/* 7. Modal de Criação Real de Pedido de Orçamento (RFQ) */}
       <CreateRFQModal

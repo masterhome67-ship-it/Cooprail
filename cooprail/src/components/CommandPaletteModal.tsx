@@ -45,10 +45,10 @@ export function CommandPaletteModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-100">
-      <div className="w-full max-w-lg bg-[#0e141f] border border-[#223043] rounded-lg shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-slate-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-100">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden">
         {/* Barra de Busca */}
-        <div className="p-3 border-b border-[#1c2636] flex items-center gap-2.5">
+        <div className="p-3 border-b border-slate-100 flex items-center gap-2.5">
           <Search className="w-4 h-4 text-slate-400" />
           <input
             autoFocus
@@ -56,9 +56,9 @@ export function CommandPaletteModal({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Digite para buscar..."
-            className="flex-1 bg-transparent border-none outline-none text-xs text-white placeholder-slate-400"
+            className="flex-1 bg-transparent border-none outline-none text-xs text-slate-800 placeholder-slate-400"
           />
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -77,13 +77,13 @@ export function CommandPaletteModal({
                     onSelectAction(item.action);
                     onClose();
                   }}
-                  className="w-full flex items-center justify-between p-2 rounded hover:bg-[#16202e] text-left text-xs transition-colors group"
+                  className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 text-left text-xs transition-colors group cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#38bdf8]" />
-                    <span className="text-slate-200 group-hover:text-white">{item.label}</span>
+                    <Icon className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0284c7]" />
+                    <span className="text-slate-700 group-hover:text-slate-900 font-medium">{item.label}</span>
                   </div>
-                  <span className="text-[10px] text-slate-400 bg-[#121924] px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-mono">
                     {item.type}
                   </span>
                 </button>

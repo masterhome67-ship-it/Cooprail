@@ -74,7 +74,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
     }
   ],
   "aiScore": 8.5, // Nota de 0 a 10 de conformidade técnica
-  "aiAnalysisSummary": "Parecer objetivo da IA sobre o documento: conformidade técnica, itens cotados, completude e o que faltou informar."
+  "aiAnalysisSummary": "Parecer técnico e objetivo da auditoria sobre o documento: conformidade técnica, itens cotados, completude e o que faltou informar."
 }`;
 
       const parts: any[] = [{ text: prompt }];
@@ -135,7 +135,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
           validUntil: extractedData.validUntil || 'Não informado',
           items: extractedData.items || [],
           aiScore: Number(extractedData.aiScore) || 8.0,
-          aiAnalysisSummary: extractedData.aiAnalysisSummary || 'Auditoria documental realizada pelo Agente de IA.',
+          aiAnalysisSummary: extractedData.aiAnalysisSummary || 'Auditoria documental realizada pelo Motor de Conformidade Cooprail.',
         },
       });
     }

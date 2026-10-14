@@ -92,6 +92,7 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   slash_command?: string;
+  image_url?: string;
   action_card?: {
     type: 'quote_recommendation' | 'rfq_scope';
     title: string;

@@ -15,7 +15,8 @@ import {
   Banknote,
   Cloud,
   Lock,
-  ChevronRight
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 import { Language, translations } from '@/lib/translations';
 
@@ -88,6 +89,18 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
             </button>
           </div>
 
+          {/* Link direto para o Portal do Fornecedor */}
+          <a
+            href="/portal-parceiro"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-bold transition-all shadow-xs cursor-pointer"
+            title={lang === 'pt' ? 'Área exclusiva para envio de propostas e cotações de fornecedores' : 'Supplier Proposal & Quotation Portal'}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>{lang === 'pt' ? 'Portal do Fornecedor' : 'Supplier Portal'}</span>
+          </a>
+
           <button
             onClick={onOpenLogin}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
@@ -120,6 +133,15 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
             <span>{t.heroCtaPrimary}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
+          <a
+            href="/portal-parceiro"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-[#0284c7] text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            <ExternalLink className="w-4 h-4" />
+            <span>{lang === 'pt' ? 'Portal do Fornecedor (Cotar)' : 'Supplier Portal (Quote)'}</span>
+          </a>
           <a
             href="#comofunciona"
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-bold transition-all shadow-xs"
@@ -357,6 +379,16 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
           <span>• {t.footerRights}</span>
         </div>
         <div className="flex items-center gap-4 text-[11px] text-slate-500">
+          <a
+            href="/portal-parceiro"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#0284c7] font-semibold text-slate-700 flex items-center gap-1 transition-colors"
+          >
+            <ExternalLink className="w-3 h-3 text-[#0284c7]" />
+            <span>{lang === 'pt' ? 'Portal do Fornecedor' : 'Supplier Portal'}</span>
+          </a>
+          <span>•</span>
           <span>{t.footerSub}</span>
           <span>•</span>
           <span className="font-semibold text-[#0284c7]">

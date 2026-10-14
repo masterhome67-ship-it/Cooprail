@@ -53,3 +53,15 @@ CLAUDE.local.md
 .memsearch/
 .claude/worktrees/
 .wallet.json
+
+# Media & Presentation Assets (keep out of git)
+*.webp
+*.mp4
+*.m4v
+ROTEIRO_*.md
+create_real_token.js
+execute_real_settlement.js
+check_wallet.js
+token_info.json
+cooprail_logo*.png
+plugin/
