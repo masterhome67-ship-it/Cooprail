@@ -24,6 +24,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Language, translations } from '@/lib/translations';
+import { WorkflowShowcase } from '@/components/WorkflowShowcase';
 
 interface LandingPageProps {
   lang: Language;
@@ -361,7 +362,10 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
         </div>
       </section>
 
-      {/* 4. Seção: Governança, Segregação de Funções & Frentes de Obra */}
+      {/* 4. Jornada Interativa em 5 Passos (Do canteiro ao pedido) */}
+      <WorkflowShowcase lang={lang} />
+
+      {/* 5. Seção: Governança, Segregação de Funções & Frentes de Obra */}
       <section id="governanca" className="py-24 border-t border-slate-200 px-6 lg:px-12 bg-[#f8fafc]">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
@@ -400,10 +404,10 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
                 </div>
                 <div>
                   <span className="text-xs font-bold text-slate-900 block">
-                    Chamado Técnico Operacional #CH-2026-089
+                    Chamado Técnico Operacional #CH-2026-012
                   </span>
                   <span className="text-[10px] text-slate-500">
-                    Planta Industrial Cafelândia • CC-4500
+                    Planta Industrial & Canteiro Central • CC-2100
                   </span>
                 </div>
               </div>
@@ -416,9 +420,9 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
               <div>
                 <strong className="text-slate-900 block text-[11px] mb-1">Itens Requisitados da Frente de Obra:</strong>
                 <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-700">
-                  <div>• 50 metros — Tubo PEAD 1.000mm (Conforme Memorial Cafelândia)</div>
-                  <div>• 12 unidades — Conexões e Anéis de Vedação EPDM</div>
-                  <div>• 1 lote — Armação CA-50 para Caixas de Passagem</div>
+                  <div>• 60 metros — Tubulação Industrial PEAD DN 800mm PN10</div>
+                  <div>• 16 unidades — Conexões Flangeadas & Juntas de Vedação</div>
+                  <div>• 1 lote — Kit de Montagem & Fixação Estrutural</div>
                 </div>
               </div>
 
