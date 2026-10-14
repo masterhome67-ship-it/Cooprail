@@ -284,38 +284,35 @@ export default function Home() {
 
     const newTask: Task = {
       id: `task-doc-${Date.now()}`,
-      title: `Decisão de Suprimentos: ${newRFQ.title}`,
-      description: `Auditoria de conformidade extraiu a proposta comercial. Fornecedor ${newRFQ.quotes[0]?.supplier_name} com índice de adesão ${newRFQ.quotes[0]?.ai_score}/10.`,
-      status: 'needs_you',
+      title: `Demanda Estruturada: ${newRFQ.title}`,
+      description: `Memorial técnico analisado com ${newRFQ.items.length} itens extraídos. Selecione os fornecedores para disparar a solicitação de cotação.`,
+      status: 'waiting_others',
       priority: 'high',
-      category: 'quote_decision',
-      due_date: 'Hoje',
-      badge_text: 'Proposta Homologada',
+      category: 'rfq_review',
+      due_date: newRFQ.deadline || 'Em 7 dias',
+      badge_text: 'Aguardando Cotações',
     };
     setTasks((prev) => [newTask, ...prev]);
 
-    showToast(`Documento processado! Proposta de ${newRFQ.quotes[0]?.supplier_name} analisada.`);
-    setActiveTab('comparator');
+    showToast(`Projeto estruturado! Demanda ${newRFQ.code} pronta para envio aos fornecedores.`);
+    setActiveTab('rfqs');
 
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const docChatMsg: ChatMessage = {
       id: `msg-doc-${Date.now()}`,
       sender_role: 'assistant',
-      content: `A proposta comercial foi processada e conferida. Identificada cotação de ${newRFQ.quotes[0]?.supplier_name} no montante de ${newRFQ.quotes[0]?.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. A decisão foi registrada na esteira operacional.`,
+      content: `O memorial técnico do projeto "${newRFQ.title}" foi processado e auditado com sucesso pelo Motor de Conformidade Cooprail! Foram identificados ${newRFQ.items.length} itens e especificações técnicas. A demanda está pronta para envio aos fornecedores homologados para recebermos propostas reais.`,
       timestamp: timeStr,
       action_card: {
-        type: 'quote_recommendation',
-        title: `Proposta: ${newRFQ.quotes[0]?.supplier_name}`,
+        type: 'rfq_scope',
+        title: `Demanda Técnica: ${newRFQ.title}`,
         metrics: [
-          {
-            label: 'Valor',
-            value: newRFQ.quotes[0]?.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || '',
-          },
-          { label: 'Prazo', value: `${newRFQ.quotes[0]?.delivery_lead_time_days} dias` },
-          { label: 'Adesão Técnica', value: `${newRFQ.quotes[0]?.ai_score} / 10` },
+          { label: 'Itens', value: `${newRFQ.items.length} itens` },
+          { label: 'Status', value: 'Aguardando Cotações' },
+          { label: 'Prazo', value: newRFQ.deadline || 'Em 7 dias' },
         ],
-        actions: [{ label: 'Emitir Pedido de Compra', action: 'approve' }],
+        actions: [{ label: 'Abrir Painel de Demandas (RFQs)', action: 'open_rfq' }],
       },
     };
     setChatMessages((prev) => [...prev, docChatMsg]);

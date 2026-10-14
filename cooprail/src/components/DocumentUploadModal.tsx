@@ -163,33 +163,19 @@ export function DocumentUploadModal({
             },
           ];
 
+    const cleanName = selectedFile.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+
     const newRFQ: RFQ = {
       id: `rfq-doc-${Date.now()}`,
       code: generatedCode,
-      title: formData.rfqTitle || `Cotação de ${formData.supplierName}`,
-      scope_description: `Documento "${selectedFile.name}" analisado e auditado pelo Agente Leitor de Cotações (Gemini 2.5 Flash).`,
-      status: 'analyzing',
+      title: formData.rfqTitle || `Demanda: ${cleanName}`,
+      scope_description: `Demanda técnica estruturada a partir do memorial "${selectedFile.name}". Especificações e quantitativos auditados pelo Motor de Conformidade Cooprail.`,
+      status: 'draft',
       deadline: 'Em 7 dias',
-      target_delivery_date: `Em ${formData.leadTimeDays} dias`,
-      estimated_budget: formData.totalAmount > 0 ? formData.totalAmount * 1.05 : 50000.0,
+      target_delivery_date: formData.leadTimeDays > 0 ? `Em ${formData.leadTimeDays} dias` : 'A definir com fornecedores',
+      estimated_budget: formData.totalAmount > 0 ? formData.totalAmount : 0,
       items: rfqItems,
-      quotes: [
-        {
-          id: `quote-doc-1`,
-          rfq_id: `rfq-doc-${Date.now()}`,
-          supplier_name: formData.supplierName,
-          supplier_rating: 4.9,
-          total_amount: formData.totalAmount,
-          delivery_lead_time_days: formData.leadTimeDays,
-          payment_terms: formData.paymentTerms,
-          status: 'shortlisted',
-          ai_score: formData.aiScore,
-          savings_percentage: 5.0,
-          ai_analysis_summary:
-            formData.aiAnalysisSummary ||
-            `Proposta extraída de "${selectedFile.name}". Fornecedor: ${formData.supplierName}. Valor total: ${formData.totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}, com prazo de entrega de ${formData.leadTimeDays} dias corridos.`,
-        },
-      ],
+      quotes: [], // ZERO cotações simuladas! A demanda aguarda cotação real dos parceiros.
     };
 
     onDocumentExtracted(newRFQ);
@@ -207,10 +193,10 @@ export function DocumentUploadModal({
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900">
-                Importação & Leitura de Documentos (PDF / Planilhas)
+                Estruturar Demanda a partir de Projeto / Memorial Descritivo
               </h2>
               <p className="text-xs text-slate-500">
-                O sistema processa o documento e identifica fornecedor, valores e prazos.
+                O motor analisa o projeto técnico e extrai quantitativos e itens para envio aos fornecedores.
               </p>
             </div>
           </div>
