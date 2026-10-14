@@ -19,7 +19,7 @@ export const translations = {
       'A Cooprail transforma memoriais descritivos e projetos de engenharia em demandas estruturadas, homologa parceiros em 3 segundos via Receita Federal e conecta suas frentes de obra com máxima agilidade, transparência e economia.',
     heroCtaPrimary: 'Acessar Portal Corporativo',
     heroCtaSecondary: 'Conhecer Funcionalidades',
-    heroCtaSupplier: 'Portal do Fornecedor (Cotar)',
+    heroCtaSupplier: 'Fornecedor',
 
     // Seção de Funcionalidades & Diferenciais Centrais
     diffHeading: 'FUNCIONALIDADES & DIFERENCIAIS DA PLATAFORMA',
@@ -150,7 +150,7 @@ export const translations = {
       'Cooprail transforms complex engineering specifications into structured RFQs, verifies new vendors in 3 seconds via Federal Registry, and connects job sites with peak efficiency and cost savings.',
     heroCtaPrimary: 'Launch Corporate Portal',
     heroCtaSecondary: 'Explore Platform Features',
-    heroCtaSupplier: 'Supplier Portal (Quote)',
+    heroCtaSupplier: 'Supplier',
 
     // Core Features & Differentials
     diffHeading: 'PLATFORM FEATURES & DIFFERENTIATORS',
