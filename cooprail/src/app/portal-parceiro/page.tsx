@@ -549,12 +549,12 @@ function SupplierPortalContent() {
                       Dados Oficiais da Receita Federal
                     </span>
                     {isNewSupplier ? (
-                      <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
-                        Novo Fornecedor • Habilitação Automática
+                      <span className="text-[10px] bg-sky-100 text-[#0284c7] border border-sky-200 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                        ✨ Novo Parceiro • Habilitação Automática
                       </span>
                     ) : (
-                      <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
-                        Fornecedor Cadastrado
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Parceiro Credenciado
                       </span>
                     )}
                   </div>
@@ -565,22 +565,26 @@ function SupplierPortalContent() {
                       <strong className="text-slate-900">{receitaData.name}</strong>
                     </div>
                     <div>
-                      <span className="text-slate-500 text-[10px] block">Situação Cadastral:</span>
+                      <span className="text-slate-500 text-[10px] block">Situação na Receita Federal:</span>
                       <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
-                        <Check className="w-3 h-3" /> {receitaData.status || 'ATIVA'}
+                        <Check className="w-3 h-3" /> {receitaData.status_receita || (receitaData.is_active ? 'ATIVA' : 'REGULAR')}
                       </span>
                     </div>
                     <div className="md:col-span-2">
-                      <span className="text-slate-500 text-[10px] block">Atividade / CNAE:</span>
-                      <span className="text-slate-700 text-[11px]">{receitaData.cnae_main || 'Serviços Técnicos e Obras'}</span>
+                      <span className="text-slate-500 text-[10px] block">Atividade Econômica / CNAE:</span>
+                      <span className="text-slate-700 text-[11px] font-medium">
+                        {receitaData.cnae_principal || receitaData.cnae_main || 'Serviços de Engenharia e Obras'}
+                      </span>
                     </div>
                     <div>
                       <span className="text-slate-500 text-[10px] block">Município / UF:</span>
-                      <span className="text-slate-700 font-medium">{receitaData.city || 'Cafelândia'} - {receitaData.state || 'PR'}</span>
+                      <span className="text-slate-700 font-semibold">
+                        {receitaData.city ? `${receitaData.city} - ${receitaData.state}` : (receitaData.location || 'Brasil')}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-slate-500 text-[10px] block">CNPJ:</span>
-                      <span className="text-slate-700 font-mono">{receitaData.cnpj}</span>
+                      <span className="text-slate-500 text-[10px] block">CNPJ Oficial:</span>
+                      <span className="text-slate-700 font-mono font-semibold">{receitaData.cnpj}</span>
                     </div>
                   </div>
                 </div>

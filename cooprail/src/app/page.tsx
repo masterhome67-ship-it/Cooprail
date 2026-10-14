@@ -75,22 +75,6 @@ import {
   Check,
 } from 'lucide-react';
 
-const initialOrders: PurchaseOrderRecord[] = [
-  {
-    id: 'po-1',
-    po_code: 'PO-2026-089',
-    supplier_name: 'Metalúrgica Ferro & Aço Nacional S.A.',
-    supplier_cnpj: '12.345.678/0001-90',
-    rfq_code: 'RFQ-2026-001',
-    total_amount_brl: 81500.0,
-    delivery_days: 15,
-    created_at: 'Hoje, 10:30',
-    status: 'approved',
-    sector_name: 'Divisão de Infraestrutura & Via Permanente - Corredor Oeste',
-    cost_center: 'CC-4100-VIA',
-    is_existing_contractor: true,
-  },
-];
 
 export default function Home() {
   const [lang, setLang] = useState<Language>('pt');
@@ -434,19 +418,28 @@ export default function Home() {
   // Ação: Setor Operacional abre chamado que cai na triagem de Compras
   const handleCreateTicket = (ticket: OperationalTicketData) => {
     const newTaskId = `task-ticket-${Date.now()}`;
+    const itemsSummary =
+      ticket.items && ticket.items.length > 0
+        ? ticket.items.map((i) => `${i.quantity} ${i.unit} de ${i.name}${i.spec ? ` [${i.spec}]` : ''}`).join('; ')
+        : ticket.item_description || 'Itens diversos';
+    const imagesNote =
+      ticket.images && ticket.images.length > 0
+        ? ` 📸 Contém ${ticket.images.length} imagem(ns) técnica(s) em anexo.`
+        : '';
+
     const newTask: Task = {
       id: newTaskId,
-      title: `Triagem de Chamado: ${ticket.item_description}`,
-      description: `Chamado aberto pelo setor ${ticket.sector_name}. Qtd: ${ticket.quantity}. Justificativa: ${ticket.justification || 'Necessidade de campo'}.${ticket.suggested_contractor ? ` Sugerido verificar empresa já mobilizada no canteiro: ${ticket.suggested_contractor}.` : ''} Setor de compras deve analisar e verificar a melhor estratégia de suprimento.`,
+      title: `Chamado Técnico: ${ticket.title || ticket.item_description || 'Demanda do Canteiro'}`,
+      description: `Chamado aberto pelo setor ${ticket.sector_name}. Itens requisitados: ${itemsSummary}.${imagesNote} Justificativa: ${ticket.justification || 'Necessidade operacional de campo'}.${ticket.suggested_contractor ? ` Fornecedor in-loco sugerido: ${ticket.suggested_contractor}.` : ''} O Setor de Compras deve analisar e abrir cotação formal.`,
       status: 'needs_you',
       priority: ticket.urgency === 'emergencial' ? 'urgent' : ticket.urgency === 'alta' ? 'high' : 'medium',
       category: 'quote_decision',
       due_date: ticket.urgency === 'emergencial' ? 'Imediato (Urgência)' : 'Hoje',
-      badge_text: 'Chamado Operacional',
+      badge_text: 'Chamado de Suprimentos',
     };
 
     setTasks((prev) => [newTask, ...prev]);
-    showToast(`Chamado encaminhado para análise e verificação do Setor de Compras!`);
+    showToast(`Chamado "${ticket.title || 'Demanda'}" encaminhado ao Setor de Compras com sucesso!`);
     setActiveTab('dashboard');
   };
 

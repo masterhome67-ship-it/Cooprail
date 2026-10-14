@@ -136,62 +136,8 @@ export const initialChatMessages: ChatMessage[] = [
   },
 ];
 
-export const initialSectors: Sector[] = [
-  {
-    id: 'sec-1',
-    name: 'Divisão de Infraestrutura & Via Permanente - Corredor Oeste',
-    code: 'SEC-VIA-INFRA-01',
-    location: 'Hub Logístico e Corredor Operacional Ocidental',
-    manager_name: 'Eng. Ricardo Mendes',
-    cost_center: 'CC-4100-VIA',
-    description: 'Manutenção de via permanente, troca de dormentes, nivelamento de lastro e conformidade estrutural.',
-    active_contractors: [
-      {
-        supplier_name: 'Metalúrgica Ferro & Aço Nacional S.A.',
-        contract_code: 'CTR-2026-ENG-04',
-        scope: 'Contrato vigente de manutenção mecânica e soldagem industrial',
-        since_date: '15/01/2026',
-        can_provide_parts: true,
-      },
-    ],
-  },
-  {
-    id: 'sec-2',
-    name: 'Oficinas Centrais & Manutenção de Frota',
-    code: 'SEC-OF-CENTRAL',
-    location: 'Pátio Central Ferroviário - Hangar 3',
-    manager_name: 'Marcos Vinícius Prado',
-    cost_center: 'CC-3200-FROTA',
-    description: 'Revisão geral de truques de locomotivas, rodeiros, eixos, rolamentos e sistemas pneumáticos de freio.',
-    active_contractors: [
-      {
-        supplier_name: 'Trilhos Brasil Fixadores e Componentes Ltda',
-        contract_code: 'CTR-2025-OF-12',
-        scope: 'Fornecimento contínuo e reposição de fixadores e grampos elásticos',
-        since_date: '02/08/2025',
-        can_provide_parts: true,
-      },
-    ],
-  },
-  {
-    id: 'sec-3',
-    name: 'Sinalização, Eletrificação & Subestações',
-    code: 'SEC-ELETRO-SUB',
-    location: 'Trecho Eletrificado Norte / Serra',
-    manager_name: 'Helena Bottino',
-    cost_center: 'CC-5500-ELETRO',
-    description: 'Sistemas de catenária, cabos alimentadores, transformadores e monitoramento de circuitos de via.',
-    active_contractors: [
-      {
-        supplier_name: 'Condutores & Cabos Paulistas Eletro S.A.',
-        contract_code: 'CTR-2026-SUB-08',
-        scope: 'Manutenção preventiva de subestações e rede aérea',
-        since_date: '10/02/2026',
-        can_provide_parts: true,
-      },
-    ],
-  },
-];
+export const initialSectors: Sector[] = [];
+
 
 
 
