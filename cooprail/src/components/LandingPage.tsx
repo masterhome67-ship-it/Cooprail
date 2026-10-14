@@ -19,7 +19,6 @@ import {
   ChevronRight,
   ExternalLink,
   Scale,
-  Sparkles,
   Camera,
   Check,
 } from 'lucide-react';
@@ -45,9 +44,6 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
             alt="COOPRAIL"
             className="h-8 md:h-9 w-auto object-contain"
           />
-          <span className="hidden sm:inline-block text-[10px] bg-sky-50 text-[#0284c7] font-bold px-2 py-0.5 rounded border border-sky-200 tracking-wider">
-            ENTERPRISE
-          </span>
         </div>
 
         {/* Links de Navegação */}
@@ -114,12 +110,6 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
 
       {/* 2. Hero Section com Espaçamentos Generosos */}
       <section className="relative pt-20 pb-24 md:pt-28 md:pb-32 px-6 lg:px-12 max-w-6xl mx-auto text-center space-y-8">
-        {/* Badge Institucional */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-[#0284c7] text-xs font-bold uppercase tracking-wider shadow-2xs">
-          <Sparkles className="w-3.5 h-3.5 text-[#0284c7]" />
-          <span>{t.heroBadge}</span>
-        </div>
-
         {/* Título Principal de Grande Impacto */}
         <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 max-w-4xl mx-auto leading-[1.15]">
           {t.heroTitlePrefix}
@@ -143,16 +133,6 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
           </button>
 
           <a
-            href="/portal-parceiro"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-[#0284c7] text-xs md:text-sm font-bold transition-all shadow-xs cursor-pointer"
-          >
-            <ExternalLink className="w-4 h-4" />
-            <span>{t.heroCtaSupplier}</span>
-          </a>
-
-          <a
             href="#diferenciais"
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs md:text-sm font-bold transition-all shadow-xs"
           >
@@ -166,9 +146,6 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProp
         <div className="max-w-6xl mx-auto space-y-16">
           {/* Cabeçalho da Seção */}
           <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <span className="text-[11px] font-mono font-bold text-[#0284c7] uppercase tracking-wider bg-sky-50 px-3 py-1 rounded-full border border-sky-200 inline-block">
-              {t.diffHeading}
-            </span>
             <h2 className="text-2xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
               {t.diffTitle}
             </h2>
