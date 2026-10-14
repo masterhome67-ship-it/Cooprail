@@ -36,27 +36,19 @@ export function CreateRFQModal({
 }: CreateRFQModalProps) {
   const [title, setTitle] = useState('');
   const [scopeDescription, setScopeDescription] = useState('');
-  const [estimatedBudget, setEstimatedBudget] = useState('45000');
-  const [targetDeliveryDate, setTargetDeliveryDate] = useState('Em 15 dias');
-  const [deadline, setDeadline] = useState('Em 5 dias');
+  const [estimatedBudget, setEstimatedBudget] = useState('');
+  const [targetDeliveryDate, setTargetDeliveryDate] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [selectedSectorId, setSelectedSectorId] = useState<string>(sectors[0]?.id || '');
   const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
   const [items, setItems] = useState<RFQItem[]>([
     {
       id: 'item-1',
-      item_name: 'Tubos PEAD e Conexões de Drenagem Pluvial',
-      specification: 'Tubos corrugados de alta densidade PEAD DN 400mm com juntas elásticas conforme NBR 8890.',
-      quantity: 120,
-      unit: 'metros',
-      target_unit_price: 250.0,
-    },
-    {
-      id: 'item-2',
-      item_name: 'Caixas Coletoras e Grelhas Industriais',
-      specification: 'Caixas de concreto armado pré-moldado com grelhas articuladas de ferro fundido nodular classe D400.',
-      quantity: 15,
+      item_name: '',
+      specification: '',
+      quantity: 1,
       unit: 'unidades',
-      target_unit_price: 1000.0,
+      target_unit_price: 0,
     },
   ]);
 

@@ -976,22 +976,15 @@ export default function Home() {
 
             return (
               <div className="space-y-6">
-                {/* Status da Conexão com a Receita Federal */}
-                <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 via-sky-50 to-white p-3 rounded-xl border border-emerald-200 shadow-2xs">
-                  <div className="flex items-center gap-2.5">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                    </span>
-                    <div>
-                      <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                        API da Receita Federal: <span className="text-emerald-700 font-extrabold">CONECTADA & OPERACIONAL</span>
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        Consultas em tempo real via BrasilAPI e MinhaReceita sincronizadas com a base pública da Receita Federal do Brasil.
-                      </p>
-                    </div>
+                {/* Cabeçalho da Visão */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h1 className="text-base font-bold text-slate-900">
+                      Pesquisa & Homologação de Fornecedores
+                    </h1>
+                    <p className="text-xs text-slate-500">
+                      Consulte qualquer empresa diretamente na base oficial da Receita Federal por CNPJ para homologar e salvar no seu workspace.
+                    </p>
                   </div>
                   <button
                     onClick={() => setIsCreateRFQOpen(true)}
@@ -1008,7 +1001,7 @@ export default function Home() {
                     <div>
                       <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                         <Search className="w-4 h-4 text-[#0284c7]" />
-                        Pesquisar & Homologar Fornecedor por CNPJ
+                        Pesquisar Fornecedor por CNPJ na Receita Federal
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
                         Informe o CNPJ de qualquer empresa brasileira para extrair Razão Social, Situação Cadastral (Ativa/Baixada), CNAE, Endereço e Quadro de Sócios (QSA).
@@ -1051,26 +1044,6 @@ export default function Home() {
                       )}
                     </button>
                   </form>
-
-                  {/* Atalhos para testes rápidos com empresas reais */}
-                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
-                    <span className="text-[11px] font-semibold text-slate-500">Testar com CNPJ real:</span>
-                    {[
-                      { name: 'Copacol', cnpj: '76.535.764/0001-43' },
-                      { name: 'Petrobras', cnpj: '33.000.167/0001-01' },
-                      { name: 'Vale S.A.', cnpj: '33.592.510/0001-54' },
-                      { name: 'Gerdau Aços', cnpj: '33.611.500/0001-19' },
-                    ].map((testItem) => (
-                      <button
-                        key={testItem.cnpj}
-                        type="button"
-                        onClick={() => handleSearchReceita(testItem.cnpj)}
-                        className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-sky-50 hover:text-[#0284c7] hover:border-sky-200 border border-slate-200 text-slate-600 font-medium transition-all cursor-pointer"
-                      >
-                        {testItem.name} ({testItem.cnpj})
-                      </button>
-                    ))}
-                  </div>
 
                   {/* Mensagem de Erro da Receita Federal */}
                   {receitaError && (
@@ -1211,18 +1184,8 @@ export default function Home() {
                         Nenhum fornecedor cadastrado no workspace
                       </h4>
                       <p className="text-xs text-slate-500 max-w-md mx-auto">
-                        Todos os fornecedores mockados foram removidos conforme solicitado. Utilize a caixa de consulta acima para pesquisar qualquer CNPJ na <strong>Receita Federal</strong> e adicioná-lo de forma 100% oficial.
+                        Nenhum fornecedor cadastrado. Digite qualquer CNPJ de empresa brasileira no campo de busca acima para puxar os dados oficiais da <strong>Receita Federal</strong> e homologá-la no seu workspace.
                       </p>
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSearchReceita('76.535.764/0001-43')}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-semibold cursor-pointer"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-[#0284c7]" />
-                          <span>Clique aqui para carregar e testar a Copacol (CNPJ Real)</span>
-                        </button>
-                      </div>
                     </div>
                   ) : filteredSaved.length === 0 ? (
                     <div className="p-6 rounded-xl bg-white border border-slate-200 text-center text-xs text-slate-500">
