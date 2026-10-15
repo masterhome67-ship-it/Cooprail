@@ -32,9 +32,13 @@ import {
   setActiveSessionUserId,
   getRegisteredAccounts,
   registerNewAccount,
-  clearAllWorkspaceData,
   getHelpAgentInitialMessage,
 } from '@/lib/userWorkspace';
+import {
+  detectQuotationIntent,
+  parseQuotationParams,
+  executeAutonomousQuotation,
+} from '@/lib/autonomousQuotation';
 import {
   initialOrganization,
   initialUserProfile,
@@ -348,19 +352,6 @@ export default function Home() {
     setChatMessages((prev) => [...prev, rfqChatMsg]);
   };
 
-  const handleResetWorkspace = () => {
-    if (confirm('Deseja limpar todos os dados de teste (cotações, pedidos e chamados) e recomeçar do zero absoluto?')) {
-      clearAllWorkspaceData(currentUser?.id);
-      setTasks([]);
-      setRfqs([]);
-      setSelectedRfqId('');
-      setOrders([]);
-      setChatMessages([getHelpAgentInitialMessage()]);
-      setActiveTab('dashboard');
-      showToast('Ambiente reiniciado do zero com sucesso! Nenhum pedido ou cotação pendente.');
-    }
-  };
-
   // Escuta atalho Cmd+K / Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -502,6 +493,66 @@ export default function Home() {
 
     setChatMessages((prev) => [...prev, userMsg]);
 
+    // 1. FLUXO AUTÔNOMO: Se a mensagem contiver intenção de cotação / busca de materiais
+    if (detectQuotationIntent(text)) {
+      try {
+        const params = parseQuotationParams(text);
+        const { rfq: newRFQ, quotes, summaryText } = await executeAutonomousQuotation(params);
+
+        // Atualiza a esteira de RFQs e seleciona para o Comparador
+        setRfqs((prev) => [newRFQ, ...prev]);
+        setSelectedRfqId(newRFQ.id);
+
+        // Gera a pendência de decisão imediata na esteira
+        const newTask: Task = {
+          id: `task-auto-${Date.now()}`,
+          title: `Decisão de Compra: ${newRFQ.code} (${quotes.length} Cotações Prontas)`,
+          description: `Cotação autônoma realizada para ${params.quantity} ${params.unit} de ${params.material} em ${params.location}. Melhor oferta: ${quotes[0].supplier_name} (${quotes[0].total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}).`,
+          status: 'needs_you',
+          priority: 'high',
+          category: 'quote_decision',
+          due_date: newRFQ.deadline,
+          badge_text: 'Cotação Pronta',
+        };
+        setTasks((prev) => [newTask, ...prev]);
+
+        // Responde no Chat com Card Interativo de Decisão
+        const bestQuote = quotes[0];
+        const autoReplyMsg: ChatMessage = {
+          id: `ast-${Date.now()}`,
+          sender_role: 'assistant',
+          content: summaryText,
+          timestamp: timeStr,
+          slash_command: '/busca',
+          action_card: {
+            type: 'quote_recommendation',
+            title: `Cotação Autônoma: ${newRFQ.code}`,
+            metrics: [
+              {
+                label: 'Melhor Oferta',
+                value: bestQuote.total_amount.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                }),
+              },
+              { label: 'Fornecedor', value: bestQuote.supplier_name },
+              { label: 'Prazo', value: `${bestQuote.delivery_lead_time_days} dia(s)` },
+            ],
+            actions: [
+              { label: '📊 Abrir no Comparador', action: 'inspect' },
+              { label: '✓ Aprovar Menor Preço', action: 'approve' },
+            ],
+          },
+        };
+
+        setChatMessages((prev) => [...prev, autoReplyMsg]);
+        showToast(`Cotação ${newRFQ.code} coletada com ${quotes.length} fornecedores!`);
+        return;
+      } catch (err) {
+        console.warn('Fallback da cotação autônoma para chat padrão:', err);
+      }
+    }
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -607,7 +658,6 @@ export default function Home() {
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenUploadDoc={() => setIsUploadDocOpen(true)}
           onNewRFQ={() => setIsCreateRFQOpen(true)}
-          onResetWorkspace={handleResetWorkspace}
         />
 
         {/* 3. Área Principal de Trabalho */}

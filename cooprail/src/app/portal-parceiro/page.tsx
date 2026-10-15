@@ -37,6 +37,11 @@ import {
   Check,
 } from 'lucide-react';
 import { getSavedSuppliers } from '@/lib/suppliersData';
+import {
+  getPublishedRFQByCode,
+  getAllPublishedRFQs,
+  PublishedRFQ,
+} from '@/lib/userWorkspace';
 
 // Figuras e desenhos técnicos reais extraídos do Memorial Descritivo da Copacol (Cafelândia/PR)
 const DEFAULT_MEMORIAL_IMAGES = [
@@ -123,7 +128,12 @@ const MEMORIAL_ITEMS_TO_QUOTE = [
 
 function SupplierPortalContent() {
   const searchParams = useSearchParams();
-  const rfqCode = searchParams.get('rfq') || 'RFQ-2026-COPACOL-01';
+  const rawRfqParam = searchParams.get('rfq');
+
+  // Cotação ativa carregada dinamicamente (Umuarama cimento, Copacol ou criada no sistema)
+  const [availableRfqs, setAvailableRfqs] = useState<PublishedRFQ[]>([]);
+  const [selectedRfqCode, setSelectedRfqCode] = useState<string>(rawRfqParam || 'RFQ-2026-UMU-01');
+  const [activeRfq, setActiveRfq] = useState<PublishedRFQ>(() => getPublishedRFQByCode(rawRfqParam));
 
   // Modalidade de Fornecimento Selecionada pelo Parceiro
   const [quoteMode, setQuoteMode] = useState<'turnkey' | 'parts_only' | 'service_only'>('turnkey');
@@ -142,23 +152,17 @@ function SupplierPortalContent() {
   >([
     {
       sender: 'assistant',
-      text: 'Olá! Sou o Assistente Técnico Exclusivo do Memorial Descritivo da Copacol. Estou restrito a responder somente com base nas especificações do memorial de Cafelândia/PR (vala de 370m, caixas com estacas CA-50, tubos PEAD de 1.000mm fornecidos pela contratante, canal 3x3m). Em que posso esclarecer?',
+      text: 'Olá! Sou o Assistente Técnico Especializado da Cooprail. Posso esclarecer especificações dos materiais, exigências de entrega no canteiro, faturamento e conformidade técnica desta cotação. Em que posso ajudar?',
       time: 'Agora',
     },
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (isAiDrawerOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [chatMessages, isChatLoading, isAiDrawerOpen]);
-
   // 1. Estado de Autenticação Segura do Fornecedor & Reconhecimento de Novos Parceiros
   const [isSupplierAuthenticated, setIsSupplierAuthenticated] = useState(false);
   const [authCnpj, setAuthCnpj] = useState('');
-  const [authRfqCode, setAuthRfqCode] = useState(rfqCode);
+  const [authRfqCode, setAuthRfqCode] = useState(() => activeRfq.code);
   const [authContactName, setAuthContactName] = useState('');
   const [authEmail, setAuthEmail] = useState('');
   const [authPhone, setAuthPhone] = useState('');
@@ -166,6 +170,26 @@ function SupplierPortalContent() {
   const [receitaData, setReceitaData] = useState<any | null>(null);
   const [receitaError, setReceitaError] = useState<string | null>(null);
   const [isNewSupplier, setIsNewSupplier] = useState(false);
+
+  useEffect(() => {
+    const list = getAllPublishedRFQs();
+    setAvailableRfqs(list);
+    const resolved = getPublishedRFQByCode(selectedRfqCode);
+    setActiveRfq(resolved);
+    setAuthRfqCode(resolved.code);
+  }, [selectedRfqCode]);
+
+  useEffect(() => {
+    if (rawRfqParam) {
+      setSelectedRfqCode(rawRfqParam);
+    }
+  }, [rawRfqParam]);
+
+  useEffect(() => {
+    if (isAiDrawerOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [isAiDrawerOpen]);
 
   const handleLookupCnpj = async (cnpjInput?: string) => {
     const raw = cnpjInput || authCnpj;
@@ -315,7 +339,9 @@ function SupplierPortalContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `[DÚVIDA TÉCNICA ESTRITA DO MEMORIAL COPACOL CAFELÂNDIA]: ${q}. RESPONDA EXCLUSIVAMENTE COM BASE NO DOCUMENTO FORNECIDO. SE NÃO CONSTOU, DIGA QUE NÃO CONSTA NO DOCUMENTO.`,
+          message: activeRfq.hasCopacolDrawings
+            ? `[DÚVIDA TÉCNICA ESTRITA DO MEMORIAL COPACOL CAFELÂNDIA]: ${q}. RESPONDA EXCLUSIVAMENTE COM BASE NO DOCUMENTO FORNECIDO.`
+            : `[DÚVIDA TÉCNICA DA COTAÇÃO ${activeRfq.code} - ${activeRfq.title}]: ${q}. Escopo: ${activeRfq.scope_description}. Itens: ${JSON.stringify(activeRfq.items)}. Local de Entrega: ${activeRfq.location || 'Umuarama/PR'}.`,
           slashCommand: '/busca',
         }),
       });
@@ -326,7 +352,7 @@ function SupplierPortalContent() {
           ...prev,
           {
             sender: 'assistant',
-            text: data.reply || 'Informação conferida nas especificações do memorial.',
+            text: data.reply || 'Informação conferida nas especificações técnicas.',
             time: timeStr,
           },
         ]);
@@ -338,13 +364,13 @@ function SupplierPortalContent() {
       setIsChatLoading(false);
     }
 
-    // Fallback estrito offline
+    // Fallback estrito offline personalizado
     setTimeout(() => {
-      let reply = 'Conforme o Memorial Técnico da Copacol (Cafelândia/PR), os 740 metros de tubos PEAD DN 1000mm são fornecidos pela CONTRATANTE (Copacol). A CONTRATADA é responsável pela escavação de 370m de vala, 5 caixas de inspeção estruturadas, reaterro com compactação e canal de descida 3x3m até o rio receptor.';
-      if (q.toLowerCase().includes('caixa') || q.toLowerCase().includes('estaca')) {
-        reply = 'As caixas de inspeção medem 2,50m × 1,50m × 2,00m com fundo em concreto de 15cm e bloco dissipador de 70cm apoiado em estaca de 1,50m armada com 4 barras CA-50 3/8" e estribos CA-60 4,2mm a cada 15cm.';
-      } else if (q.toLowerCase().includes('canal') || q.toLowerCase().includes('descida')) {
-        reply = 'O canal de descida revestido em concreto possui dimensões de 3,00m por 3,00m e espessura de 10cm com malha de ferro, conduzindo as águas até o rio receptor.';
+      let reply = '';
+      if (activeRfq.hasCopacolDrawings) {
+        reply = 'Conforme o Memorial Técnico da Copacol (Cafelândia/PR), os 740 metros de tubos PEAD DN 1000mm são fornecidos pela CONTRATANTE (Copacol). A CONTRATADA é responsável pela escavação de 370m de vala, 5 caixas de inspeção estruturadas, reaterro com compactação e canal de descida 3x3m até o rio receptor.';
+      } else {
+        reply = `Para esta solicitação (${activeRfq.title} • ${activeRfq.code}), a entrega é para ${activeRfq.location || 'Umuarama - PR'}. Os materiais devem atender às normas ABNT NBR aplicáveis, sacaria intacta de 50kg, com entrega CIF e descarga no canteiro. A liquidação é garantida pela Cooprail.`;
       }
       setChatMessages((prev) => [...prev, { sender: 'assistant', text: reply, time: timeStr }]);
       setIsChatLoading(false);
@@ -360,7 +386,7 @@ function SupplierPortalContent() {
 
     const newQuoteRecord = {
       id: `quote-${Date.now()}`,
-      rfq_id: rfqCode,
+      rfq_id: activeRfq.code,
       supplier_name: supplierName,
       cnpj: cnpj || 'Não informado',
       contact_name: contactName,
@@ -368,16 +394,16 @@ function SupplierPortalContent() {
       phone: phone,
       supplier_rating: 4.8,
       total_amount: numericAmount || 0,
-      delivery_lead_time_days: Number(leadTimeDays) || 30,
-      payment_terms: 'Liquidação Garantida via Solana Smart Escrow',
+      delivery_lead_time_days: Number(leadTimeDays) || 2,
+      payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto',
       status: 'received',
-      ai_score: aiAuditReport?.score || 9.2,
-      ai_analysis_summary: `Proposta recebida via Portal do Parceiro para o memorial de Cafelândia. Modalidade: ${
+      ai_score: aiAuditReport?.score || 9.4,
+      ai_analysis_summary: `Proposta recebida via Portal do Parceiro para "${activeRfq.title}". Modalidade: ${
         quoteMode === 'turnkey'
-          ? 'Pacote Completo (Peça + Instalação)'
+          ? 'Fornecimento + Descarga'
           : quoteMode === 'parts_only'
-          ? 'Apenas Fornecimento da Peça'
-          : 'Apenas Execução / Mão de Obra no Canteiro'
+          ? 'Apenas Material'
+          : 'Mão de Obra / Serviço'
       }. Documento: ${proposalPdfName || 'Preenchimento Manual'}.`,
       savings_percentage: 5.0,
       quote_mode: quoteMode,
@@ -446,9 +472,22 @@ function SupplierPortalContent() {
             </div>
           )}
 
-          <span className="text-slate-500 font-mono text-[11px] bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
-            Ref: {rfqCode}
-          </span>
+          {/* Seletor de Cotação Ativa */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400 text-[10px] hidden md:inline">Cotação:</span>
+            <select
+              value={selectedRfqCode}
+              onChange={(e) => setSelectedRfqCode(e.target.value)}
+              className="bg-slate-100 hover:bg-slate-200/80 border border-slate-300 text-slate-800 font-mono text-[11px] font-bold px-2 py-1 rounded cursor-pointer outline-none transition-colors max-w-[200px] sm:max-w-[280px] truncate"
+              title="Alternar cotação ativa"
+            >
+              {availableRfqs.map((r) => (
+                <option key={r.code} value={r.code}>
+                  {r.code} • {r.title}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </header>
 
@@ -467,7 +506,7 @@ function SupplierPortalContent() {
                 Credenciamento do Fornecedor
               </h1>
               <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-                Para consultar o <strong>Memorial Técnico Descritivo</strong> e enviar sua proposta comercial para a cotação <strong>{rfqCode}</strong>, identifique sua empresa pelo CNPJ.
+                Para consultar as especificações técnicas e enviar sua proposta comercial para <strong>{activeRfq.title} ({activeRfq.code})</strong>, identifique sua empresa pelo CNPJ.
               </p>
             </div>
 
@@ -475,15 +514,19 @@ function SupplierPortalContent() {
               {/* Campo RFQ */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Código da Demanda / RFQ Vinculada
+                  Demanda / Cotação Selecionada
                 </label>
-                <input
-                  type="text"
-                  value={authRfqCode}
-                  onChange={(e) => setAuthRfqCode(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 cursor-not-allowed"
-                  readOnly
-                />
+                <select
+                  value={selectedRfqCode}
+                  onChange={(e) => setSelectedRfqCode(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#0284c7] cursor-pointer"
+                >
+                  {availableRfqs.map((r) => (
+                    <option key={r.code} value={r.code}>
+                      {r.code} — {r.title}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Campo CNPJ + Consulta Receita */}
@@ -645,162 +688,288 @@ function SupplierPortalContent() {
         /* Conteúdo Principal Liberado para o Parceiro */
         <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
         {/* Banner do Objeto Técnico da Contratação */}
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
-          <span className="text-[10px] font-mono font-bold text-[#0284c7] uppercase tracking-wide bg-sky-50 px-2.5 py-0.5 rounded border border-sky-200">
-            Memorial Técnico Descritivo Oficial
-          </span>
-          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Substituição Parcial de Tubulação da Rede de Águas Pluviais da Indústria de Cafelândia - PR
-          </h1>
-          <p className="text-xs text-slate-600 max-w-4xl leading-relaxed">
-            <strong>COPACOL – Cooperativa Agroindustrial Consolata</strong> • Responsável Técnico: Eng. Civil Kaique de Lucca P. Cotrin (CREA/PR) • Unidade Industrial Cafelândia/PR.
-          </p>
-        </div>
-
-        {/* 2. PLANILHA CLARA DO QUE PRECISA SER COTADO (RESPOSTA DIRETA: O QUE COTAR) */}
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#0284c7]" />
-                Planilha Oficial de Itens & Escopo Técnico a Cotar
-              </h2>
-              <p className="text-xs text-slate-500">
-                Verifique detalhadamente a divisão de responsabilidade entre Contratada e Contratante:
-              </p>
-            </div>
-            <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded border border-slate-200 self-start sm:self-auto">
-              5 Itens de Escopo
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-mono font-bold text-[#0284c7] uppercase tracking-wide bg-sky-50 px-2.5 py-0.5 rounded border border-sky-200">
+              {activeRfq.hasCopacolDrawings ? 'Memorial Técnico Descritivo Oficial' : 'Requisição de Cotação Ativa'} • {activeRfq.code}
+            </span>
+            <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 font-semibold">
+              Recebendo Propostas
             </span>
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] text-slate-600 font-bold uppercase">
-                  <th className="py-2.5 px-3 w-12 text-center">Item</th>
-                  <th className="py-2.5 px-3">Descrição da Atividade</th>
-                  <th className="py-2.5 px-3">Quantitativo</th>
-                  <th className="py-2.5 px-3">Dimensões / Seção</th>
-                  <th className="py-2.5 px-3">Fornecimento de Materiais</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800">
-                {MEMORIAL_ITEMS_TO_QUOTE.map((it) => (
-                  <tr key={it.num} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-3 text-center font-mono font-bold text-slate-500">{it.num}</td>
-                    <td className="py-3 px-3">
-                      <p className="font-bold text-slate-900">{it.item}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{it.detalhes}</p>
-                    </td>
-                    <td className="py-3 px-3 font-semibold font-mono text-slate-700 whitespace-nowrap">{it.quantity}</td>
-                    <td className="py-3 px-3 text-slate-600 font-mono text-[11px] whitespace-nowrap">{it.dimensao}</td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
-                          it.responsabilidade === 'contratante'
-                            ? 'bg-amber-50 text-amber-800 border-amber-300'
-                            : 'bg-sky-50 text-[#0284c7] border-sky-200'
-                        }`}
-                      >
-                        {it.responsabilidadeText}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+            {activeRfq.title}
+          </h1>
+          <p className="text-xs text-slate-600 max-w-4xl leading-relaxed">
+            {activeRfq.scope_description}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs border-t border-slate-100">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">Local de Entrega / Região</span>
+              <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                <MapPin className="w-3.5 h-3.5 text-[#0284c7]" />
+                {activeRfq.location || 'Umuarama - PR'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">Prazo para Envio de Propostas</span>
+              <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                {activeRfq.deadline || 'Em 24 horas'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">Previsão de Entrega Desejada</span>
+              <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                <PackageCheck className="w-3.5 h-3.5 text-emerald-600" />
+                {activeRfq.target_delivery_date || 'Até 2 dias úteis'}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* 3. GALERIA AMPLIADA DE DESENHOS TÉCNICOS COM ZOOM EM TELA CHEIA */}
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
+        {/* 2. PLANILHA CLARA DO QUE PRECISA SER COTADO */}
+        {activeRfq.hasCopacolDrawings ? (
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#0284c7]" />
+                  Planilha Oficial de Itens & Escopo Técnico a Cotar
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Verifique detalhadamente a divisão de responsabilidade entre Contratada e Contratante:
+                </p>
+              </div>
+              <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded border border-slate-200 self-start sm:self-auto">
+                5 Itens de Escopo
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] text-slate-600 font-bold uppercase">
+                    <th className="py-2.5 px-3 w-12 text-center">Item</th>
+                    <th className="py-2.5 px-3">Descrição da Atividade</th>
+                    <th className="py-2.5 px-3">Quantitativo</th>
+                    <th className="py-2.5 px-3">Dimensões / Seção</th>
+                    <th className="py-2.5 px-3">Fornecimento de Materiais</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-800">
+                  {MEMORIAL_ITEMS_TO_QUOTE.map((it) => (
+                    <tr key={it.num} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3 px-3 text-center font-mono font-bold text-slate-500">{it.num}</td>
+                      <td className="py-3 px-3">
+                        <p className="font-bold text-slate-900">{it.item}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{it.detalhes}</p>
+                      </td>
+                      <td className="py-3 px-3 font-semibold font-mono text-slate-700 whitespace-nowrap">{it.quantity}</td>
+                      <td className="py-3 px-3 text-slate-600 font-mono text-[11px] whitespace-nowrap">{it.dimensao}</td>
+                      <td className="py-3 px-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            it.responsabilidade === 'contratante'
+                              ? 'bg-amber-50 text-amber-800 border-amber-300'
+                              : 'bg-sky-50 text-[#0284c7] border-sky-200'
+                          }`}
+                        >
+                          {it.responsabilidadeText}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#0284c7]" />
+                  Planilha Oficial de Itens & Insumos Requisitados
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Itens e quantidades requeridas para fornecimento imediato em {activeRfq.location || 'Umuarama/PR'}:
+                </p>
+              </div>
+              <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded border border-slate-200 self-start sm:self-auto">
+                {activeRfq.items?.length || 1} {activeRfq.items?.length === 1 ? 'Item Solicitado' : 'Itens Solicitados'}
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] text-slate-600 font-bold uppercase">
+                    <th className="py-2.5 px-3 w-12 text-center">Item</th>
+                    <th className="py-2.5 px-3">Descrição do Material / Insumo</th>
+                    <th className="py-2.5 px-3">Quantitativo Solicitado</th>
+                    <th className="py-2.5 px-3">Norma / Especificação Técnica</th>
+                    <th className="py-2.5 px-3">Modalidade de Entrega</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-800">
+                  {(activeRfq.items || []).map((it, idx) => (
+                    <tr key={it.id || idx} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3 px-3 text-center font-mono font-bold text-slate-500">
+                        {String(idx + 1).padStart(2, '0')}
+                      </td>
+                      <td className="py-3 px-3">
+                        <p className="font-bold text-slate-900">{it.item_name}</p>
+                      </td>
+                      <td className="py-3 px-3 font-semibold font-mono text-slate-800 whitespace-nowrap">
+                        {it.quantity} {it.unit}
+                      </td>
+                      <td className="py-3 px-3 text-slate-600 text-[11px]">
+                        {it.specification || 'Padrão industrial ABNT'}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border bg-sky-50 text-[#0284c7] border-sky-200">
+                          Fornecido pela Proponente (CIF {activeRfq.location || 'Umuarama/PR'})
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 3. SEÇÃO TÉCNICA (DESENHOS PARA COPACOL OU DIRETRIZES DE QUALIDADE PARA DEMAIS) */}
+        {activeRfq.hasCopacolDrawings ? (
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-[#0284c7]" />
+                  Plantas, Seções Estruturais & Croquis Técnicos do Memorial
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Clique na imagem principal para ampliar e conferir cotas, bitolas de aço e alinhamentos:
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setZoomLevel(1);
+                  setIsLightboxOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-semibold cursor-pointer shadow-2xs self-start sm:self-auto"
+              >
+                <Maximize2 className="w-3.5 h-3.5 text-[#0284c7]" />
+                <span>Ampliar em Tela Cheia</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              {/* Imagem Ampliada em Grande Destaque (8 colunas) */}
+              <div
+                onClick={() => {
+                  setZoomLevel(1);
+                  setIsLightboxOpen(true);
+                }}
+                className="lg:col-span-8 relative rounded-xl overflow-hidden border border-slate-200 bg-white min-h-[460px] flex items-center justify-center group shadow-xs cursor-zoom-in"
+                title="Clique para abrir o visualizador com zoom"
+              >
+                <img
+                  src={activeImg.url}
+                  alt={activeImg.title}
+                  className="w-full h-auto max-h-[560px] object-contain p-3 transition-transform duration-200 group-hover:scale-101"
+                />
+                <div className="absolute top-3 right-3 bg-slate-900/75 hover:bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1 rounded-md flex items-center gap-1.5 backdrop-blur-xs transition-colors shadow-sm">
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Clique para Zoom</span>
+                </div>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/85 via-slate-950/50 to-transparent p-4 text-white">
+                  <span className="text-[10px] font-mono bg-[#0284c7] text-white px-2 py-0.5 rounded w-fit font-bold mb-1 inline-block">
+                    {activeImg.tag}
+                  </span>
+                  <h3 className="text-sm font-bold">{activeImg.title}</h3>
+                  <p className="text-xs text-slate-200 leading-snug">{activeImg.description}</p>
+                </div>
+              </div>
+
+              {/* Miniaturas Clicáveis para Seleção (4 colunas) */}
+              <div className="lg:col-span-4 space-y-2 flex flex-col justify-between max-h-[560px] overflow-y-auto pr-1">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                  Selecione o Desenho / Figura:
+                </span>
+                {DEFAULT_MEMORIAL_IMAGES.map((img, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={`p-2.5 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
+                      activeImageIndex === idx
+                        ? 'bg-sky-50 border-sky-400 ring-1 ring-sky-300'
+                        : 'bg-white hover:bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <img
+                      src={img.url}
+                      alt={img.title}
+                      className="w-16 h-14 object-contain rounded-lg shrink-0 border border-slate-200 bg-white"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[9px] font-mono font-bold text-[#0284c7] block">
+                        {img.tag}
+                      </span>
+                      <h4 className="text-xs font-bold text-slate-800 truncate">{img.title}</h4>
+                      <p className="text-[10px] text-slate-500 line-clamp-1">{img.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+            <div className="border-b border-slate-100 pb-3">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Eye className="w-4 h-4 text-[#0284c7]" />
-                Plantas, Seções Estruturais & Croquis Técnicos do Memorial
+                <ShieldCheck className="w-4 h-4 text-[#0284c7]" />
+                Diretrizes Técnicas de Qualidade & Entrega em {activeRfq.location || 'Umuarama/PR'}
               </h2>
               <p className="text-xs text-slate-500">
-                Clique na imagem principal para ampliar e conferir cotas, bitolas de aço e alinhamentos:
+                Critérios de conformidade exigidos pela Cooprail para homologação, faturamento e liquidação financeira:
               </p>
             </div>
-            <button
-              onClick={() => {
-                setZoomLevel(1);
-                setIsLightboxOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-semibold cursor-pointer shadow-2xs self-start sm:self-auto"
-            >
-              <Maximize2 className="w-3.5 h-3.5 text-[#0284c7]" />
-              <span>Ampliar em Tela Cheia</span>
-            </button>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-            {/* Imagem Ampliada em Grande Destaque (8 colunas) */}
-            <div
-              onClick={() => {
-                setZoomLevel(1);
-                setIsLightboxOpen(true);
-              }}
-              className="lg:col-span-8 relative rounded-xl overflow-hidden border border-slate-200 bg-white min-h-[460px] flex items-center justify-center group shadow-xs cursor-zoom-in"
-              title="Clique para abrir o visualizador com zoom"
-            >
-              <img
-                src={activeImg.url}
-                alt={activeImg.title}
-                className="w-full h-auto max-h-[560px] object-contain p-3 transition-transform duration-200 group-hover:scale-101"
-              />
-              <div className="absolute top-3 right-3 bg-slate-900/75 hover:bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1 rounded-md flex items-center gap-1.5 backdrop-blur-xs transition-colors shadow-sm">
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span>Clique para Zoom</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                <div className="w-8 h-8 rounded-lg bg-sky-100 text-[#0284c7] flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-bold text-slate-900">Norma ABNT & Sacaria</h3>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Insumos em conformidade com as normas ABNT NBR aplicáveis (NBR 16697). Sacaria intacta, sem umidade, empedramento ou rasgos, com lote e validade visíveis.
+                </p>
               </div>
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/85 via-slate-950/50 to-transparent p-4 text-white">
-                <span className="text-[10px] font-mono bg-[#0284c7] text-white px-2 py-0.5 rounded w-fit font-bold mb-1 inline-block">
-                  {activeImg.tag}
-                </span>
-                <h3 className="text-sm font-bold">
-                  {activeImg.title}
-                </h3>
-                <p className="text-xs text-slate-200 leading-snug">
-                  {activeImg.description}
+
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-bold text-slate-900">Descarga no Local (CIF)</h3>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Entrega no canteiro de obras de {activeRfq.location || 'Umuarama - PR'}. Carga paletizada com filme protetor ou descarregamento manual direto no depósito.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <Coins className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-bold text-slate-900">Liquidação Garantida</h3>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Faturamento com NF eletrônica. Liquidação assegurada via Smart Escrow Solana ou depósito corporativo 30 dias após conferência de recebimento físico.
                 </p>
               </div>
             </div>
-
-            {/* Miniaturas Clicáveis para Seleção (4 colunas) */}
-            <div className="lg:col-span-4 space-y-2 flex flex-col justify-between max-h-[560px] overflow-y-auto pr-1">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                Selecione o Desenho / Figura:
-              </span>
-              {DEFAULT_MEMORIAL_IMAGES.map((img, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => setActiveImageIndex(idx)}
-                  className={`p-2.5 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
-                    activeImageIndex === idx
-                      ? 'bg-sky-50 border-sky-400 ring-1 ring-sky-300'
-                      : 'bg-white hover:bg-slate-50 border-slate-200'
-                  }`}
-                >
-                  <img
-                    src={img.url}
-                    alt={img.title}
-                    className="w-16 h-14 object-contain rounded-lg shrink-0 border border-slate-200 bg-white"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[9px] font-mono font-bold text-[#0284c7] block">
-                      {img.tag}
-                    </span>
-                    <h4 className="text-xs font-bold text-slate-800 truncate">{img.title}</h4>
-                    <p className="text-[10px] text-slate-500 line-clamp-1">{img.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
-        </div>
+        )}
 
         {/* 4. FORMULÁRIO DE SUBMISSÃO DA PROPOSTA COMERCIAL */}
         <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-6">

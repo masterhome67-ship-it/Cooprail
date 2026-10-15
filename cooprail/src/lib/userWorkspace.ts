@@ -113,15 +113,27 @@ function initializeCleanWorkspace(user: RegisteredAccount): UserWorkspaceData {
 
   const initialWelcomeMessage = getHelpAgentInitialMessage();
 
+  const defaultUmuRFQ = DEFAULT_PUBLISHED_RFQS[0];
+  const initialTask: Task = {
+    id: `task-rfq-init-umu`,
+    title: `Cotação Ativa: Propostas para ${defaultUmuRFQ.code}`,
+    description: `Requisição de compra aberta para 50 sacos de cimento em Umuarama/PR. Envie o link do Portal do Parceiro aos fornecedores ou avalie cotações de mercado.`,
+    status: 'needs_you',
+    priority: 'high',
+    category: 'quote_decision',
+    due_date: defaultUmuRFQ.deadline,
+    badge_text: 'Cotação em Andamento',
+  };
+
   const cleanData: UserWorkspaceData = {
     organization: cleanOrg,
     user: user,
-    tasks: [],
-    rfqs: [],
+    tasks: [initialTask],
+    rfqs: [defaultUmuRFQ],
     orders: [],
     sectors: [],
     chatMessages: [initialWelcomeMessage],
-    isNewUser: true,
+    isNewUser: false,
   };
 
   if (typeof window !== 'undefined') {
@@ -138,11 +150,11 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
       organization: { ...initialOrganization, name: user.company_name },
       user,
       tasks: [],
-      rfqs: [],
+      rfqs: [DEFAULT_PUBLISHED_RFQS[0]],
       orders: [],
       sectors: [],
       chatMessages: [getHelpAgentInitialMessage()],
-      isNewUser: true,
+      isNewUser: false,
     };
   }
 
@@ -152,6 +164,18 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
   if (raw) {
     try {
       const parsed: UserWorkspaceData = JSON.parse(raw);
+      // Se não tiver a RFQ de Umuarama no workspace, insere
+      if (!parsed.rfqs || parsed.rfqs.length === 0) {
+        parsed.rfqs = [DEFAULT_PUBLISHED_RFQS[0]];
+        localStorage.setItem(key, JSON.stringify(parsed));
+      } else {
+        const hasUmu = parsed.rfqs.some((r) => r.code === DEFAULT_PUBLISHED_RFQS[0].code);
+        if (!hasUmu) {
+          parsed.rfqs.push(DEFAULT_PUBLISHED_RFQS[0]);
+          localStorage.setItem(key, JSON.stringify(parsed));
+        }
+      }
+
       // Se a primeira mensagem ainda for a de boas-vindas antiga, atualiza para o agente de ajuda com comandos
       if (parsed.chatMessages && parsed.chatMessages.length > 0) {
         if (
@@ -173,6 +197,190 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
 
   // Sempre inicializa workspace limpo do zero para qualquer usuário
   return initializeCleanWorkspace(user);
+}
+
+export interface PublishedRFQ extends RFQ {
+  location?: string;
+  hasCopacolDrawings?: boolean;
+}
+
+export const DEFAULT_PUBLISHED_RFQS: PublishedRFQ[] = [
+  {
+    id: 'rfq-umu-cimento-01',
+    code: 'RFQ-2026-UMU-01',
+    title: 'Aquisição de 50 Sacos de Cimento CP II-Z / CP IV (Umuarama - PR)',
+    scope_description:
+      'Fornecimento imediato com frete incluso e descarga paletizada de 50 sacos de 50kg de Cimento Portland para manutenção civil e drenagem no canteiro regional de Umuarama - PR. Fornecimento com nota fiscal e laudo ABNT NBR 16697.',
+    status: 'published',
+    deadline: 'Em 24 horas',
+    target_delivery_date: 'Em até 2 dias úteis',
+    estimated_budget: 1750,
+    items: [
+      {
+        id: 'umu-1',
+        item_name: 'Cimento Portland CP II-Z ou CP IV (Saco 50kg)',
+        specification:
+          'Em conformidade com ABNT NBR 16697, marca de primeira linha homologada (Votoran, Itambé ou equivalente técnico), sacaria intacta sem umidade.',
+        quantity: 50,
+        unit: 'sacos (50kg)',
+        target_unit_price: 34.0,
+      },
+      {
+        id: 'umu-2',
+        item_name: 'Frete e Descarga no Canteiro de Obras (Umuarama/PR)',
+        specification:
+          'Entrega CIF no perímetro urbano de Umuarama - PR, com descarga paletizada ou manual direta no depósito de obra.',
+        quantity: 1,
+        unit: 'frete/descarga',
+        target_unit_price: 50.0,
+      },
+    ],
+    quotes: [],
+    location: 'Umuarama - PR',
+    hasCopacolDrawings: false,
+  },
+  {
+    id: 'rfq-copacol-01',
+    code: 'RFQ-2026-COPACOL-01',
+    title:
+      'Substituição Parcial de Tubulação da Rede de Águas Pluviais da Indústria de Cafelândia - PR',
+    scope_description:
+      'Contratação de empresa de engenharia para execução de valas, caixas de inspeção estruturadas, assentamento de 740m de tubos PEAD DN 1.000mm e canal de descida 3x3m na Unidade Industrial da Copacol em Cafelândia/PR.',
+    status: 'published',
+    deadline: 'Em 48 horas',
+    target_delivery_date: 'Conclusão em 45 dias',
+    estimated_budget: 185000,
+    items: [
+      {
+        id: 'cop-1',
+        item_name: 'Escavação de Vala para Drenagem',
+        specification:
+          '370m lineares, 1,5m prof. x 2,5m larg. Fornecido pela Contratada.',
+        quantity: 370,
+        unit: 'm lineares',
+        target_unit_price: 95.0,
+      },
+      {
+        id: 'cop-2',
+        item_name: 'Execução de 05 Caixas de Inspeção Estruturadas',
+        specification:
+          '2,50m x 1,50m x 2,00m prof., bloco dissipador em concreto 70cm sobre estaca armada.',
+        quantity: 5,
+        unit: 'unidades',
+        target_unit_price: 11000.0,
+      },
+      {
+        id: 'cop-3',
+        item_name: 'Locação e Assentamento de Tubos PEAD DN 1000mm',
+        specification:
+          '740m lineares. Material PEAD fornecido pela Copacol (Contratante). Cotação de mão de obra e maquinário.',
+        quantity: 740,
+        unit: 'm lineares',
+        target_unit_price: 65.0,
+      },
+      {
+        id: 'cop-4',
+        item_name: 'Reaterro de Vala e Regularização do Solo',
+        specification:
+          '370 metros de extensão com compactação mecânica em camadas sucessivas.',
+        quantity: 1,
+        unit: 'serviço global',
+        target_unit_price: 28000.0,
+      },
+      {
+        id: 'cop-5',
+        item_name: 'Execução de Canal de Descida Revestido em Concreto',
+        specification:
+          'Canal 3,00m x 3,00m em concreto armado 10cm com malha até corpo receptor.',
+        quantity: 1,
+        unit: 'estrutura',
+        target_unit_price: 38000.0,
+      },
+    ],
+    quotes: [],
+    location: 'Cafelândia - PR (Unidade Industrial Copacol)',
+    hasCopacolDrawings: true,
+  },
+];
+
+const SHARED_RFQS_KEY = 'cooprail_shared_rfqs_v1';
+
+export function savePublishedRFQ(rfq: RFQ | PublishedRFQ): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const rfqs = getAllPublishedRFQs();
+    const idx = rfqs.findIndex((r) => r.code === rfq.code || r.id === rfq.id);
+    if (idx >= 0) {
+      rfqs[idx] = { ...rfqs[idx], ...rfq };
+    } else {
+      rfqs.unshift(rfq as PublishedRFQ);
+    }
+    localStorage.setItem(SHARED_RFQS_KEY, JSON.stringify(rfqs));
+  } catch (e) {
+    console.error('Erro ao salvar RFQ compartilhada:', e);
+  }
+}
+
+export function getAllPublishedRFQs(): PublishedRFQ[] {
+  if (typeof window === 'undefined') return DEFAULT_PUBLISHED_RFQS;
+  try {
+    const raw = localStorage.getItem(SHARED_RFQS_KEY);
+    const shared: PublishedRFQ[] = raw ? JSON.parse(raw) : [];
+
+    const tenantRfqs: PublishedRFQ[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('cooprail_workspace_tenant_')) {
+        try {
+          const val = localStorage.getItem(k);
+          if (val) {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed.rfqs)) {
+              tenantRfqs.push(...parsed.rfqs);
+            }
+          }
+        } catch {}
+      }
+    }
+
+    const map = new Map<string, PublishedRFQ>();
+    DEFAULT_PUBLISHED_RFQS.forEach((d) => map.set(d.code, d));
+    tenantRfqs.forEach((t) => {
+      if (t.code) map.set(t.code, { ...map.get(t.code), ...t });
+    });
+    shared.forEach((s) => {
+      if (s.code) map.set(s.code, { ...map.get(s.code), ...s });
+    });
+
+    return Array.from(map.values());
+  } catch {
+    return DEFAULT_PUBLISHED_RFQS;
+  }
+}
+
+export function getPublishedRFQByCode(code?: string | null): PublishedRFQ {
+  const all = getAllPublishedRFQs();
+  if (!code) {
+    const umu = all.find((r) => r.code.includes('UMU') || r.title.toLowerCase().includes('cimento'));
+    return umu || all[0] || DEFAULT_PUBLISHED_RFQS[0];
+  }
+
+  const clean = code.trim().toLowerCase();
+  const direct = all.find((r) => r.code.toLowerCase() === clean);
+  if (direct) return direct;
+
+  if (clean.includes('umu') || clean.includes('cimento')) {
+    const umuMatch = all.find(
+      (r) => r.code.includes('UMU') || r.title.toLowerCase().includes('cimento')
+    );
+    if (umuMatch) return umuMatch;
+  }
+  if (clean.includes('copacol') || clean.includes('cafel')) {
+    const copMatch = all.find((r) => r.code.includes('COPACOL'));
+    if (copMatch) return copMatch;
+  }
+
+  return all[0] || DEFAULT_PUBLISHED_RFQS[0];
 }
 
 // Salvar workspace isolado do usuário
@@ -218,3 +426,4 @@ export function setActiveSessionUserId(userId: string | null): void {
     localStorage.removeItem(CURRENT_SESSION_KEY);
   }
 }
+

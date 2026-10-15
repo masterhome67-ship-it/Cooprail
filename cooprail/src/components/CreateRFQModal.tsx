@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, FileText, CheckCircle2, Plus, Trash2, Globe, Sparkles, Building2, MapPin, Loader2 } from 'lucide-react';
 import { RFQ, RFQItem, Sector, Quote } from '@/lib/mockData';
 import { matchSuppliersForRFQ } from '@/lib/suppliersData';
+import { savePublishedRFQ } from '@/lib/userWorkspace';
 
 interface CreateRFQModalProps {
   isOpen: boolean;
@@ -150,6 +151,7 @@ export function CreateRFQModal({
       quotes: initialQuotes,
     };
 
+    savePublishedRFQ(newRFQ);
     onCreateRFQ(newRFQ);
     onClose();
   };
