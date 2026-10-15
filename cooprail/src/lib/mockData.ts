@@ -89,6 +89,8 @@ export interface RFQ {
   items: RFQItem[];
   quotes: Quote[];
   sector_id?: string;
+  location?: string;
+  hasCopacolDrawings?: boolean;
 }
 
 export interface ChatMessage {
