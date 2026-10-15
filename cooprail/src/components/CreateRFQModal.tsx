@@ -1,30 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-  X,
-  Plus,
-  Trash2,
-  FileText,
-  Calendar,
-  DollarSign,
-  Package,
-  Layers,
-  ArrowRight,
-  CheckCircle2,
-  ShieldCheck,
-  Check,
-  MapPin,
-  Building2,
-  Zap,
-} from 'lucide-react';
-import { RFQ, RFQItem, Quote, Sector } from '@/lib/mockData';
-import { matchSuppliersForRFQ, Supplier } from '@/lib/suppliersData';
+import React, { useState } from 'react';
+import { X, FileText, CheckCircle2, Plus, Trash2, Globe, Sparkles, Building2, MapPin, Loader2 } from 'lucide-react';
+import { RFQ, RFQItem, Sector, Quote } from '@/lib/mockData';
+import { matchSuppliersForRFQ } from '@/lib/suppliersData';
 
 interface CreateRFQModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateRFQ: (newRFQ: RFQ) => void;
+  onCreateRFQ: (rfq: RFQ) => void;
   sectors?: Sector[];
 }
 
@@ -36,11 +20,14 @@ export function CreateRFQModal({
 }: CreateRFQModalProps) {
   const [title, setTitle] = useState('');
   const [scopeDescription, setScopeDescription] = useState('');
+  const [location, setLocation] = useState('Cafelândia / PR');
   const [estimatedBudget, setEstimatedBudget] = useState('');
-  const [targetDeliveryDate, setTargetDeliveryDate] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [targetDeliveryDate, setTargetDeliveryDate] = useState('Em 7 dias');
+  const [deadline, setDeadline] = useState('Em 48 horas');
   const [selectedSectorId, setSelectedSectorId] = useState<string>(sectors[0]?.id || '');
-  const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+  const [searchOpenMarket, setSearchOpenMarket] = useState<boolean>(false);
+  const [isLoadingMarket, setIsLoadingMarket] = useState<boolean>(false);
+
   const [items, setItems] = useState<RFQItem[]>([
     {
       id: 'item-1',
@@ -51,19 +38,6 @@ export function CreateRFQModal({
       target_unit_price: 0,
     },
   ]);
-
-  // Fornecedores aptos calculados com base no escopo e itens
-  const eligibleSuppliers = matchSuppliersForRFQ(
-    `${title} ${scopeDescription}`,
-    items.map((i) => i.item_name)
-  );
-
-  // Inicializa a seleção de fornecedores automaticamente com os mais aptos
-  useEffect(() => {
-    if (eligibleSuppliers.length > 0 && selectedSupplierIds.length === 0) {
-      setSelectedSupplierIds(eligibleSuppliers.slice(0, 3).map((item) => item.supplier.id));
-    }
-  }, [eligibleSuppliers, selectedSupplierIds.length]);
 
   if (!isOpen) return null;
 
@@ -92,95 +66,88 @@ export function CreateRFQModal({
     );
   };
 
-  const toggleSupplier = (supId: string) => {
-    setSelectedSupplierIds((prev) =>
-      prev.includes(supId) ? prev.filter((id) => id !== supId) : [...prev, supId]
-    );
-  };
-
-  // Modelos Rápidos de Demanda
-  const handleApplyTemplate = (type: 'pluvial' | 'aco') => {
-    if (type === 'pluvial') {
-      setTitle('Aquisição de Tubulação e Drenagem Pluvial (Cascavel / Toledo)');
-      setScopeDescription(
-        'Fornecimento de tubos PEAD, canaletas e caixas coletoras para adequação da rede pluvial da ferrovia no corredor Oeste do Paraná. Necessário laudo de conformidade e entrega in-loco.'
-      );
-      setEstimatedBudget('45000');
-      setItems([
-        {
-          id: 'item-1',
-          item_name: 'Tubos PEAD DN 400mm Corrugados',
-          specification: 'Tubos de polietileno de alta densidade conforme NBR 8890, barra 6m.',
-          quantity: 120,
-          unit: 'metros',
-          target_unit_price: 250.0,
-        },
-        {
-          id: 'item-2',
-          item_name: 'Caixas de Drenagem e Grelhas D400',
-          specification: 'Concreto armado pré-moldado com grelhas de ferro fundido para carga pesada.',
-          quantity: 15,
-          unit: 'unidades',
-          target_unit_price: 1000.0,
-        },
-      ]);
-    } else {
-      setTitle('Fornecimento de Perfis de Aço e Solda Industrial (Canteiro Central)');
-      setScopeDescription(
-        'Fornecimento de vigas estruturais laminadas ASTM A572 Grau 50 e serviços de solda e fixação para reforço de via e passarelas industriais.'
-      );
-      setEstimatedBudget('62000');
-      setItems([
-        {
-          id: 'item-1',
-          item_name: 'Vigas Estruturais W200x26.6',
-          specification: 'Aço ASTM A572 Grau 50 certificado com laudo de composição química.',
-          quantity: 40,
-          unit: 'peças',
-          target_unit_price: 1200.0,
-        },
-        {
-          id: 'item-2',
-          item_name: 'Kits de Soldagem e Fixadores de Alta Tensão',
-          specification: 'Parafusos A325 e eletrodos E7018 certificados para infraestrutura.',
-          quantity: 50,
-          unit: 'kits',
-          target_unit_price: 280.0,
-        },
-      ]);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !scopeDescription.trim()) {
-      alert('Preencha o título e o escopo da requisição.');
+    if (!title.trim()) {
+      alert('Preencha o título do pedido de cotação.');
       return;
     }
 
     const calculatedTotal =
       parseFloat(estimatedBudget) ||
-      items.reduce((acc, curr) => acc + (Number(curr.quantity) * Number(curr.target_unit_price) || 0), 0);
+      items.reduce((acc, curr) => acc + (Number(curr.quantity) * Number(curr.target_unit_price) || 0), 0) ||
+      5000;
 
     const generatedCode = `RFQ-2026-${Math.floor(100 + Math.random() * 900)}`;
-    const selectedSector = sectors.find((s) => s.id === selectedSectorId);
 
-    // Identifica os fornecedores selecionados para cotar
-    const suppliersToQuote = eligibleSuppliers.filter((s) =>
-      selectedSupplierIds.includes(s.supplier.id)
-    );
+    let initialQuotes: Quote[] = [];
+
+    // Se a busca de mercado aberto estiver ativada, pesquisa fornecedores reais da região com o Gemini
+    if (searchOpenMarket) {
+      setIsLoadingMarket(true);
+      try {
+        const itemsSummary = items
+          .filter((i) => i.item_name.trim())
+          .map((i) => `${i.quantity} ${i.unit} de ${i.item_name}`)
+          .join(', ') || title;
+
+        const res = await fetch('/api/market-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            item: `${title} (${itemsSummary})`,
+            quantity: `${items[0]?.quantity || 1} ${items[0]?.unit || 'unidades'}`,
+            location: location || 'Região Sul',
+            budget: calculatedTotal,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.suppliers) && data.suppliers.length > 0) {
+          initialQuotes = data.suppliers.map((sup: any, idx: number) => {
+            const quoteAmount = sup.total_amount || calculatedTotal * (1 - idx * 0.04);
+            const savings = Math.max(0, Math.round(((calculatedTotal - quoteAmount) / calculatedTotal) * 100));
+
+            return {
+              id: `quote-mkt-${Date.now()}-${idx}`,
+              rfq_id: generatedCode,
+              supplier_name: sup.name,
+              supplier_rating: sup.rating || 4.5,
+              total_amount: quoteAmount,
+              delivery_lead_time_days: sup.delivery_lead_time_days || (idx === 0 ? 1 : 3),
+              payment_terms: 'Mercado Aberto / 30 dias',
+              status: 'received',
+              ai_score: Number((9.0 + (idx === 0 ? 0.7 : 0.3)).toFixed(1)),
+              ai_analysis_summary:
+                sup.ai_analysis ||
+                `Fornecedor identificado em ${sup.city || location}. Contato: ${sup.phone || 'Público'}.`,
+              savings_percentage: savings,
+              is_open_market: true,
+              supplier_phone: sup.phone,
+              supplier_city: sup.city || location,
+              market_source: sup.market_source,
+            };
+          });
+        }
+      } catch (err) {
+        console.error('Falha ao buscar mercado aberto:', err);
+      } finally {
+        setIsLoadingMarket(false);
+      }
+    }
 
     const newRFQ: RFQ = {
       id: `rfq-${Date.now()}`,
       code: generatedCode,
       title: title.trim(),
-      scope_description: scopeDescription.trim(),
+      scope_description: scopeDescription.trim() || `Cotação de fornecimento para ${location}.`,
       status: 'published',
-      deadline: deadline || 'Em 5 dias',
-      target_delivery_date: targetDeliveryDate || 'Em 15 dias',
+      deadline: deadline || 'Em 48 horas',
+      target_delivery_date: targetDeliveryDate || 'Em 7 dias',
       estimated_budget: calculatedTotal,
       items: items.filter((i) => i.item_name.trim() !== ''),
-      quotes: [],
+      quotes: initialQuotes,
     };
 
     onCreateRFQ(newRFQ);
@@ -198,28 +165,32 @@ export function CreateRFQModal({
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900">
-                Abrir Novo Pedido de Orçamento (RFQ)
+                Abrir Novo Pedido de Cotação (RFQ)
               </h2>
               <p className="text-[11px] text-slate-500">
-                Dispare a requisição para fornecedores homologados e receba cotações concorrentes para comparar.
+                Gere a requisição formal para enviar aos fornecedores e receber propostas comerciais.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors cursor-pointer">
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors cursor-pointer"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto text-xs flex-1">
-
           {/* Dados Principais */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-2 space-y-1">
-              <label className="text-slate-700 font-bold block">Título da Requisição / Objeto da Compra *</label>
+              <label className="text-slate-700 font-bold block">
+                Objeto da Compra / Material Requisitado *
+              </label>
               <input
                 type="text"
-                placeholder="Ex: Aquisição de Tubulação PEAD e Drenagem Pluvial"
+                placeholder="Ex: 50 sacos de cimento CP II-E-32"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -228,34 +199,31 @@ export function CreateRFQModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-700 font-bold block">Setor / Obra de Destino</label>
-              <select
-                value={selectedSectorId}
-                onChange={(e) => setSelectedSectorId(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
-              >
-                {sectors.length > 0 ? (
-                  sectors.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))
-                ) : (
-                  <option value="default">Divisão de Infraestrutura - Corredor Oeste</option>
-                )}
-              </select>
+              <label className="text-slate-700 font-bold block flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-[#0284c7]" />
+                <span>Cidade / Local da Entrega *</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: Cafelândia / PR"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                required
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
+              />
             </div>
           </div>
 
           {/* Escopo Técnico */}
           <div className="space-y-1">
-            <label className="text-slate-700 font-bold block">Escopo Técnico Detalhado *</label>
+            <label className="text-slate-700 font-bold block">
+              Especificações Técnicas e Requisitos de Entrega
+            </label>
             <textarea
               rows={2}
-              placeholder="Descreva as especificações, normas técnicas aplicáveis e requisitos de entrega..."
+              placeholder="Descreva normas técnicas (NBR/ABNT), condições de entrega in-loco e prazo..."
               value={scopeDescription}
               onChange={(e) => setScopeDescription(e.target.value)}
-              required
               className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
             />
           </div>
@@ -263,20 +231,20 @@ export function CreateRFQModal({
           {/* Orçamento e Prazos */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-slate-700 font-bold block">Orçamento Estimado Teto (R$)</label>
+              <label className="text-slate-700 font-bold block">Orçamento Máximo Teto (R$)</label>
               <input
                 type="number"
-                placeholder="45000"
+                placeholder="Ex: 2000"
                 value={estimatedBudget}
                 onChange={(e) => setEstimatedBudget(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-slate-700 font-bold block">Prazo Limite para Resposta</label>
+              <label className="text-slate-700 font-bold block">Prazo para Resposta</label>
               <input
                 type="text"
-                placeholder="Em 5 dias"
+                placeholder="Ex: Em 48 horas"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
@@ -286,7 +254,7 @@ export function CreateRFQModal({
               <label className="text-slate-700 font-bold block">Prazo Desejado de Entrega</label>
               <input
                 type="text"
-                placeholder="Em 15 dias"
+                placeholder="Ex: Em 7 dias"
                 value={targetDeliveryDate}
                 onChange={(e) => setTargetDeliveryDate(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
@@ -297,59 +265,46 @@ export function CreateRFQModal({
           {/* Itens Requisitados */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-slate-800 font-bold">Itens e Quantitativos Solicitados</label>
+              <label className="text-slate-800 font-bold">Itens e Quantitativos</label>
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="inline-flex items-center gap-1 text-[11px] text-[#0284c7] hover:underline cursor-pointer font-bold"
+                className="flex items-center gap-1 text-[#0284c7] hover:text-[#0369a1] font-semibold text-xs cursor-pointer"
               >
-                <Plus className="w-3 h-3" /> Adicionar Item
+                <Plus className="w-3.5 h-3.5" />
+                <span>Adicionar Outro Item</span>
               </button>
             </div>
 
             <div className="space-y-2">
               {items.map((item, idx) => (
-                <div key={item.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <div key={item.id} className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
                   <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-5">
+                    <div className="col-span-6">
                       <input
                         type="text"
-                        placeholder="Nome do Item / Material..."
+                        placeholder="Nome do material (Ex: Saco de Cimento 50kg)"
                         value={item.item_name}
                         onChange={(e) => handleItemChange(item.id, 'item_name', e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-[#0284c7]"
+                        className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 placeholder-slate-400 text-xs focus:outline-none focus:border-[#0284c7]"
                       />
                     </div>
                     <div className="col-span-2">
                       <input
                         type="number"
-                        min="1"
                         placeholder="Qtd"
-                        value={item.quantity}
+                        value={item.quantity || ''}
                         onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
                         className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-[#0284c7]"
                       />
                     </div>
-                    <div className="col-span-2">
-                      <select
+                    <div className="col-span-3">
+                      <input
+                        type="text"
+                        placeholder="Unidade (sacos, m...)"
                         value={item.unit}
                         onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-slate-900 text-xs focus:outline-none focus:border-[#0284c7]"
-                      >
-                        <option value="metros">metros</option>
-                        <option value="unidades">unidades</option>
-                        <option value="peças">peças</option>
-                        <option value="kg">kg</option>
-                        <option value="kits">kits</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        placeholder="Preço R$"
-                        value={item.target_unit_price || ''}
-                        onChange={(e) => handleItemChange(item.id, 'target_unit_price', e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-[#0284c7]"
+                        className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 placeholder-slate-400 text-xs focus:outline-none focus:border-[#0284c7]"
                       />
                     </div>
                     <div className="col-span-1 flex items-center justify-end">
@@ -364,23 +319,36 @@ export function CreateRFQModal({
                       )}
                     </div>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Norma técnica / especificação do material..."
-                    value={item.specification}
-                    onChange={(e) => handleItemChange(item.id, 'specification', e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 placeholder-slate-400 text-xs focus:outline-none focus:border-[#0284c7]"
-                  />
                 </div>
               ))}
             </div>
           </div>
 
+          {/* Caixa de Busca Inteligente de Mercado Aberto */}
+          <div className="p-3.5 rounded-xl border border-sky-200 bg-sky-50/70 space-y-2">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={searchOpenMarket}
+                onChange={(e) => setSearchOpenMarket(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-[#0284c7] rounded border-slate-300 focus:ring-[#0284c7]"
+              />
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-[#0284c7]" />
+                  Buscar fornecedores de mercado aberto na região com IA (Sem cadastro prévio)
+                </span>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  O sistema pesquisa na internet distribuidoras, lojas e fabricantes locais em {location || 'sua região'}, trazendo contatos reais e preços de mercado direto para o Comparador de Cotações.
+                </p>
+              </div>
+            </label>
+          </div>
 
           {/* Rodapé com botão de Envio */}
           <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
             <p className="text-[11px] text-slate-500">
-              O pedido será disparado para os fornecedores selecionados. As propostas retornarão para o comparador.
+              A requisição será criada e disponibilizada no Comparador com as opções de envio para as empresas.
             </p>
 
             <div className="flex items-center gap-2">
@@ -394,11 +362,20 @@ export function CreateRFQModal({
 
               <button
                 type="submit"
-                disabled={selectedSupplierIds.length === 0}
+                disabled={isLoadingMarket}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] disabled:opacity-50 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Disparar Cotação para Fornecedores ({selectedSupplierIds.length})</span>
+                {isLoadingMarket ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Pesquisando Fornecedores de Mercado...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Publicar Pedido de Cotação (RFQ)</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

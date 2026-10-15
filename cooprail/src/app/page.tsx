@@ -32,6 +32,8 @@ import {
   setActiveSessionUserId,
   getRegisteredAccounts,
   registerNewAccount,
+  clearAllWorkspaceData,
+  getHelpAgentInitialMessage,
 } from '@/lib/userWorkspace';
 import {
   initialOrganization,
@@ -86,6 +88,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
+  const [selectedRfqId, setSelectedRfqId] = useState<string>('');
   const [orders, setOrders] = useState<PurchaseOrderRecord[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -317,7 +320,12 @@ export default function Home() {
     };
     setTasks((prev) => [newTask, ...prev]);
 
-    showToast(`Pedido ${newRFQ.code} emitido! ${newRFQ.quotes.length} cotações recebidas dos fornecedores próximos.`);
+    setSelectedRfqId(newRFQ.id);
+    showToast(
+      newRFQ.quotes.length > 0
+        ? `Cotação ${newRFQ.code} aberta com ${newRFQ.quotes.length} fornecedores identificados! Compare propostas no comparador.`
+        : `Cotação ${newRFQ.code} aberta com sucesso! Copie o link do portal para as empresas ou dispare via WhatsApp.`
+    );
     setActiveTab('comparator');
 
     const now = new Date();
@@ -325,19 +333,32 @@ export default function Home() {
     const rfqChatMsg: ChatMessage = {
       id: `msg-rfq-${Date.now()}`,
       sender_role: 'assistant',
-      content: `O pedido de orçamento ${newRFQ.code} ("${newRFQ.title}") foi disparado para os fornecedores próximos. Recebemos ${newRFQ.quotes.length} propostas comerciais. Navegue no Comparador de Cotações para avaliar os preços, prazos e emitir a Ordem de Compra.`,
+      content: `A Requisição de Cotação ${newRFQ.code} ("${newRFQ.title}") foi aberta na esteira de compras. Há ${newRFQ.quotes.length} proposta(s) pronta(s). Envie o link do portal para fornecedores ou busque mais cotações no Comparador antes de emitir a Ordem de Compra formal.`,
       timestamp: timeStr,
       action_card: {
         type: 'quote_recommendation',
-        title: `Propostas Recebidas: ${newRFQ.code}`,
+        title: `Cotação em Aberto: ${newRFQ.code}`,
         metrics: [
-          { label: 'Propostas', value: `${newRFQ.quotes.length} fornecedores` },
-          { label: 'Teto', value: newRFQ.estimated_budget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
+          { label: 'Propostas', value: `${newRFQ.quotes.length} recebida(s)` },
+          { label: 'Teto Máx', value: newRFQ.estimated_budget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
         ],
-        actions: [{ label: 'Ver no Comparador', action: 'inspect' }],
+        actions: [{ label: 'Abrir no Comparador', action: 'inspect' }],
       },
     };
     setChatMessages((prev) => [...prev, rfqChatMsg]);
+  };
+
+  const handleResetWorkspace = () => {
+    if (confirm('Deseja limpar todos os dados de teste (cotações, pedidos e chamados) e recomeçar do zero absoluto?')) {
+      clearAllWorkspaceData(currentUser?.id);
+      setTasks([]);
+      setRfqs([]);
+      setSelectedRfqId('');
+      setOrders([]);
+      setChatMessages([getHelpAgentInitialMessage()]);
+      setActiveTab('dashboard');
+      showToast('Ambiente reiniciado do zero com sucesso! Nenhum pedido ou cotação pendente.');
+    }
   };
 
   // Escuta atalho Cmd+K / Ctrl+K
@@ -464,25 +485,6 @@ export default function Home() {
     showToast(`Ordem liquidada on-chain com sucesso no cluster Solana!`);
   };
 
-  const handleCreateTestOrder = () => {
-    const testPo: PurchaseOrderRecord = {
-      id: `po-test-${Date.now()}`,
-      po_code: `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      supplier_name: 'Metalúrgica Ferro & Aço Nacional S.A.',
-      supplier_cnpj: '18.234.567/0001-90',
-      rfq_code: 'RFQ-2026-IND-01',
-      total_amount_brl: 45000.0,
-      delivery_days: 7,
-      created_at: 'Hoje',
-      status: 'pending_approval',
-      sector_name: 'Divisão de Infraestrutura & Via Permanente - Corredor Oeste',
-      cost_center: 'CC-4200',
-      is_existing_contractor: true,
-      approval_notes: 'Empresa já mobilizada no canteiro da Unidade Oeste. Homologada sem custo adicional de frete.',
-    };
-    setOrders((prev) => [testPo, ...prev]);
-    showToast('Ordem de compra de teste criada! Agora você pode simular a liquidação.');
-  };
 
   // Envio de Mensagem no Chat do Assistente Operacional (com suporte a Fotos e Visão de Peças)
   const handleSendMessage = async (text: string, slashCommand?: string, imageBase64?: string) => {
@@ -605,6 +607,7 @@ export default function Home() {
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenUploadDoc={() => setIsUploadDocOpen(true)}
           onNewRFQ={() => setIsCreateRFQOpen(true)}
+          onResetWorkspace={handleResetWorkspace}
         />
 
         {/* 3. Área Principal de Trabalho */}
@@ -714,18 +717,41 @@ export default function Home() {
           {/* Visão: Comparador de Cotações (Fase 3) */}
           {activeTab === 'comparator' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h1 className="text-base font-bold text-slate-900">Comparador de Cotações</h1>
                   <p className="text-xs text-slate-500">
-                    Análise técnica e financeira com recomendação automatizada de fornecedores.
+                    Análise técnica e financeira de propostas com busca de mercado aberto em tempo real.
                   </p>
                 </div>
+
+                {rfqs.length > 1 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-600">RFQ:</span>
+                    <select
+                      value={selectedRfqId || rfqs[0]?.id}
+                      onChange={(e) => setSelectedRfqId(e.target.value)}
+                      className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 font-medium focus:outline-none focus:border-[#0284c7]"
+                    >
+                      {rfqs.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.code} - {r.title.slice(0, 35)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <QuoteComparator
-                rfq={rfqs[0]}
+                rfq={rfqs.find((r) => r.id === selectedRfqId) || rfqs[0]}
                 onGeneratePO={handleGeneratePO}
                 onOpenCreateRFQ={() => setIsCreateRFQOpen(true)}
+                onUpdateQuotes={(rfqId, updatedQuotes) => {
+                  setRfqs((prev) =>
+                    prev.map((r) => (r.id === rfqId ? { ...r, quotes: updatedQuotes } : r))
+                  );
+                  showToast('Cotações de mercado atualizadas no comparador!');
+                }}
               />
             </div>
           )}
@@ -813,16 +839,9 @@ export default function Home() {
                 <div className="p-8 text-center rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
                   <ShoppingBag className="w-8 h-8 text-slate-400 mx-auto" />
                   <p className="text-xs font-semibold text-slate-700">Nenhuma ordem de compra emitida</p>
-                  <p className="text-xs text-slate-500">
-                    Aprove uma proposta no comparador de cotações ou gere uma ordem para simulação imediata de liquidação.
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    As Ordens de Compra formais são geradas automaticamente quando você aprova uma proposta comercial vencedora no Comparador de Cotações.
                   </p>
-                  <button
-                    onClick={handleCreateTestOrder}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer mx-auto mt-2"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Gerar Ordem para Simular Pagamento On-Chain</span>
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">

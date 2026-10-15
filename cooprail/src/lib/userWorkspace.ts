@@ -185,7 +185,26 @@ export function saveUserWorkspace(userId: string, data: UserWorkspaceData): void
   }
 }
 
-// Gerenciamento de Sessão Ativa
+export function clearAllWorkspaceData(userId?: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (userId) {
+      localStorage.removeItem(getWorkspaceStorageKey(userId));
+    }
+    localStorage.removeItem('cooprail_partner_quotes');
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('cooprail_workspace_tenant_') || k === 'cooprail_partner_quotes')) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch (e) {
+    console.error('Erro ao limpar dados do workspace:', e);
+  }
+}
+
 export function getActiveSessionUserId(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(CURRENT_SESSION_KEY);

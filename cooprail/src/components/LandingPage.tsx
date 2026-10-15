@@ -29,9 +29,10 @@ interface LandingPageProps {
   lang: Language;
   onToggleLang: (lang: Language) => void;
   onOpenLogin: () => void;
+  onEnterDemo?: () => void;
 }
 
-export function LandingPage({ lang, onToggleLang, onOpenLogin }: LandingPageProps) {
+export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: LandingPageProps) {
   const t = translations[lang];
 
   return (

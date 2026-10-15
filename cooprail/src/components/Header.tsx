@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Plus, UploadCloud, Command, LogOut } from 'lucide-react';
+import { Search, Plus, UploadCloud, Command, LogOut, RotateCcw } from 'lucide-react';
 import { Language, translations } from '@/lib/translations';
 
 interface HeaderProps {
@@ -11,6 +11,7 @@ interface HeaderProps {
   onOpenCommandPalette: () => void;
   onNewRFQ: () => void;
   onOpenUploadDoc: () => void;
+  onResetWorkspace?: () => void;
 }
 
 export function Header({
@@ -20,6 +21,7 @@ export function Header({
   onOpenCommandPalette,
   onNewRFQ,
   onOpenUploadDoc,
+  onResetWorkspace,
 }: HeaderProps) {
   const t = translations[lang];
 
@@ -89,6 +91,17 @@ export function Header({
           <Plus className="w-3.5 h-3.5" />
           <span>{t.btnNewRFQ}</span>
         </button>
+
+        {onResetWorkspace && (
+          <button
+            onClick={onResetWorkspace}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-semibold transition-colors cursor-pointer shadow-xs ml-1"
+            title="Limpar todos os dados e reiniciar o teste do zero"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+            <span className="hidden sm:inline">Reiniciar Teste do Zero</span>
+          </button>
+        )}
 
         <button
           onClick={onLogout}

@@ -53,6 +53,11 @@ export interface Quote {
   ai_score: number;
   ai_analysis_summary: string;
   savings_percentage: number;
+  is_open_market?: boolean;
+  supplier_phone?: string;
+  supplier_city?: string;
+  supplier_distance_km?: number;
+  market_source?: string;
 }
 
 export interface Sector {
