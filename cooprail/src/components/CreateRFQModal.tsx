@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { X, FileText, CheckCircle2, Plus, Trash2, Globe, Sparkles, Building2, MapPin, Loader2 } from 'lucide-react';
 import { RFQ, RFQItem, Sector, Quote } from '@/lib/mockData';
 import { matchSuppliersForRFQ } from '@/lib/suppliersData';
-import { savePublishedRFQ, DEFAULT_UMU_QUOTES } from '@/lib/userWorkspace';
+import { savePublishedRFQ } from '@/lib/userWorkspace';
 
 interface CreateRFQModalProps {
   isOpen: boolean;
@@ -138,75 +138,7 @@ export function CreateRFQModal({
       }
     }
 
-    if (initialQuotes.length === 0) {
-      const isUmu = location.toLowerCase().includes('umuarama') || title.toLowerCase().includes('umuarama');
-      const isCimento = title.toLowerCase().includes('cimento') || items.some((i) => i.item_name.toLowerCase().includes('cimento'));
-
-      if (isUmu || isCimento) {
-        initialQuotes = DEFAULT_UMU_QUOTES.map((q, idx) => ({
-          ...q,
-          id: `quote-${Date.now()}-${idx}`,
-          rfq_id: generatedCode,
-        }));
-      } else {
-        const q1 = Math.round(calculatedTotal * 0.95);
-        const q2 = Math.round(calculatedTotal * 0.98);
-        const q3 = Math.round(calculatedTotal * 1.02);
-        initialQuotes = [
-          {
-            id: `quote-init-${Date.now()}-0`,
-            rfq_id: generatedCode,
-            supplier_name: `Distribuidora Regional Líder (${location || 'Paraná'})`,
-            supplier_rating: 4.8,
-            total_amount: q1,
-            delivery_lead_time_days: 2,
-            payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto',
-            status: 'received',
-            ai_score: 9.6,
-            ai_analysis_summary: `Melhor proposta apurada na região. Economia de 5% sobre o orçamento estimado.`,
-            savings_percentage: 5.0,
-            is_open_market: true,
-            supplier_phone: '(44) 3622-4500',
-            supplier_city: location || 'Paraná',
-            market_source: 'Catálogo Regional B2B',
-          },
-          {
-            id: `quote-init-${Date.now()}-1`,
-            rfq_id: generatedCode,
-            supplier_name: `Comercial & Insumos Industriais Sul`,
-            supplier_rating: 4.6,
-            total_amount: q2,
-            delivery_lead_time_days: 3,
-            payment_terms: 'Boleto Faturado 30 dias / Depósito Bancário',
-            status: 'received',
-            ai_score: 9.1,
-            ai_analysis_summary: `Fornecedor homologado com certificação técnica e faturamento corporativo padrão.`,
-            savings_percentage: 2.0,
-            is_open_market: true,
-            supplier_phone: '(44) 3624-8800',
-            supplier_city: location || 'Paraná',
-            market_source: 'Rede Oficial de Distribuição B2B',
-          },
-          {
-            id: `quote-init-${Date.now()}-2`,
-            rfq_id: generatedCode,
-            supplier_name: `Materiais & Logística Canteiro Express`,
-            supplier_rating: 4.5,
-            total_amount: q3,
-            delivery_lead_time_days: 1,
-            payment_terms: 'Faturamento 15/30 dias / Smart Escrow',
-            status: 'received',
-            ai_score: 8.8,
-            ai_analysis_summary: `Opção com prazo de entrega de 24h para suporte emergencial no canteiro de obras.`,
-            savings_percentage: 0.0,
-            is_open_market: true,
-            supplier_phone: '(44) 3639-1200',
-            supplier_city: location || 'Paraná',
-            market_source: 'Distribuição Rápida de Insumos',
-          },
-        ];
-      }
-    }
+    // RFQ inicia sem propostas mockadas; propostas são inseridas via Portal do Parceiro ou busca real
 
     const newRFQ: RFQ = {
       id: `rfq-${Date.now()}`,

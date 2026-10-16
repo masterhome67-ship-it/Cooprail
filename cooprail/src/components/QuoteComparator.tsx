@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RFQ, Quote } from '@/lib/mockData';
-import { DEFAULT_UMU_QUOTES, formatCurrencyBRLInput, parseCurrencyBRL } from '@/lib/userWorkspace';
+import { formatCurrencyBRLInput, parseCurrencyBRL } from '@/lib/userWorkspace';
 import {
   Check,
   Star,
@@ -111,87 +111,31 @@ export function QuoteComparator({
 
   useEffect(() => {
     if (rfq?.quotes && rfq.quotes.length > 0) {
-      const sanitized = sanitizeQuotesList(rfq.quotes);
+      // Filtra qualquer resquício de propostas mockadas antigas
+      const realOnly = rfq.quotes.filter(
+        (q) =>
+          !q.id.startsWith('quote-umu-') &&
+          !q.id.startsWith('quote-auto-') &&
+          !q.id.startsWith('quote-init-') &&
+          !q.supplier_name.includes('Depósito & Distribuidora Umuarama Materiais') &&
+          !q.supplier_name.includes('Votoran / Constrular Paraná') &&
+          !q.supplier_name.includes('Cimento Itambé / Rede Oeste') &&
+          !q.supplier_name.includes('Distribuidora Regional Líder') &&
+          !q.supplier_name.includes('Comercial & Insumos Industriais Sul') &&
+          !q.supplier_name.includes('Materiais & Logística Canteiro Express')
+      );
+      const sanitized = sanitizeQuotesList(realOnly);
       setLocalQuotes(sanitized);
-      if (!selectedQuoteId || !sanitized.some((q) => q.id === selectedQuoteId)) {
-        setSelectedQuoteId(sanitized[0].id);
-      }
-    } else if (
-      rfq?.code?.includes('UMU') ||
-      rfq?.title?.toLowerCase().includes('cimento') ||
-      rfq?.scope_description?.toLowerCase().includes('cimento')
-    ) {
-      const sanitized = sanitizeQuotesList(DEFAULT_UMU_QUOTES);
-      setLocalQuotes(sanitized);
-      setSelectedQuoteId(sanitized[0].id);
-      if (onUpdateQuotes && rfq?.id) {
-        onUpdateQuotes(rfq.id, sanitized);
-      }
-    } else if (rfq) {
-      const budget = rfq.estimated_budget || 5000;
-      const q1 = Math.round(budget * 0.95);
-      const q2 = Math.round(budget * 0.98);
-      const q3 = Math.round(budget * 1.02);
-      const autoQuotes: Quote[] = [
-        {
-          id: `quote-auto-${rfq.id}-0`,
-          rfq_id: rfq.code,
-          supplier_name: `Distribuidora Regional Líder (${rfq.location || 'Paraná'})`,
-          supplier_rating: 4.8,
-          total_amount: q1,
-          delivery_lead_time_days: 2,
-          payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto',
-          status: 'received',
-          ai_score: 9.6,
-          ai_analysis_summary: `Melhor relação custo-benefício apurada no mercado regional. Economia de 5% sobre a estimativa orçamentária.`,
-          savings_percentage: 5.0,
-          is_open_market: true,
-          supplier_phone: '(44) 3622-4500',
-          supplier_city: rfq.location || 'Paraná',
-          market_source: 'Catálogo de Fornecedores Homologados',
-        },
-        {
-          id: `quote-auto-${rfq.id}-1`,
-          rfq_id: rfq.code,
-          supplier_name: `Comercial & Insumos Industriais Sul`,
-          supplier_rating: 4.6,
-          total_amount: q2,
-          delivery_lead_time_days: 3,
-          payment_terms: 'Boleto Faturado 30 dias / Depósito Bancário',
-          status: 'received',
-          ai_score: 9.1,
-          ai_analysis_summary: `Fornecedor homologado com certificação de conformidade técnica e faturamento corporativo padrão.`,
-          savings_percentage: 2.0,
-          is_open_market: true,
-          supplier_phone: '(44) 3624-8800',
-          supplier_city: rfq.location || 'Paraná',
-          market_source: 'Rede Oficial de Distribuição B2B',
-        },
-        {
-          id: `quote-auto-${rfq.id}-2`,
-          rfq_id: rfq.code,
-          supplier_name: `Materiais & Logística Canteiro Express`,
-          supplier_rating: 4.5,
-          total_amount: q3,
-          delivery_lead_time_days: 1,
-          payment_terms: 'Faturamento 15/30 dias / Smart Escrow',
-          status: 'received',
-          ai_score: 8.8,
-          ai_analysis_summary: `Opção de pronta-entrega emergencial em 24h caso haja urgência no avanço da obra no canteiro.`,
-          savings_percentage: 0.0,
-          is_open_market: true,
-          supplier_phone: '(44) 3639-1200',
-          supplier_city: rfq.location || 'Paraná',
-          market_source: 'Distribuição Rápida de Insumos',
-        },
-      ];
-      setLocalQuotes(autoQuotes);
-      setSelectedQuoteId(autoQuotes[0].id);
-      if (onUpdateQuotes && rfq?.id) {
-        onUpdateQuotes(rfq.id, autoQuotes);
+      if (sanitized.length > 0) {
+        if (!selectedQuoteId || !sanitized.some((q) => q.id === selectedQuoteId)) {
+          setSelectedQuoteId(sanitized[0].id);
+        }
+      } else {
+        setSelectedQuoteId('');
       }
     } else {
       setLocalQuotes([]);
+      setSelectedQuoteId('');
     }
   }, [rfq, onUpdateQuotes]);
 

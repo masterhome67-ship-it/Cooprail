@@ -169,67 +169,25 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
         parsed.rfqs = [DEFAULT_PUBLISHED_RFQS[0]];
         localStorage.setItem(key, JSON.stringify(parsed));
       } else {
+        // Limpa quaisquer propostas sintéticas/mockadas que tenham ficado salvas em RFQs anteriores
         let changed = false;
         parsed.rfqs.forEach((r) => {
-          if (!r.quotes || r.quotes.length === 0) {
-            changed = true;
-            if (r.code?.includes('UMU') || r.title?.toLowerCase().includes('cimento')) {
-              r.quotes = DEFAULT_UMU_QUOTES;
-            } else {
-              const b = r.estimated_budget || 5000;
-              r.quotes = [
-                {
-                  id: `quote-ws-${r.id}-0`,
-                  rfq_id: r.code,
-                  supplier_name: `Distribuidora Regional Líder (${r.location || 'Paraná'})`,
-                  supplier_rating: 4.8,
-                  total_amount: Math.round(b * 0.95),
-                  delivery_lead_time_days: 2,
-                  payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto',
-                  status: 'received',
-                  ai_score: 9.6,
-                  ai_analysis_summary: `Melhor custo-benefício identificado para entrega na região.`,
-                  savings_percentage: 5.0,
-                  is_open_market: true,
-                  supplier_phone: '(44) 3622-4500',
-                  supplier_city: r.location || 'Paraná',
-                  market_source: 'Catálogo de Fornecedores Homologados',
-                },
-                {
-                  id: `quote-ws-${r.id}-1`,
-                  rfq_id: r.code,
-                  supplier_name: `Comercial & Insumos Industriais Sul`,
-                  supplier_rating: 4.6,
-                  total_amount: Math.round(b * 0.98),
-                  delivery_lead_time_days: 3,
-                  payment_terms: 'Boleto Faturado 30 dias',
-                  status: 'received',
-                  ai_score: 9.1,
-                  ai_analysis_summary: `Fornecedor homologado com certificação de conformidade técnica.`,
-                  savings_percentage: 2.0,
-                  is_open_market: true,
-                  supplier_phone: '(44) 3624-8800',
-                  supplier_city: r.location || 'Paraná',
-                  market_source: 'Rede Regional B2B',
-                },
-                {
-                  id: `quote-ws-${r.id}-2`,
-                  rfq_id: r.code,
-                  supplier_name: `Materiais & Logística Canteiro Express`,
-                  supplier_rating: 4.5,
-                  total_amount: Math.round(b * 1.02),
-                  delivery_lead_time_days: 1,
-                  payment_terms: 'Faturamento 15/30 dias',
-                  status: 'received',
-                  ai_score: 8.8,
-                  ai_analysis_summary: `Pronta entrega emergencial em até 24h no canteiro.`,
-                  savings_percentage: 0.0,
-                  is_open_market: true,
-                  supplier_phone: '(44) 3639-1200',
-                  supplier_city: r.location || 'Paraná',
-                  market_source: 'Distribuição Rápida de Insumos',
-                },
-              ];
+          if (r.quotes && r.quotes.length > 0) {
+            const cleaned = r.quotes.filter(
+              (q) =>
+                !q.id.startsWith('quote-umu-') &&
+                !q.id.startsWith('quote-auto-') &&
+                !q.id.startsWith('quote-init-') &&
+                !q.supplier_name.includes('Depósito & Distribuidora Umuarama Materiais') &&
+                !q.supplier_name.includes('Votoran / Constrular Paraná') &&
+                !q.supplier_name.includes('Cimento Itambé / Rede Oeste') &&
+                !q.supplier_name.includes('Distribuidora Regional Líder') &&
+                !q.supplier_name.includes('Comercial & Insumos Industriais Sul') &&
+                !q.supplier_name.includes('Materiais & Logística Canteiro Express')
+            );
+            if (cleaned.length !== r.quotes.length) {
+              r.quotes = cleaned;
+              changed = true;
             }
           }
         });
@@ -266,62 +224,7 @@ export interface PublishedRFQ extends RFQ {
   hasCopacolDrawings?: boolean;
 }
 
-export const DEFAULT_UMU_QUOTES: Quote[] = [
-  {
-    id: 'quote-umu-1',
-    rfq_id: 'RFQ-2026-UMU-01',
-    supplier_name: 'Depósito & Distribuidora Umuarama Materiais',
-    supplier_rating: 4.8,
-    total_amount: 1625,
-    delivery_lead_time_days: 1,
-    payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto',
-    status: 'received',
-    ai_score: 9.6,
-    ai_analysis_summary:
-      'Menor preço unitário apurado em Umuarama (R$ 32,50/saco de 50kg). Entrega em até 24h no canteiro com frete e descarga inclusos.',
-    savings_percentage: 7.0,
-    is_open_market: true,
-    supplier_phone: '(44) 3622-4500',
-    supplier_city: 'Umuarama - PR',
-    market_source: 'Distribuidor Local Umuarama',
-  },
-  {
-    id: 'quote-umu-2',
-    rfq_id: 'RFQ-2026-UMU-01',
-    supplier_name: 'Votoran / Constrular Paraná - Unidade Noroeste',
-    supplier_rating: 4.7,
-    total_amount: 1700,
-    delivery_lead_time_days: 2,
-    payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto 30D',
-    status: 'received',
-    ai_score: 9.3,
-    ai_analysis_summary:
-      'Cimento Votoran CP II-E-32 de primeira linha com laudo técnico ABNT NBR 16697. Sacaria paletizada com proteção plástica (R$ 34,00/saco).',
-    savings_percentage: 3.0,
-    is_open_market: true,
-    supplier_phone: '(44) 3624-8800',
-    supplier_city: 'Umuarama - PR',
-    market_source: 'Rede Oficial Votoran',
-  },
-  {
-    id: 'quote-umu-3',
-    rfq_id: 'RFQ-2026-UMU-01',
-    supplier_name: 'Cimento Itambé / Rede Oeste Materiais',
-    supplier_rating: 4.5,
-    total_amount: 1750,
-    delivery_lead_time_days: 2,
-    payment_terms: 'Boleto 30 Dias / Smart Escrow On-Chain',
-    status: 'received',
-    ai_score: 8.9,
-    ai_analysis_summary:
-      'Pronta-entrega na região noroeste de Umuarama. Cimento Itambé CP IV resistente a sulfatos (R$ 35,00/saco). Faturamento corporativo.',
-    savings_percentage: 0.0,
-    is_open_market: true,
-    supplier_phone: '(44) 3621-3300',
-    supplier_city: 'Umuarama - PR',
-    market_source: 'Distribuidora Regional',
-  },
-];
+export const DEFAULT_UMU_QUOTES: Quote[] = [];
 
 export const DEFAULT_PUBLISHED_RFQS: PublishedRFQ[] = [
   {

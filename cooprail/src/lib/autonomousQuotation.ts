@@ -221,75 +221,7 @@ export async function executeAutonomousQuotation(
     console.warn('Busca de mercado via API demorou ou falhou, aplicando cotações locais rápidas.');
   }
 
-  // Fallback garantido caso a busca externa não retorne
-  if (quotes.length === 0) {
-    const isUmuarama = params.location.toLowerCase().includes('umuarama');
-    const isCimento = params.material.toLowerCase().includes('cimento');
-
-    const sup1Name = isCimento && isUmuarama ? 'Depósito & Distribuidora Umuarama Materiais' : `Distribuidora Líder ${params.location}`;
-    const sup2Name = isCimento && isUmuarama ? 'Votoran / Constrular Paraná - Unidade Noroeste' : `Comercial Norte Materiais Industriais`;
-    const sup3Name = isCimento && isUmuarama ? 'Cimento Itambé / Rede Sul Construções' : `Logística & Insumos Regionais`;
-
-    const unitPrice1 = params.estimatedUnitPrice * 0.96;
-    const unitPrice2 = params.estimatedUnitPrice * 1.0;
-    const unitPrice3 = params.estimatedUnitPrice * 1.04;
-
-    quotes = [
-      {
-        id: `quote-auto-${Date.now()}-0`,
-        rfq_id: generatedCode,
-        supplier_name: sup1Name,
-        supplier_rating: 4.8,
-        total_amount: Math.round(params.quantity * unitPrice1),
-        delivery_lead_time_days: 1,
-        payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto',
-        status: 'received',
-        ai_score: 9.6,
-        ai_analysis_summary: `Melhor relação custo-benefício em ${params.location}. Preço unitário médio de R$ ${unitPrice1.toFixed(2)} com entrega rápida no canteiro.`,
-        savings_percentage: 4.0,
-        is_open_market: true,
-        supplier_phone: '(44) 3622-4500',
-        supplier_city: params.location,
-        market_source: 'Catálogo Regional B2B',
-      },
-      {
-        id: `quote-auto-${Date.now()}-1`,
-        rfq_id: generatedCode,
-        supplier_name: sup2Name,
-        supplier_rating: 4.6,
-        total_amount: Math.round(params.quantity * unitPrice2),
-        delivery_lead_time_days: 2,
-        payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto 30D',
-        status: 'received',
-        ai_score: 9.1,
-        ai_analysis_summary: `Distribuidor com pronta-entrega e laudo de conformidade técnica ABNT. Preço unitário: R$ ${unitPrice2.toFixed(2)}.`,
-        savings_percentage: 0.0,
-        is_open_market: true,
-        supplier_phone: '(44) 3624-8800',
-        supplier_city: params.location,
-        market_source: 'Rede Oficial de Distribuição',
-      },
-      {
-        id: `quote-auto-${Date.now()}-2`,
-        rfq_id: generatedCode,
-        supplier_name: sup3Name,
-        supplier_rating: 4.5,
-        total_amount: Math.round(params.quantity * unitPrice3),
-        delivery_lead_time_days: 2,
-        payment_terms: 'Boleto 30 Dias / Smart Escrow',
-        status: 'received',
-        ai_score: 8.8,
-        ai_analysis_summary: `Capacidade de atendimento imediato em ${params.location}. Cotação unitária de R$ ${unitPrice3.toFixed(2)}.`,
-        savings_percentage: 0.0,
-        is_open_market: true,
-        supplier_phone: '(44) 3621-3300',
-        supplier_city: params.location,
-        market_source: 'Mercado Aberto',
-      },
-    ];
-  }
-
-  // Cria o registro da RFQ completo
+  // Cria o registro da RFQ completo sem propostas fictícias
   const rfqItem: RFQItem = {
     id: `item-${Date.now()}`,
     item_name: params.material,
@@ -303,7 +235,7 @@ export async function executeAutonomousQuotation(
     id: `rfq-auto-${Date.now()}`,
     code: generatedCode,
     title: `Aquisição de ${params.quantity} ${params.unit} de ${params.material} (${params.location})`,
-    scope_description: `Cotação autônoma aberta pelo Agente de Suprimentos para fornecimento e descarga imediata em ${params.location}.`,
+    scope_description: `Cotação autônoma aberta pelo Agente de Suprimentos para fornecimento e descarga em ${params.location}.`,
     status: 'published',
     deadline: 'Em 24 horas',
     target_delivery_date: 'Até 2 dias úteis',
@@ -317,11 +249,16 @@ export async function executeAutonomousQuotation(
   // Salva no barramento compartilhado para ficar acessível ao Portal do Parceiro
   savePublishedRFQ(newRFQ);
 
-  const bestQuote = quotes[0];
-  const unitPriceFormatted = (bestQuote.total_amount / params.quantity).toFixed(2);
-  const totalFormatted = bestQuote.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  let summaryText = '';
+  if (quotes.length > 0) {
+    const bestQuote = quotes[0];
+    const unitPriceFormatted = (bestQuote.total_amount / params.quantity).toFixed(2);
+    const totalFormatted = bestQuote.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  const summaryText = `🎯 **Cotação Autônoma Realizada com Sucesso!**\n\nIdentifiquei a necessidade de **${params.quantity} ${params.unit} de ${params.material}** para entrega em **${params.location}**.\n\nO motor autônomo pesquisou o mercado regional e consolidou **${quotes.length} cotações concorrentes**:\n\n• 🏆 **1º Menor Preço:** **${bestQuote.supplier_name}** — **${totalFormatted}** (R$ ${unitPriceFormatted}/unidade) • Prazo: **${bestQuote.delivery_lead_time_days} dia(s)**\n• 🏢 **2ª Proposta:** ${quotes[1]?.supplier_name || 'Distribuidor'} — ${quotes[1]?.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n• 🏢 **3ª Proposta:** ${quotes[2]?.supplier_name || 'Distribuidor'} — ${quotes[2]?.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n\nA requisição **${generatedCode}** já foi criada e sincronizada no **Comparador de Cotações**. O link público do **Portal do Parceiro** também está ativo caso novos fornecedores queiram cotar.`;
+    summaryText = `🎯 **Cotação Autônoma Realizada!**\n\nIdentifiquei a necessidade de **${params.quantity} ${params.unit} de ${params.material}** para entrega em **${params.location}**.\n\nO motor de pesquisa localizou **${quotes.length} fornecedores reais**:\n\n• 🏆 **1º Menor Preço:** **${bestQuote.supplier_name}** — **${totalFormatted}** (R$ ${unitPriceFormatted}/unidade) • Prazo: **${bestQuote.delivery_lead_time_days} dia(s)**\n\nA requisição **${generatedCode}** está sincronizada no **Comparador de Cotações**. O link público do **Portal do Parceiro** também está ativo para receber propostas adicionais.`;
+  } else {
+    summaryText = `🎯 **Requisição de Compra Criada e Aberta ao Mercado!**\n\nIdentifiquei a necessidade de **${params.quantity} ${params.unit} de ${params.material}** para entrega em **${params.location}**.\n\n• **Código da RFQ:** **${generatedCode}**\n• **Referência de Balizador (SINAPI Paraná):** R$ ${params.estimatedUnitPrice.toFixed(2)}/${params.unit} (Orçamento Teto: ${params.totalBudget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})\n• **Status:** Publicada no Mercado Aberto.\n• **Propostas de Fornecedores:** Aguardando envio de propostas reais pelo **Portal do Parceiro** ou inserção direta no Comparador.\n\nAcesse a aba **Comparador de Cotações** para acompanhar as propostas que chegarem ou copiar o link público para fornecedores da sua rede.`;
+  }
 
   return {
     rfq: newRFQ,

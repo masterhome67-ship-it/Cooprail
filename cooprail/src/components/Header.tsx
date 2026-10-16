@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Plus, UploadCloud, Command, LogOut } from 'lucide-react';
+import { Search, Plus, UploadCloud, Command, LogOut, FileKey } from 'lucide-react';
 import { Language, translations } from '@/lib/translations';
 
 interface HeaderProps {
@@ -11,6 +11,7 @@ interface HeaderProps {
   onOpenCommandPalette: () => void;
   onNewRFQ: () => void;
   onOpenUploadDoc: () => void;
+  onOpenCertificateModal?: () => void;
 }
 
 export function Header({
@@ -20,6 +21,7 @@ export function Header({
   onOpenCommandPalette,
   onNewRFQ,
   onOpenUploadDoc,
+  onOpenCertificateModal,
 }: HeaderProps) {
   const t = translations[lang];
 
@@ -72,6 +74,17 @@ export function Header({
           </button>
         </div>
 
+
+        {onOpenCertificateModal && (
+          <button
+            onClick={onOpenCertificateModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+            title="Configurar Certificado Digital A1 da Empresa (SEFAZ DF-e)"
+          >
+            <FileKey className="w-3.5 h-3.5 text-[#0284c7]" />
+            <span>Certificado A1</span>
+          </button>
+        )}
 
         <button
           onClick={onOpenUploadDoc}

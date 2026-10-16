@@ -11,6 +11,7 @@ import { CreateRFQModal } from '@/components/CreateRFQModal';
 import { DocumentUploadModal } from '@/components/DocumentUploadModal';
 import { SolanaSettlementModal, PurchaseOrderRecord } from '@/components/SolanaSettlementModal';
 import { OrderConfirmationModal } from '@/components/OrderConfirmationModal';
+import { FiscalCertificateModal } from '@/components/FiscalCertificateModal';
 import { SectorsView, OperationalTicketData } from '@/components/SectorsView';
 import { LandingPage } from '@/components/LandingPage';
 import { LoginModal } from '@/components/LoginModal';
@@ -105,6 +106,7 @@ export default function Home() {
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [selectedOrderForSettlement, setSelectedOrderForSettlement] = useState<PurchaseOrderRecord | null>(null);
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
   const [supplierFilter, setSupplierFilter] = useState<'all' | 'nearby' | 'mobilized'>('all');
@@ -658,6 +660,7 @@ export default function Home() {
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenUploadDoc={() => setIsUploadDocOpen(true)}
           onNewRFQ={() => setIsCreateRFQOpen(true)}
+          onOpenCertificateModal={() => setIsCertModalOpen(true)}
         />
 
         {/* 3. Área Principal de Trabalho */}
@@ -1377,6 +1380,13 @@ export default function Home() {
         isOpen={isConfirmationModalOpen}
         onClose={() => setIsConfirmationModalOpen(false)}
         onConfirmOrder={handleConfirmOrder}
+      />
+
+      {/* 11. Modal de Certificado Digital A1 da Empresa (SEFAZ DF-e) */}
+      <FiscalCertificateModal
+        isOpen={isCertModalOpen}
+        onClose={() => setIsCertModalOpen(false)}
+        tenantName={currentUser?.company_name || organization.name}
       />
     </div>
   );
