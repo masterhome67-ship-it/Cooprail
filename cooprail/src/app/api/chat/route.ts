@@ -49,6 +49,15 @@ export async function POST(req: NextRequest) {
       activeAgent = 'Módulo de Pedidos & Ordens de Compra';
       agentRoleTag = '/pedido';
     } else if (
+      slashCommand === '/compare' ||
+      lower.startsWith('/compare') ||
+      lower.includes('compare') ||
+      lower.includes('proposta') ||
+      lower.includes('comparador')
+    ) {
+      activeAgent = 'Módulo de Comparação de Cotações & Propostas';
+      agentRoleTag = '/compare';
+    } else if (
       slashCommand === '/demandas' ||
       lower.startsWith('/demandas') ||
       lower.includes('demanda') ||
@@ -122,6 +131,11 @@ DIRETRIZES DE ATUAÇÃO CONFORME O AGENTE ATIVO:
 
 - Se for AGENTE DE PEDIDOS (/pedido):
   * Oriente a emissão formal de Ordens de Compra (PO), vinculação com o setor requisitante e a execução do Smart Escrow On-Chain na Solana para garantia financeira.
+
+- Se for AGENTE DE COMPARAÇÃO (/compare):
+  * Analise as cotações e propostas disponíveis para as RFQs ativas no sistema.
+  * Compare preço unitário, frete, prazo de entrega, garantias e condições de pagamento.
+  * Se o usuário consultar preço de mercado de materiais (ex: cal, cimento, brita, madeira), informe referências técnicas e balizadores oficiais (ex: SINAPI Paraná: Cal ~R$ 18,50/saco, Cimento ~R$ 34,00/saco, Brita ~R$ 95,00/m³), e oriente que as cotações detalhadas de fornecedores são gerenciadas na aba Comparador de Cotações.
 
 - Se for AGENTE DE ORGANIZAÇÃO DE DEMANDAS (/demandas):
   * Ajude a estruturar novas requisições (RFQs), especificando escopo técnico, lote de itens e critérios de qualificação técnica para atrair fornecedores no mercado.`;

@@ -262,9 +262,43 @@ async function callOpenAICompatible(options: {
  */
 function generateDeterministicFallback(payload: AIRequestPayload): string {
   const lower = payload.message.toLowerCase();
+  const cmd = payload.slashCommand || '';
 
+  // 1. Comando ou intenção /compare (Comparador de Cotações)
+  if (cmd === '/compare' || lower.startsWith('/compare') || lower.includes('compare') || lower.includes('proposta') || lower.includes('comparador')) {
+    let itemContext = 'insumos para obras civis e industriais';
+    let referenceInfo = 'Referência de balizadores oficiais SINAPI Paraná.';
+
+    if (lower.includes('cal')) {
+      itemContext = 'Cal Hidratada CH-I (sacos 20kg)';
+      referenceInfo = 'Balizador SINAPI PR: R$ 18,50 / saco (50 sacos = R$ 925,00 teto de mercado).';
+    } else if (lower.includes('cimento')) {
+      itemContext = 'Cimento Portland CP II-Z / CP IV (sacos 50kg)';
+      referenceInfo = 'Balizador SINAPI PR: R$ 34,00 / saco (50 sacos = R$ 1.700,00 teto de mercado).';
+    } else if (lower.includes('brita')) {
+      itemContext = 'Pedra Brita Graduada Nº 1/2/3';
+      referenceInfo = 'Balizador SINAPI PR: R$ 95,00 / m³.';
+    } else if (lower.includes('madeira')) {
+      itemContext = 'Madeira Serrada / Sarrafos de Pinus Tratado';
+      referenceInfo = 'Balizador SINAPI PR: R$ 28,00 / metro linear.';
+    }
+
+    return `[Módulo de Comparação de Cotações & Propostas]\n\n📊 **Análise Comparativa de Mercado (${itemContext}):**\n• **${referenceInfo}**\n• **Análise de Dispersão:** No Paraná, a dispersão média entre distribuidores locais e atacado direto de fábrica varia entre 6% e 12%.\n• **Gestão de Propostas:** As propostas recebidas de parceiros e cotações de mercado aberto são centralizadas e gerenciadas na aba **Comparador de Cotações**.\n• **Como Abrir Cotação Formal:** Para publicar esta requisição aos fornecedores da região, digite \`/demandas cotar 50 sacos de cal\` ou clique em "+ Nova Cotação (RFQ)".`;
+  }
+
+  // 2. PEAD / Tubos / Drenagem
   if (lower.includes('pead') || lower.includes('tubo') || lower.includes('válvula') || lower.includes('drenagem')) {
-    return `[Módulo de Suprimentos & Engenharia]\n\nIdentificação de Material de Via/Drenagem:\n• Especificação: Tubos PEAD Corrugados DN 400mm conforme NBR 8890 e Válvulas Industriais de Retenção.\n• Fornecedores Homologados Próximos:\n  - Hidráulica Oeste Paraná Ltda (Cascavel/PR - 12 km)\n  - Drenagem Toledo S.A. (Toledo/PR - 45 km)\n• Fornecedores Externos de Mercado (Não Homologados recomendados para cotação):\n  - Tigre ADS Brasil (Joinville/SC) • Tubos corrugados de grande diâmetro\n  - PeadBrasil Tubulações Industriais (Curitiba/PR)\n\nRecomendação: Clique em "+ Novo Pedido (RFQ)" para disparar cotação incluindo fornecedores homologados e externos.`;
+    return `[Módulo de Suprimentos & Engenharia]\n\nIdentificação de Material de Via/Drenagem:\n• Especificação: Tubos PEAD Corrugados DN 400mm conforme NBR 8890 e Válvulas Industriais de Retenção.\n• Fornecedores Homologados Próximos:\n  - Hidráulica Oeste Paraná Ltda (Cascavel/PR - 12 km)\n  - Drenagem Toledo S.A. (Toledo/PR - 45 km)\n• Fornecedores Externos de Mercado (Não Homologados recomendados para cotação):\n  - Tigre ADS Brasil (Joinville/SC) • Tubos corrugados de grande diâmetro\n  - PeadBrasil Tubulações Industriais (Curitiba/PR)\n\nRecomendação: Para cotar, envie \`/demandas cotar tubos PEAD DN 1000mm\` para publicar na esteira de RFQs.`;
+  }
+
+  // 3. Comando /controle
+  if (cmd === '/controle' || lower.startsWith('/controle')) {
+    return `[Módulo de Controle & Compliance Fiscal]\n\n🛡️ **Auditoria Cadastral e Orçamentária Ativa:**\n• **Conformidade Fiscal:** Cruzamento de chaves NF-e via WebService SEFAZ PR/DF-e com Certificado Digital A1.\n• **Situação Cadastral:** Consulta integrada de CNPJ na Receita Federal (CND e certidões negativas).\n• **Alçadas de Compra:** Controle estrito de centros de custo e limites orçamentários por diretoria.`;
+  }
+
+  // 4. Comando /pedido
+  if (cmd === '/pedido' || lower.startsWith('/pedido')) {
+    return `[Módulo de Pedidos & Ordens de Compra]\n\n📦 **Emissão e Liquidação de Purchase Orders (POs):**\n• As ordens de compra aprovadas vinculam o fornecedor homologado diretamente ao centro de custo operacional requisitante.\n• **Solana Smart Escrow:** Liquidação financeira garantida on-chain, protegendo o comprador até o aceite da NF e medição técnica em canteiro.`;
   }
 
   return `Consulta processada pelo motor operacional Cooprail. O sistema está pronto para buscar fornecedores homologados, prestadores já mobilizados no canteiro e fabricantes de mercado aberto.`;

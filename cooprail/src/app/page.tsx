@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
-import { DecisionStream } from '@/components/DecisionStream';
 import { QuoteComparator } from '@/components/QuoteComparator';
 import { AgentWorkspaceChat } from '@/components/AgentWorkspaceChat';
 import { CommandPaletteModal } from '@/components/CommandPaletteModal';
@@ -742,18 +741,22 @@ export default function Home() {
                       {(() => {
                         let totalBudget = 0;
                         let totalSpent = 0;
+                        let validMatches = 0;
                         orders.forEach((o) => {
-                          totalSpent += o.total_amount_brl || 0;
+                          const spent = o.total_amount_brl || 0;
                           const linked = rfqs.find((r) => r.code === o.rfq_code);
-                          if (linked && linked.estimated_budget) {
-                            totalBudget += linked.estimated_budget;
-                          } else {
-                            totalBudget += o.total_amount_brl || 0;
+                          if (linked && linked.estimated_budget && linked.estimated_budget > 0) {
+                            const ratio = spent / linked.estimated_budget;
+                            if (ratio >= 0.35 && ratio <= 1.25) {
+                              totalBudget += linked.estimated_budget;
+                              totalSpent += spent;
+                              validMatches++;
+                            }
                           }
                         });
-                        if (totalBudget > 0 && totalSpent < totalBudget) {
+                        if (validMatches > 0 && totalBudget > totalSpent) {
                           const diff = ((totalBudget - totalSpent) / totalBudget) * 100;
-                          return `-${diff.toFixed(1)}%`;
+                          return `+${diff.toFixed(1)}%`;
                         }
                         return '0.0%';
                       })()}
@@ -783,7 +786,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Centro de Início por Agentes Especializados (Protagonista da Tela) */}
+              {/* Centro de Início por Agentes Especializados (Protagonista Exclusivo do Painel) */}
               <AgentWorkspaceChat
                 messages={chatMessages}
                 onSendMessage={handleSendMessage}
@@ -801,17 +804,6 @@ export default function Home() {
                 onNewRFQ={() => setIsCreateRFQOpen(true)}
                 lang={lang}
               />
-
-              {/* Fluxo Central de Decisões Imediatas ("Precisa de Você") */}
-              {tasks.length > 0 && (
-                <div className="pt-1">
-                  <DecisionStream
-                    tasks={tasks}
-                    onApproveTask={handleApproveTask}
-                    onOpenComparator={() => setActiveTab('comparator')}
-                  />
-                </div>
-              )}
             </div>
           )}
 
