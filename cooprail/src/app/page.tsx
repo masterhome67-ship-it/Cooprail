@@ -78,7 +78,12 @@ import {
   Mail,
   Sparkles,
   Check,
+  Pencil,
+  Users,
+  Eye,
+  Clock,
 } from 'lucide-react';
+import { TeamBuyersView, TeamMember } from '@/components/TeamBuyersView';
 
 
 export default function Home() {
@@ -92,6 +97,7 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [selectedRfqId, setSelectedRfqId] = useState<string>('');
+  const [editingRFQ, setEditingRFQ] = useState<RFQ | null>(null);
   const [orders, setOrders] = useState<PurchaseOrderRecord[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -350,6 +356,40 @@ export default function Home() {
       },
     };
     setChatMessages((prev) => [...prev, rfqChatMsg]);
+  };
+
+  const handleUpdateRFQ = (updatedRFQ: RFQ) => {
+    setRfqs((prev) => prev.map((r) => (r.id === updatedRFQ.id ? updatedRFQ : r)));
+    setEditingRFQ(null);
+    showToast(`Requisição ${updatedRFQ.code} atualizada com sucesso!`);
+  };
+
+  const handleDeleteRFQ = (rfqId: string, rfqTitle: string) => {
+    if (window.confirm(`Deseja realmente excluir a requisição "${rfqTitle}"?`)) {
+      setRfqs((prev) => prev.filter((r) => r.id !== rfqId));
+      if (selectedRfqId === rfqId) {
+        setSelectedRfqId('');
+      }
+      showToast('Requisição de compra excluída.');
+    }
+  };
+
+  const handleConfirmRFQ = (rfqId: string) => {
+    setRfqs((prev) =>
+      prev.map((r) => (r.id === rfqId ? { ...r, status: 'published' as const } : r))
+    );
+    showToast('Requisição confirmada e aberta para cotações no mercado!');
+  };
+
+  const handleEditRFQ = (rfq: RFQ) => {
+    setEditingRFQ(rfq);
+    setIsCreateRFQOpen(true);
+  };
+
+  const handleGoToComparator = (rfqId: string) => {
+    setSelectedRfqId(rfqId);
+    setActiveTab('comparator');
+    showToast('Requisição carregada no Comparador de Cotações!');
   };
 
   // Escuta atalho Cmd+K / Ctrl+K
@@ -828,43 +868,128 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
-                  {rfqs.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between p-3.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors">
-                      <div>
-                        <span className="text-[10px] font-mono font-bold text-[#0284c7] bg-sky-50 border border-sky-200 px-2 py-0.5 rounded">
-                          {r.code}
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 mt-1">{r.title}</h4>
-                        <p className="text-xs text-slate-500">{r.items.length} itens cadastrados • Entrega: {r.target_delivery_date}</p>
+                  {rfqs.map((r) => {
+                    const isPublished = r.status === 'published';
+                    const isAwarded = r.status === 'awarded';
+
+                    return (
+                      <div
+                        key={r.id}
+                        className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-slate-50/70 border border-slate-200 hover:border-slate-300 transition-all gap-4"
+                      >
+                        <div className="space-y-1.5 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-mono font-bold text-[#0284c7] bg-sky-50 border border-sky-200 px-2 py-0.5 rounded">
+                              {r.code}
+                            </span>
+
+                            {isAwarded ? (
+                              <span className="text-[10px] font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-[#0284c7]" /> Concluída / Homologada
+                              </span>
+                            ) : isPublished ? (
+                              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Aberta para Cotações
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-amber-600" /> Rascunho / Pendente de Confirmação
+                              </span>
+                            )}
+
+                            {r.location && (
+                              <span className="text-[10px] text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded flex items-center gap-1">
+                                <MapPin className="w-2.5 h-2.5 text-[#0284c7]" /> {r.location}
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="text-sm font-bold text-slate-900">{r.title}</h4>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                            <span>
+                              Itens: <strong className="text-slate-700">{r.items.length} cadastrado(s)</strong>
+                            </span>
+                            <span>
+                              Entrega: <strong className="text-slate-700">{r.target_delivery_date}</strong>
+                            </span>
+                            <span>
+                              Prazo de Propostas: <strong className="text-slate-700">{r.deadline}</strong>
+                            </span>
+                            {r.estimated_budget > 0 && (
+                              <span>
+                                Teto Orçado:{' '}
+                                <strong className="text-slate-800">
+                                  {r.estimated_budget.toLocaleString('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL',
+                                  })}
+                                </strong>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Ações da Requisição */}
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => handleGoToComparator(r.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                            title="Abrir no Comparador de Cotações para buscar fornecedores"
+                          >
+                            <Scale className="w-3.5 h-3.5" />
+                            <span>Ver Cotações ({r.quotes.length})</span>
+                          </button>
+
+                          {!isPublished && !isAwarded && (
+                            <button
+                              onClick={() => handleConfirmRFQ(r.id)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-semibold transition-colors cursor-pointer"
+                              title="Confirmar e abrir requisição para fornecedores"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Confirmar</span>
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => handleEditRFQ(r)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                            title="Ajustar itens, quantidades ou prazos"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Ajustar</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteRFQ(r.id, r.title)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+                            title="Excluir requisição"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setActiveTab('comparator')}
-                          className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer shadow-xs"
-                        >
-                          Ver Cotações ({r.quotes.length})
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           )}
 
-          {/* Visão: Pedidos de Compra */}
+          {/* Visão: Pedidos de Compra (PO Corporativo - Sem Solana) */}
           {activeTab === 'orders' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-base font-bold text-slate-900">Ordens de Compra & Liquidação On-Chain</h1>
+                  <h1 className="text-base font-bold text-slate-900">Ordens & Pedidos de Compra (PO)</h1>
                   <p className="text-xs text-slate-500">
-                    Gestão de pedidos aprovados, garantias contratuais e liquidação via Solana Settlement Layer.
+                    Gestão corporativa de pedidos emitidos, faturamento direto, autorizações de fornecimento e confirmação de entrega.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
-                    Total de Ordens: <strong className="text-slate-900">{orders.length}</strong>
+                    Total de Pedidos: <strong className="text-slate-900">{orders.length}</strong>
                   </span>
                 </div>
               </div>
@@ -872,7 +997,7 @@ export default function Home() {
               {orders.length === 0 ? (
                 <div className="p-8 text-center rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
                   <ShoppingBag className="w-8 h-8 text-slate-400 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-700">Nenhuma ordem de compra emitida</p>
+                  <p className="text-xs font-semibold text-slate-700">Nenhum pedido de compra emitido</p>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto">
                     As Ordens de Compra formais são geradas automaticamente quando você aprova uma proposta comercial vencedora no Comparador de Cotações.
                   </p>
@@ -881,7 +1006,6 @@ export default function Home() {
                 <div className="space-y-3">
                   {orders.map((po) => {
                     const isSettled = po.status === 'settled_onchain';
-                    const usdEquivalent = Math.round((po.total_amount_brl / 5.60) * 100) / 100;
 
                     return (
                       <div
@@ -900,11 +1024,11 @@ export default function Home() {
                               </span>
                               {isSettled ? (
                                 <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
-                                  <ShieldCheck className="w-3 h-3 text-emerald-600" /> Liquidado On-Chain (Smart Escrow)
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Pedido Confirmado & Emitido
                                 </span>
                               ) : (
-                                <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                                  Aprovado • Pendente de Liquidação
+                                <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-amber-600" /> Aguardando Confirmação do Comprador
                                 </span>
                               )}
                               <span className="text-[11px] text-slate-500">• Emitido: {po.created_at}</span>
@@ -912,7 +1036,7 @@ export default function Home() {
 
                             <h4 className="text-sm font-bold text-slate-900">{po.supplier_name}</h4>
                             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                              <span>Prazo de entrega: <strong className="text-slate-800">{po.delivery_days} dias</strong></span>
+                              <span>Prazo de entrega: <strong className="text-slate-800">{po.delivery_days} dias corridos</strong></span>
                               {po.rfq_code && <span> • Vinculado à {po.rfq_code}</span>}
                               {po.sector_name && (
                                 <span className="flex items-center gap-1 text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
@@ -921,33 +1045,21 @@ export default function Home() {
                               )}
                               {po.is_existing_contractor && (
                                 <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px] font-semibold">
-                                  <Zap className="w-3 h-3 fill-emerald-600 text-emerald-600" /> Empresa Mobilizada no Setor (Zero Custo Extra)
+                                  <Zap className="w-3 h-3 fill-emerald-600 text-emerald-600" /> Fornecedor Homologado no Setor
                                 </span>
                               )}
                             </div>
 
-                            {/* Informações On-Chain se já liquidado */}
+                            {/* Informações corporativas de autorização se confirmado */}
                             {isSettled && po.settlement_data && (
                               <div className="mt-2 pt-2 border-t border-emerald-100 flex flex-wrap items-center gap-3 text-[11px] font-mono text-emerald-800">
                                 <span>
-                                  Slot: <strong>#{po.settlement_data.slot}</strong>
+                                  Protocolo de Autorização: <strong>{po.settlement_data.signature || `AUT-${po.po_code}`}</strong>
                                 </span>
                                 <span>•</span>
-                                <span>
-                                  Taxa: <strong>{po.settlement_data.networkFeeSol} SOL</strong>
+                                <span className="text-slate-600 font-sans">
+                                  Condição: <strong>Faturamento Corporativo (Boleto Bancário / TED)</strong>
                                 </span>
-                                <span>•</span>
-                                <span className="text-slate-500">
-                                  Hash: {po.settlement_data.signature.slice(0, 16)}...
-                                </span>
-                                <a
-                                  href={`https://explorer.solana.com/tx/${po.settlement_data.signature}?cluster=devnet`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[#0284c7] hover:underline inline-flex items-center gap-0.5 font-sans font-medium"
-                                >
-                                  Explorer <ExternalLink className="w-3 h-3" />
-                                </a>
                               </div>
                             )}
                           </div>
@@ -960,8 +1072,8 @@ export default function Home() {
                                   currency: 'BRL',
                                 })}
                               </p>
-                              <p className="text-[11px] font-mono font-semibold text-[#0284c7]">
-                                ≈ {usdEquivalent.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC
+                              <p className="text-[11px] text-slate-500 font-medium">
+                                Faturamento Direto com Fornecedor
                               </p>
                             </div>
 
@@ -969,18 +1081,18 @@ export default function Home() {
                               {isSettled ? (
                                 <button
                                   onClick={() => handleOpenSettlement(po)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                                 >
-                                  <Lock className="w-3.5 h-3.5" />
-                                  <span>Ver Protocolo de Custódia</span>
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Ver Autorização do Pedido</span>
                                 </button>
                               ) : (
                                 <button
                                   onClick={() => handleOpenSettlement(po)}
                                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
                                 >
-                                  <Lock className="w-3.5 h-3.5" />
-                                  <span>Liquidar via Solana (Smart Escrow)</span>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Confirmar Pedido de Compra</span>
                                 </button>
                               )}
                             </div>
@@ -1003,6 +1115,28 @@ export default function Home() {
             />
           )}
 
+          {/* Visão: Equipe & Compradores (Autenticador de Usuários) */}
+          {activeTab === 'team' && (
+            <TeamBuyersView
+              sectors={sectors}
+              activeBuyerId={currentUser?.id}
+              onSelectActiveBuyer={(member: TeamMember) => {
+                setCurrentUser((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        name: member.name,
+                        email: member.email,
+                        role: member.role_title,
+                      }
+                    : prev
+                );
+                showToast(`Autenticado como: ${member.name} (${member.role_title})`);
+              }}
+              showToast={showToast}
+            />
+          )}
+
           {/* Visão: Fornecedores Homologados & Consulta Receita Federal */}
           {activeTab === 'suppliers' && (() => {
             const filteredSaved = customSuppliers.filter((sup) => {
@@ -1022,11 +1156,16 @@ export default function Home() {
                 {/* Cabeçalho da Visão */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h1 className="text-base font-bold text-slate-900">
-                      Pesquisa & Homologação de Fornecedores
-                    </h1>
-                    <p className="text-xs text-slate-500">
-                      Consulte qualquer empresa diretamente na base oficial da Receita Federal por CNPJ para homologar e salvar no seu workspace.
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-base font-bold text-slate-900">
+                        Catálogo & Homologação de Fornecedores Industriais
+                      </h1>
+                      <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full">
+                        Exclusivo Fornecedores PJ
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Base exclusiva para consulta e homologação de parceiros externos, fabricantes e distribuidores. (Para gerenciar compradores e setores internos, acesse a aba <strong>Equipe & Compradores</strong>).
                     </p>
                   </div>
                   <button
@@ -1330,11 +1469,16 @@ export default function Home() {
       />
 
 
-      {/* 7. Modal de Criação Real de Pedido de Orçamento (RFQ) */}
+      {/* 7. Modal de Criação / Edição de Pedido de Orçamento (RFQ) */}
       <CreateRFQModal
         isOpen={isCreateRFQOpen}
-        onClose={() => setIsCreateRFQOpen(false)}
+        onClose={() => {
+          setIsCreateRFQOpen(false);
+          setEditingRFQ(null);
+        }}
         onCreateRFQ={handleCreateRFQ}
+        onUpdateRFQ={handleUpdateRFQ}
+        initialRFQ={editingRFQ}
         sectors={sectors}
       />
 

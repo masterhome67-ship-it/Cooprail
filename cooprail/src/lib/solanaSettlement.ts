@@ -4,13 +4,15 @@ export interface SettlementResult {
   signature: string;
   slot: number;
   blockTime: number;
-  escrowPda: string;
+  escrowPda?: string;
   networkFeeSol: number;
-  tokenAmountUsdc: number;
-  cluster: 'devnet' | 'mainnet-beta';
+  tokenAmountUsdc?: number;
+  cluster: string;
   status: 'confirmed' | 'finalized';
   timestamp: string;
-  contractProgramId: string;
+  contractProgramId?: string;
+  smartContractProgramId?: string;
+  escrowPdaAccount?: string;
 }
 
 // Program ID de Liquidação & Escrow B2B (Solana Smart Settlement)

@@ -10,6 +10,8 @@ interface CreateRFQModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateRFQ: (rfq: RFQ) => void;
+  onUpdateRFQ?: (rfq: RFQ) => void;
+  initialRFQ?: RFQ | null;
   sectors?: Sector[];
 }
 
@@ -17,11 +19,13 @@ export function CreateRFQModal({
   isOpen,
   onClose,
   onCreateRFQ,
+  onUpdateRFQ,
+  initialRFQ,
   sectors = [],
 }: CreateRFQModalProps) {
   const [title, setTitle] = useState('');
   const [scopeDescription, setScopeDescription] = useState('');
-  const [location, setLocation] = useState('Cafelândia / PR');
+  const [location, setLocation] = useState('Umuarama - PR');
   const [estimatedBudget, setEstimatedBudget] = useState('');
   const [targetDeliveryDate, setTargetDeliveryDate] = useState('Em 7 dias');
   const [deadline, setDeadline] = useState('Em 48 horas');
@@ -39,6 +43,50 @@ export function CreateRFQModal({
       target_unit_price: 0,
     },
   ]);
+
+  React.useEffect(() => {
+    if (initialRFQ) {
+      setTitle(initialRFQ.title || '');
+      setScopeDescription(initialRFQ.scope_description || '');
+      setLocation(initialRFQ.location || 'Umuarama - PR');
+      setEstimatedBudget(initialRFQ.estimated_budget ? String(initialRFQ.estimated_budget) : '');
+      setTargetDeliveryDate(initialRFQ.target_delivery_date || 'Em 7 dias');
+      setDeadline(initialRFQ.deadline || 'Em 48 horas');
+      setSelectedSectorId(initialRFQ.sector_id || sectors[0]?.id || '');
+      setItems(
+        initialRFQ.items && initialRFQ.items.length > 0
+          ? initialRFQ.items
+          : [
+              {
+                id: 'item-1',
+                item_name: '',
+                specification: '',
+                quantity: 1,
+                unit: 'unidades',
+                target_unit_price: 0,
+              },
+            ]
+      );
+    } else {
+      setTitle('');
+      setScopeDescription('');
+      setLocation('Umuarama - PR');
+      setEstimatedBudget('');
+      setTargetDeliveryDate('Em 7 dias');
+      setDeadline('Em 48 horas');
+      setSelectedSectorId(sectors[0]?.id || '');
+      setItems([
+        {
+          id: 'item-1',
+          item_name: '',
+          specification: '',
+          quantity: 1,
+          unit: 'unidades',
+          target_unit_price: 0,
+        },
+      ]);
+    }
+  }, [initialRFQ, isOpen]);
 
   if (!isOpen) return null;
 
@@ -140,6 +188,24 @@ export function CreateRFQModal({
 
     // RFQ inicia sem propostas mockadas; propostas são inseridas via Portal do Parceiro ou busca real
 
+    if (initialRFQ && onUpdateRFQ) {
+      const updatedRFQ: RFQ = {
+        ...initialRFQ,
+        title: title.trim(),
+        scope_description: scopeDescription.trim() || `Cotação de fornecimento para ${location}.`,
+        deadline: deadline || 'Em 48 horas',
+        target_delivery_date: targetDeliveryDate || 'Em 7 dias',
+        estimated_budget: calculatedTotal,
+        items: items.filter((i) => i.item_name.trim() !== ''),
+        location: location || 'Umuarama - PR',
+        sector_id: selectedSectorId,
+      };
+      savePublishedRFQ(updatedRFQ);
+      onUpdateRFQ(updatedRFQ);
+      onClose();
+      return;
+    }
+
     const newRFQ: RFQ = {
       id: `rfq-${Date.now()}`,
       code: generatedCode,
@@ -169,10 +235,12 @@ export function CreateRFQModal({
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900">
-                Abrir Novo Pedido de Cotação (RFQ)
+                {initialRFQ ? `Ajustar Requisição de Compra (${initialRFQ.code})` : 'Abrir Novo Pedido de Cotação (RFQ)'}
               </h2>
               <p className="text-[11px] text-slate-500">
-                Gere a requisição formal para enviar aos fornecedores e receber propostas comerciais.
+                {initialRFQ
+                  ? `Edite quantidades, especificações ou prazos da requisição ${initialRFQ.code}.`
+                  : 'Gere a requisição formal para enviar aos fornecedores e receber propostas comerciais.'}
               </p>
             </div>
           </div>
@@ -377,7 +445,7 @@ export function CreateRFQModal({
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Publicar Pedido de Cotação (RFQ)</span>
+                    <span>{initialRFQ ? 'Salvar Ajustes da Requisição' : 'Publicar Pedido de Cotação (RFQ)'}</span>
                   </>
                 )}
               </button>

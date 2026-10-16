@@ -11,6 +11,7 @@ import {
   Layers,
   MapPin,
   LogOut,
+  Users,
 } from 'lucide-react';
 import { Organization, UserProfile } from '@/lib/mockData';
 import { Language, translations } from '@/lib/translations';
@@ -48,6 +49,7 @@ export function Sidebar({
     { id: 'orders', label: t.menuOrders, icon: ShoppingBag },
     { id: 'sectors', label: t.menuSectors, icon: MapPin },
     { id: 'suppliers', label: t.menuSuppliers, icon: Building2 },
+    { id: 'team', label: lang === 'pt' ? 'Equipe & Compradores' : 'Team & Buyers', icon: Users },
   ];
 
   return (
