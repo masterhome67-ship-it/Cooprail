@@ -19,17 +19,14 @@ export async function POST(req: NextRequest) {
     let agentRoleTag = slashCommand || '/busca';
 
     if (
-      slashCommand === '/busca' ||
-      lower.startsWith('/busca') ||
-      lower.includes('busca') ||
-      lower.includes('fornecedor') ||
-      lower.includes('pead') ||
-      lower.includes('hidráulica') ||
-      lower.includes('peça') ||
-      imageBase64
+      slashCommand === '/demandas' ||
+      lower.startsWith('/demandas') ||
+      lower.includes('demanda') ||
+      lower.includes('rfq') ||
+      lower.includes('edital')
     ) {
-      activeAgent = 'Módulo de Busca de Fornecedores & Peças';
-      agentRoleTag = '/busca';
+      activeAgent = 'Módulo de Organização de Demandas';
+      agentRoleTag = '/demandas';
     } else if (
       slashCommand === '/controle' ||
       lower.startsWith('/controle') ||
@@ -57,15 +54,9 @@ export async function POST(req: NextRequest) {
     ) {
       activeAgent = 'Módulo de Comparação de Cotações & Propostas';
       agentRoleTag = '/compare';
-    } else if (
-      slashCommand === '/demandas' ||
-      lower.startsWith('/demandas') ||
-      lower.includes('demanda') ||
-      lower.includes('rfq') ||
-      lower.includes('edital')
-    ) {
-      activeAgent = 'Módulo de Organização de Demandas';
-      agentRoleTag = '/demandas';
+    } else {
+      activeAgent = 'Módulo de Busca de Fornecedores & Peças';
+      agentRoleTag = '/busca';
     }
 
     // 1. Contexto dos Fornecedores Homologados

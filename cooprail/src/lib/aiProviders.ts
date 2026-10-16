@@ -304,6 +304,18 @@ function generateDeterministicFallback(payload: AIRequestPayload): string {
   const lower = payload.message.toLowerCase();
   const cmd = payload.slashCommand || '';
 
+  // 0. Caso uma imagem tenha sido anexada e o sistema esteja em modo de contingência
+  if (payload.imageBase64) {
+    return `[Módulo de Inspeção Visual & Engenharia de Peças]
+
+📸 **Registro Fotográfico Recebido:**
+• O arquivo visual do componente/equipamento foi carregado no sistema.
+• **Status do Diagnóstico Visual com IA:** A identificação automática de peças por visão computacional (leitura de plaquetas, normas ABNT/IEC e catálogo de mercado) requer a variável de ambiente **GEMINI_API_KEY** ativa nas configurações do servidor.
+• **Como prosseguir com a cotação:**
+  - Para abrir uma requisição formal para este equipamento: \`/demandas cotar componentes e materiais para canteiro\`
+  - Para buscar fornecedores do setor no mercado: \`/busca fornecedores de equipamentos e materiais no Paraná\`.`;
+  }
+
   // 1. Comando ou intenção /busca (Busca de Fornecedores & Peças)
   if (cmd === '/busca' || lower.startsWith('/busca') || lower.includes('fornecedor') || lower.includes('distribuidor')) {
     if (lower.includes('cimento')) {
