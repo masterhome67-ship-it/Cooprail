@@ -712,7 +712,24 @@ export default function Home() {
                       Economia Negociada
                     </span>
                     <span className="text-lg font-bold text-emerald-600 leading-tight">
-                      -4.1%
+                      {(() => {
+                        let totalBudget = 0;
+                        let totalSpent = 0;
+                        orders.forEach((o) => {
+                          totalSpent += o.total_amount_brl || 0;
+                          const linked = rfqs.find((r) => r.code === o.rfq_code);
+                          if (linked && linked.estimated_budget) {
+                            totalBudget += linked.estimated_budget;
+                          } else {
+                            totalBudget += o.total_amount_brl || 0;
+                          }
+                        });
+                        if (totalBudget > 0 && totalSpent < totalBudget) {
+                          const diff = ((totalBudget - totalSpent) / totalBudget) * 100;
+                          return `-${diff.toFixed(1)}%`;
+                        }
+                        return '0.0%';
+                      })()}
                     </span>
                   </div>
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
@@ -720,13 +737,17 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between">
+                <div
+                  onClick={() => setActiveTab('suppliers')}
+                  className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors"
+                  title="Ver catálogo de fornecedores homologados"
+                >
                   <div>
                     <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
                       Fornecedores Homologados
                     </span>
                     <span className="text-lg font-bold text-slate-900 leading-tight">
-                      24
+                      {customSuppliers.length}
                     </span>
                   </div>
                   <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs">

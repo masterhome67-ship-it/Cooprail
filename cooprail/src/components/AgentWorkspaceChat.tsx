@@ -39,12 +39,12 @@ export interface SpecializedAgent {
 export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
   {
     id: 'supplies',
-    name: 'Agente de Suprimentos & Peças',
+    name: 'Agente de Suprimentos & Mercado',
     roleTag: 'Módulo de Busca de Fornecedores & Peças',
     slashCommand: '/busca',
-    badge: 'Catálogo & Canteiro In-Loco',
-    shortDesc: 'Localiza fornecedores homologados e prestadores já mobilizados nos canteiros com frete zero.',
-    fullDesc: 'Especialista em busca inteligente de catálogo, peças técnicas industriais e sinergia de contratos ativos nas unidades de campo.',
+    badge: 'Catálogo & Canteiro',
+    shortDesc: 'Localiza fornecedores, distribuidoras e cotações de insumos.',
+    fullDesc: 'Pesquisa inteligente de fornecedores locais, consulta de distribuidores e cotação de materiais e insumos para canteiro.',
     themeColor: '#0284c7',
     borderColor: 'border-sky-300',
     bgColor: 'bg-sky-50',
@@ -52,16 +52,16 @@ export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
     icon: Search,
     quickPrompts: [
       {
-        label: 'Prestadores no Canteiro',
-        prompt: '/busca quais empresas já estão prestando serviço no canteiro de obras?',
+        label: 'Buscar Fornecedores Locais',
+        prompt: '/busca fornecedores e distribuidoras com pronta-entrega na região',
       },
       {
-        label: 'Tubos PEAD e Válvulas',
-        prompt: '/busca fornecedores homologados de tubos PEAD de alta densidade e válvulas de retenção',
+        label: 'Cotar Insumos e Materiais',
+        prompt: '/busca cotação de insumos para canteiro de obras com frete incluso',
       },
       {
-        label: 'Fornecedores em Cascavel/PR',
-        prompt: '/busca fornecedores locais na região Oeste do PR com entrega imediata',
+        label: 'Consultar Situação de CNPJ',
+        prompt: '/busca consultar dados cadastrais e conformidade de fornecedor por CNPJ',
       },
     ],
   },
@@ -71,8 +71,8 @@ export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
     roleTag: 'Módulo de Organização de Demandas',
     slashCommand: '/demandas',
     badge: 'Estruturação & Editais',
-    shortDesc: 'Estrutura editais de cotação técnica, agrupando necessidades dos setores operacionais.',
-    fullDesc: 'Transforma solicitações soltas em requisições de compra (RFQs) estruturadas, com memorial técnico e teto de gastos.',
+    shortDesc: 'Estrutura pedidos de cotação e especificações técnicas.',
+    fullDesc: 'Transforma necessidades de compra em requisições de cotação (RFQs) estruturadas, com memorial técnico e teto orçamentário.',
     themeColor: '#4f46e5',
     borderColor: 'border-indigo-300',
     bgColor: 'bg-indigo-50',
@@ -80,16 +80,16 @@ export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
     icon: FileText,
     quickPrompts: [
       {
-        label: 'Minuta de Manutenção',
-        prompt: '/demandas estruturar edital de cotação para manutenção preventiva de rodeiros e truques ferroviários',
+        label: 'Nova Cotação de Cimento',
+        prompt: '/demandas cotar 50 sacos de cimento Portland para entrega imediata',
       },
       {
-        label: 'Cabos de Sinalização',
-        prompt: '/demandas especificar compra técnica de 2.000m de cabos de sinalização para o Setor Central',
+        label: 'Estruturar Nova RFQ',
+        prompt: '/demandas criar requisição técnica de compra com memorial descritivo',
       },
       {
         label: 'Consolidar Demandas',
-        prompt: '/demandas consolidar solicitações pendentes dos setores operacionais',
+        prompt: '/demandas consolidar solicitações de materiais e verificar centros de custo',
       },
     ],
   },
@@ -98,9 +98,9 @@ export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
     name: 'Agente Financeiro & Solana B2B',
     roleTag: 'Módulo de Pedidos & Ordens de Compra',
     slashCommand: '/pedido',
-    badge: 'Smart Escrow & USDC',
-    shortDesc: 'Estrutura ordens formais (PO) e executa liquidação instantânea on-chain na Solana.',
-    fullDesc: 'Conecta o aceite da melhor cotação à emissão de Purchase Orders (POs) com liquidação sub-segundo em USDC e SPL Memo.',
+    badge: 'Smart Escrow & PO',
+    shortDesc: 'Emite ordens de compra e executa liquidação formal.',
+    fullDesc: 'Conecta o aceite da cotação à emissão de Purchase Orders (POs) formais com liquidação garantida via Solana Smart Escrow.',
     themeColor: '#059669',
     borderColor: 'border-emerald-300',
     bgColor: 'bg-emerald-50',
@@ -108,16 +108,16 @@ export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
     icon: Zap,
     quickPrompts: [
       {
-        label: 'Como Funciona a Liquidação?',
-        prompt: '/pedido como funciona a liquidação instantânea em USDC na Solana com comprovante on-chain?',
+        label: 'Como Funciona o Smart Escrow',
+        prompt: '/pedido como funciona a garantia on-chain com Solana Smart Escrow?',
       },
       {
-        label: 'Economia vs TED/Boleto',
-        prompt: '/pedido qual a economia estimada de taxas e tempo ao usar liquidação on-chain para grandes fornecedores?',
+        label: 'Emitir Ordem de Compra (PO)',
+        prompt: '/pedido emitir Purchase Order formal para a proposta aprovada',
       },
       {
-        label: 'Emitir PO da Melhor Oferta',
-        prompt: '/pedido emitir ordem de compra formal para a cotação aprovada na esteira',
+        label: 'Vantagens de Liquidação On-Chain',
+        prompt: '/pedido quais as vantagens e taxas de liquidação instantânea via Solana?',
       },
     ],
   },
@@ -127,8 +127,8 @@ export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
     roleTag: 'Módulo de Controle & Compliance',
     slashCommand: '/controle',
     badge: 'Governança & Alçadas',
-    shortDesc: 'Audita pendências na esteira de compras, limites orçamentários e centros de custo.',
-    fullDesc: 'Verifica conformidade fiscal, exigências de certificações ISO e respeita as alçadas de diretoria de cada centro de custo.',
+    shortDesc: 'Audita conformidade fiscal, limites orçamentários e alçadas.',
+    fullDesc: 'Audita notas fiscais, situação na Receita Federal/SEFAZ e valida limites orçamentários antes do fechamento.',
     themeColor: '#d97706',
     borderColor: 'border-amber-300',
     bgColor: 'bg-amber-50',
@@ -136,16 +136,16 @@ export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
     icon: ShieldCheck,
     quickPrompts: [
       {
-        label: 'Auditar Centro de Custo',
-        prompt: '/controle auditar limite orçamentário e saldo disponível do Centro de Custo 2100',
+        label: 'Auditar Situação Cadastral',
+        prompt: '/controle verificar certidões negativas e conformidade de fornecedor',
       },
       {
-        label: 'Conformidade Fiscal',
-        prompt: '/controle validar situação cadastral e certidões dos fornecedores cotados',
+        label: 'Auditoria de Centro de Custo',
+        prompt: '/controle auditar limites orçamentários e saldo disponível do centro de custo',
       },
       {
         label: 'Alçadas de Aprovação',
-        prompt: '/controle quais os níveis de aprovação necessários para compras acima de R$ 100.000,00?',
+        prompt: '/controle quais os níveis de aprovação necessários para compras corporativas?',
       },
     ],
   },
@@ -231,25 +231,25 @@ export function AgentWorkspaceChat({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden flex flex-col">
-      {/* 1. Header do Hub: Seletor de Agentes Separados */}
-      <div className="border-b border-slate-200 bg-slate-50/80 p-3.5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
+      {/* 1. Header do Hub: Central de Agentes */}
+      <div className="border-b border-slate-200 bg-slate-50/80 p-3 sm:px-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center text-[#0284c7]">
+            <div className="w-8 h-8 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center text-[#0284c7] shrink-0">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-bold text-slate-900">
-                  Centro de Início por Agentes Especializados
+                  Central de Agentes Especializados
                 </h3>
-                <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono font-bold px-2 py-0.2 rounded-full flex items-center gap-1">
+                <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   4 Agentes Ativos
                 </span>
               </div>
               <p className="text-[11px] text-slate-500">
-                Selecione o agente especialista pelo qual deseja iniciar sua operação:
+                Selecione a especialidade para operar cotações, demandas, pagamentos ou compliance:
               </p>
             </div>
           </div>
@@ -273,8 +273,8 @@ export function AgentWorkspaceChat({
           </div>
         </div>
 
-        {/* Grade de Seleção dos 4 Agentes */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1">
+        {/* Barra de Seleção dos 4 Agentes com Abas Elegantes */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {SPECIALIZED_AGENTS.map((agent) => {
             const Icon = agent.icon;
             const isSelected = agent.id === selectedAgentId;
@@ -283,78 +283,69 @@ export function AgentWorkspaceChat({
               <button
                 key={agent.id}
                 onClick={() => setSelectedAgentId(agent.id)}
-                className={`text-left p-2.5 rounded-lg border transition-all cursor-pointer relative ${
+                className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer relative ${
                   isSelected
-                    ? `bg-white ${agent.borderColor} shadow-xs ring-1 ring-[#0284c7]/30`
-                    : 'bg-white/60 hover:bg-white border-slate-200 text-slate-600'
+                    ? `bg-white ${agent.borderColor} shadow-xs ring-2 ring-[#0284c7]/20`
+                    : 'bg-white/70 hover:bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                 }`}
               >
-                <div className="flex items-start gap-2">
-                  <div
-                    className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
-                      isSelected ? `${agent.bgColor} ${agent.textColor}` : 'bg-slate-100 text-slate-500'
+                <div className="flex items-center justify-between gap-1.5 mb-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        isSelected ? `${agent.bgColor} ${agent.textColor}` : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </div>
+                    <span
+                      className={`text-xs font-bold truncate ${
+                        isSelected ? 'text-slate-900' : 'text-slate-700'
+                      }`}
+                    >
+                      {agent.name.replace('Agente de ', '')}
+                    </span>
+                  </div>
+
+                  <span
+                    className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded border shrink-0 ${
+                      isSelected
+                        ? `${agent.bgColor} ${agent.textColor} ${agent.borderColor}`
+                        : 'bg-slate-50 text-slate-500 border-slate-200'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span
-                        className={`text-xs font-bold truncate ${
-                          isSelected ? 'text-slate-900' : 'text-slate-700'
-                        }`}
-                      >
-                        {agent.name.replace('Agente de ', '')}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 line-clamp-1 leading-tight">
-                      {agent.shortDesc}
-                    </p>
-                  </div>
+                    {agent.slashCommand}
+                  </span>
                 </div>
 
-                {isSelected && (
-                  <span
-                    className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-b-lg bg-[#0284c7]`}
-                  />
-                )}
+                <p className="text-[10px] text-slate-500 line-clamp-1 leading-snug">
+                  {agent.shortDesc}
+                </p>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* 2. Banner do Agente Ativo & Sugestões de Ação Rápida */}
-      <div className="px-4 py-2 border-b border-slate-200 bg-white flex flex-col md:flex-row md:items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div
-            className={`w-6 h-6 rounded-lg flex items-center justify-center ${activeAgent.bgColor} ${activeAgent.textColor}`}
-          >
-            <activeAgent.icon className="w-3.5 h-3.5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-900">{activeAgent.name}</span>
-              <span
-                className={`text-[9px] font-mono px-1.5 py-0.2 rounded border font-semibold ${activeAgent.bgColor} ${activeAgent.textColor} ${activeAgent.borderColor}`}
-              >
-                {activeAgent.badge}
-              </span>
-            </div>
-          </div>
+      {/* 2. Faixa do Agente Ativo: Capacidade e Ações Rápidas */}
+      <div className="px-4 py-2 border-b border-slate-200 bg-white flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-2 text-slate-600 min-w-0">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+          <span className="font-bold text-slate-800 shrink-0">{activeAgent.name}:</span>
+          <span className="text-[11px] text-slate-500 truncate">{activeAgent.fullDesc}</span>
         </div>
 
         {/* Chips de Ações Rápidas (1 clique para começar) */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-semibold text-slate-600 mr-0.5 flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+          <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-[#0284c7]" />
-            Começar:
+            Ações Rápidas:
           </span>
           {activeAgent.quickPrompts.map((item, idx) => (
             <button
               key={idx}
               onClick={() => handleSend(item.prompt)}
-              className="text-[10px] px-2 py-0.5 rounded-md bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-200 text-slate-700 hover:text-[#0284c7] font-medium transition-all cursor-pointer shadow-2xs"
+              className="text-[10px] px-2.5 py-1 rounded-md bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 text-slate-700 hover:text-[#0284c7] font-medium transition-all cursor-pointer shadow-2xs"
             >
               {item.label}
             </button>
