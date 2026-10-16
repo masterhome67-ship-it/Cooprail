@@ -15,7 +15,13 @@ import {
   Camera,
   X,
   RefreshCw,
-  Image as ImageIcon,
+  ChevronUp,
+  FileEdit,
+  ScanText,
+  ShoppingBag,
+  BarChart3,
+  CornerDownRight,
+  Paperclip,
 } from 'lucide-react';
 import { ChatMessage } from '@/lib/mockData';
 import { Language } from '@/lib/translations';
@@ -28,126 +34,97 @@ export interface SpecializedAgent {
   badge: string;
   shortDesc: string;
   fullDesc: string;
-  themeColor: string;
-  borderColor: string;
-  bgColor: string;
-  textColor: string;
   icon: React.ElementType;
-  quickPrompts: { label: string; prompt: string }[];
 }
 
 export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
   {
     id: 'supplies',
-    name: 'Agente de Suprimentos & Mercado',
+    name: 'Busca de Fornecedores & Mercado',
     roleTag: 'Módulo de Busca de Fornecedores & Peças',
     slashCommand: '/busca',
-    badge: 'Catálogo & Canteiro',
-    shortDesc: 'Localiza fornecedores, distribuidoras e cotações de insumos.',
+    badge: 'Catálogo & Mercado',
+    shortDesc: 'Localiza distribuidores locais, fornecedores no canteiro e cotações de insumos.',
     fullDesc: 'Pesquisa inteligente de fornecedores locais, consulta de distribuidores e cotação de materiais e insumos para canteiro.',
-    themeColor: '#0284c7',
-    borderColor: 'border-sky-300',
-    bgColor: 'bg-sky-50',
-    textColor: 'text-[#0284c7]',
     icon: Search,
-    quickPrompts: [
-      {
-        label: 'Buscar Fornecedores Locais',
-        prompt: '/busca fornecedores e distribuidoras com pronta-entrega na região',
-      },
-      {
-        label: 'Cotar Insumos e Materiais',
-        prompt: '/busca cotação de insumos para canteiro de obras com frete incluso',
-      },
-      {
-        label: 'Consultar Situação de CNPJ',
-        prompt: '/busca consultar dados cadastrais e conformidade de fornecedor por CNPJ',
-      },
-    ],
   },
   {
     id: 'rfqs',
-    name: 'Agente de Demandas & RFQs',
+    name: 'Redator de RFQs & Demandas',
     roleTag: 'Módulo de Organização de Demandas',
     slashCommand: '/demandas',
     badge: 'Estruturação & Editais',
-    shortDesc: 'Estrutura pedidos de cotação e especificações técnicas.',
+    shortDesc: 'Estrutura editais de cotação técnica com memorial descritivo e normas ABNT.',
     fullDesc: 'Transforma necessidades de compra em requisições de cotação (RFQs) estruturadas, com memorial técnico e teto orçamentário.',
-    themeColor: '#4f46e5',
-    borderColor: 'border-indigo-300',
-    bgColor: 'bg-indigo-50',
-    textColor: 'text-indigo-600',
-    icon: FileText,
-    quickPrompts: [
-      {
-        label: 'Nova Cotação de Cimento',
-        prompt: '/demandas cotar 50 sacos de cimento Portland para entrega imediata',
-      },
-      {
-        label: 'Estruturar Nova RFQ',
-        prompt: '/demandas criar requisição técnica de compra com memorial descritivo',
-      },
-      {
-        label: 'Consolidar Demandas',
-        prompt: '/demandas consolidar solicitações de materiais e verificar centros de custo',
-      },
-    ],
+    icon: FileEdit,
+  },
+  {
+    id: 'comparator',
+    name: 'Leitor de Cotações & Comparador',
+    roleTag: 'Módulo de Comparação de Cotações',
+    slashCommand: '/compare',
+    badge: 'Propostas & Análise',
+    shortDesc: 'Cruza propostas do Portal do Parceiro, planilhas e identifica o menor preço.',
+    fullDesc: 'Lê e normaliza propostas comerciais de fornecedores, comparando preço unitário, frete e prazos de entrega.',
+    icon: ScanText,
   },
   {
     id: 'finance',
-    name: 'Agente Financeiro & Solana B2B',
+    name: 'Ordens de Compra & Liquidação',
     roleTag: 'Módulo de Pedidos & Ordens de Compra',
     slashCommand: '/pedido',
     badge: 'Smart Escrow & PO',
-    shortDesc: 'Emite ordens de compra e executa liquidação formal.',
+    shortDesc: 'Emite Purchase Orders formais e executa garantia on-chain via Solana.',
     fullDesc: 'Conecta o aceite da cotação à emissão de Purchase Orders (POs) formais com liquidação garantida via Solana Smart Escrow.',
-    themeColor: '#059669',
-    borderColor: 'border-emerald-300',
-    bgColor: 'bg-emerald-50',
-    textColor: 'text-emerald-700',
-    icon: Zap,
-    quickPrompts: [
-      {
-        label: 'Como Funciona o Smart Escrow',
-        prompt: '/pedido como funciona a garantia on-chain com Solana Smart Escrow?',
-      },
-      {
-        label: 'Emitir Ordem de Compra (PO)',
-        prompt: '/pedido emitir Purchase Order formal para a proposta aprovada',
-      },
-      {
-        label: 'Vantagens de Liquidação On-Chain',
-        prompt: '/pedido quais as vantagens e taxas de liquidação instantânea via Solana?',
-      },
-    ],
+    icon: ShoppingBag,
   },
   {
     id: 'compliance',
-    name: 'Agente de Compliance & Auditoria',
+    name: 'Compliance & Auditoria Fiscal',
     roleTag: 'Módulo de Controle & Compliance',
     slashCommand: '/controle',
-    badge: 'Governança & Alçadas',
-    shortDesc: 'Audita conformidade fiscal, limites orçamentários e alçadas.',
+    badge: 'Receita & SEFAZ',
+    shortDesc: 'Valida CNPJ na Receita Federal e cruza notas SEFAZ com Certificado Digital A1.',
     fullDesc: 'Audita notas fiscais, situação na Receita Federal/SEFAZ e valida limites orçamentários antes do fechamento.',
-    themeColor: '#d97706',
-    borderColor: 'border-amber-300',
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-700',
     icon: ShieldCheck,
-    quickPrompts: [
-      {
-        label: 'Auditar Situação Cadastral',
-        prompt: '/controle verificar certidões negativas e conformidade de fornecedor',
-      },
-      {
-        label: 'Auditoria de Centro de Custo',
-        prompt: '/controle auditar limites orçamentários e saldo disponível do centro de custo',
-      },
-      {
-        label: 'Alçadas de Aprovação',
-        prompt: '/controle quais os níveis de aprovação necessários para compras corporativas?',
-      },
-    ],
+  },
+  {
+    id: 'budget',
+    name: 'Controle Orçamentário & Centros de Custo',
+    roleTag: 'Módulo de Controle & Compliance',
+    slashCommand: '/controle',
+    badge: 'Alçadas & Verba',
+    shortDesc: 'Audita saldo orçamentário disponível e alçadas de aprovação por diretoria.',
+    fullDesc: 'Monitora centros de custo operacionais, saldos remanescentes e evita estouro de verba em compras industriais.',
+    icon: BarChart3,
+  },
+];
+
+export const STARTER_ACTIONS = [
+  {
+    label: 'Pesquisar fornecedores e distribuidores de insumos na região',
+    prompt: '/busca fornecedores e distribuidores com pronta-entrega na região',
+    agentId: 'supplies',
+  },
+  {
+    label: 'Estruturar edital de cotação para nova demanda de obra',
+    prompt: '/demandas criar edital de cotação técnica com memorial descritivo',
+    agentId: 'rfqs',
+  },
+  {
+    label: 'Como estão as propostas recebidas no Portal do Parceiro?',
+    prompt: '/compare como estão as propostas dos fornecedores para as RFQs abertas?',
+    agentId: 'comparator',
+  },
+  {
+    label: 'Auditar situação cadastral de fornecedor e notas na SEFAZ',
+    prompt: '/controle auditar certidões de fornecedor e status na Receita Federal',
+    agentId: 'compliance',
+  },
+  {
+    label: 'Quais ordens de compra precisam da minha aprovação hoje?',
+    prompt: '/pedido listar ordens de compra e decisões pendentes de aprovação',
+    agentId: 'finance',
   },
 ];
 
@@ -169,6 +146,7 @@ export function AgentWorkspaceChat({
   lang,
 }: AgentWorkspaceChatProps) {
   const [selectedAgentId, setSelectedAgentId] = useState<string>('supplies');
+  const [isAgentsOpen, setIsAgentsOpen] = useState<boolean>(true);
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -231,41 +209,39 @@ export function AgentWorkspaceChat({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden flex flex-col">
-      {/* 1. Header do Hub: Central de Agentes */}
-      <div className="border-b border-slate-200 bg-slate-50/80 p-3 sm:px-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center text-[#0284c7] shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-xs font-bold text-slate-900">
-                  Central de Agentes Especializados
-                </h3>
-                <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  4 Agentes Ativos
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Selecione a especialidade para operar cotações, demandas, pagamentos ou compliance:
-              </p>
-            </div>
-          </div>
+      {/* 1. Barra de Cabeçalho com Seção Retrátil de Agentes */}
+      <div className="border-b border-slate-200 bg-slate-50/70 p-3 sm:px-4">
+        <div className="flex items-center justify-between gap-3">
+          {/* Botão de Toggle "Agentes ^" */}
+          <button
+            type="button"
+            onClick={() => setIsAgentsOpen(!isAgentsOpen)}
+            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-[#0284c7] transition-colors cursor-pointer group"
+          >
+            <span>Agentes Especializados</span>
+            <span className="text-[10px] bg-sky-100 text-[#0284c7] font-mono px-1.5 py-0.2 rounded-full font-semibold">
+              6 disponíveis
+            </span>
+            <ChevronUp
+              className={`w-3.5 h-3.5 text-slate-400 group-hover:text-[#0284c7] transition-transform duration-200 ${
+                isAgentsOpen ? '' : 'rotate-180'
+              }`}
+            />
+          </button>
 
+          {/* Ações Rápidas de Topo */}
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenUploadDoc}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
               title="Importar Proposta em PDF"
             >
               <UploadCloud className="w-3.5 h-3.5 text-slate-600" />
-              <span>Anexar PDF</span>
+              <span className="hidden sm:inline">Anexar PDF</span>
             </button>
             <button
               onClick={onNewRFQ}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Novo Pedido (RFQ)</span>
@@ -273,171 +249,167 @@ export function AgentWorkspaceChat({
           </div>
         </div>
 
-        {/* Barra de Seleção dos 4 Agentes com Abas Elegantes */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {SPECIALIZED_AGENTS.map((agent) => {
-            const Icon = agent.icon;
-            const isSelected = agent.id === selectedAgentId;
+        {/* 2. Lista Central de Agentes em 2 Colunas Limpas (Estilo Bido Minimalista) */}
+        {isAgentsOpen && (
+          <div className="mt-3 pt-3 border-t border-slate-200/80 animate-in fade-in duration-200 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+              {SPECIALIZED_AGENTS.map((agent) => {
+                const Icon = agent.icon;
+                const isSelected = agent.id === selectedAgentId;
 
-            return (
-              <button
-                key={agent.id}
-                onClick={() => setSelectedAgentId(agent.id)}
-                className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer relative ${
-                  isSelected
-                    ? `bg-white ${agent.borderColor} shadow-xs ring-2 ring-[#0284c7]/20`
-                    : 'bg-white/70 hover:bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-1.5 mb-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <div
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                        isSelected ? `${agent.bgColor} ${agent.textColor}` : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    <span
-                      className={`text-xs font-bold truncate ${
-                        isSelected ? 'text-slate-900' : 'text-slate-700'
-                      }`}
-                    >
-                      {agent.name.replace('Agente de ', '')}
-                    </span>
-                  </div>
-
-                  <span
-                    className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded border shrink-0 ${
+                return (
+                  <button
+                    key={agent.id}
+                    onClick={() => {
+                      setSelectedAgentId(agent.id);
+                      setInputText(`${agent.slashCommand} `);
+                    }}
+                    className={`flex items-start gap-2.5 p-2 rounded-lg text-left transition-all cursor-pointer ${
                       isSelected
-                        ? `${agent.bgColor} ${agent.textColor} ${agent.borderColor}`
-                        : 'bg-slate-50 text-slate-500 border-slate-200'
+                        ? 'bg-sky-50/80 text-[#0284c7] font-semibold ring-1 ring-sky-200'
+                        : 'hover:bg-slate-100 text-slate-700 hover:text-slate-900'
                     }`}
                   >
-                    {agent.slashCommand}
-                  </span>
-                </div>
+                    <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${isSelected ? 'text-[#0284c7]' : 'text-slate-400'}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-medium truncate">{agent.name}</span>
+                        <span className="text-[10px] font-mono text-slate-600 bg-white border border-slate-200 px-1 py-0.2 rounded shrink-0">
+                          {agent.slashCommand}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-600 line-clamp-1 mt-0.5">
+                        {agent.shortDesc}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-                <p className="text-[10px] text-slate-500 line-clamp-1 leading-snug">
-                  {agent.shortDesc}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 2. Faixa do Agente Ativo: Capacidade e Ações Rápidas */}
-      <div className="px-4 py-2 border-b border-slate-200 bg-white flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-2 text-slate-600 min-w-0">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-          <span className="font-bold text-slate-800 shrink-0">{activeAgent.name}:</span>
-          <span className="text-[11px] text-slate-500 truncate">{activeAgent.fullDesc}</span>
-        </div>
-
-        {/* Chips de Ações Rápidas (1 clique para começar) */}
-        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-          <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-[#0284c7]" />
-            Ações Rápidas:
-          </span>
-          {activeAgent.quickPrompts.map((item, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSend(item.prompt)}
-              className="text-[10px] px-2.5 py-1 rounded-md bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 text-slate-700 hover:text-[#0284c7] font-medium transition-all cursor-pointer shadow-2xs"
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+            {/* Sugestões de Ações Rápidas com ↳ */}
+            <div className="pt-2 border-t border-slate-200/60 space-y-1">
+              {STARTER_ACTIONS.map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setSelectedAgentId(item.agentId);
+                    handleSend(item.prompt);
+                  }}
+                  className="w-full flex items-center gap-2 text-left py-1 px-1.5 rounded hover:bg-slate-100 text-[11px] text-slate-600 hover:text-[#0284c7] transition-colors cursor-pointer group"
+                >
+                  <span className="text-slate-600 group-hover:text-[#0284c7] font-mono">↳</span>
+                  <span className="truncate">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. Área de Conversa e Feed de Mensagens */}
-      <div className="p-4 max-h-[300px] min-h-[160px] overflow-y-auto space-y-3 bg-slate-50/40">
+      <div className="p-4 max-h-[340px] min-h-[160px] overflow-y-auto space-y-3 bg-slate-50/30">
         {messages.length === 0 ? (
-          <div className="py-4 text-center space-y-1.5">
+          <div className="py-6 text-center space-y-1.5">
             <div className="w-9 h-9 rounded-full bg-sky-50 text-[#0284c7] mx-auto flex items-center justify-center border border-sky-200">
-              <activeAgent.icon className="w-4 h-4" />
+              <Bot className="w-4 h-4" />
             </div>
-            <div className="max-w-md mx-auto space-y-0.5">
-              <h4 className="text-xs font-bold text-slate-800">
-                Inicie uma solicitação com o {activeAgent.name}
-              </h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Digite sua necessidade abaixo, clique em um atalho ou use a <strong>câmera</strong> para tirar foto de uma peça e identificá-la.
-              </p>
-            </div>
+            <p className="text-xs font-bold text-slate-800">
+              Copiloto Operacional de Compras Pronto
+            </p>
+            <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+              Selecione um agente acima ou clique em uma das ações com ↳ para iniciar sua cotação.
+            </p>
           </div>
         ) : (
           messages.map((msg) => {
             const isUser = msg.sender_role === 'user';
-
             return (
               <div
                 key={msg.id}
-                className={`flex gap-2.5 text-xs animate-in fade-in ${
-                  isUser ? 'justify-end' : 'justify-start'
-                }`}
+                className={`flex gap-2.5 text-xs ${isUser ? 'justify-end' : 'justify-start'}`}
               >
                 {!isUser && (
                   <div className="w-6 h-6 rounded-lg bg-sky-100 text-[#0284c7] flex items-center justify-center shrink-0 border border-sky-200">
-                    <Bot className="w-3 h-3" />
+                    <Bot className="w-3.5 h-3.5" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-2xl rounded-xl p-3 shadow-2xs space-y-2 ${
+                  className={`max-w-[85%] rounded-xl p-3 shadow-2xs space-y-2 ${
                     isUser
-                      ? 'bg-[#0284c7] text-white'
-                      : 'bg-white text-slate-800 border border-slate-200'
+                      ? 'bg-[#0284c7] text-white rounded-tr-xs'
+                      : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-3 text-[10px] opacity-75">
-                    <span className="font-semibold">
-                      {isUser ? 'Você' : msg.slash_command || activeAgent.name}
-                    </span>
-                    <span>{msg.timestamp}</span>
-                  </div>
+                  {/* Badge de papel/comando se houver */}
+                  {msg.slash_command && (
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span
+                        className={`text-[9px] font-mono px-1.5 py-0.2 rounded border font-semibold ${
+                          isUser
+                            ? 'bg-sky-600 border-sky-500 text-white'
+                            : 'bg-slate-100 border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        {msg.slash_command}
+                      </span>
+                      <span
+                        className={`text-[9px] ${
+                          isUser ? 'text-sky-200' : 'text-slate-600'
+                        }`}
+                      >
+                        {msg.timestamp}
+                      </span>
+                    </div>
+                  )}
 
-                  {/* Foto da Peça anexada pelo usuário */}
+                  {/* Foto de peça anexada na mensagem */}
                   {msg.image_url && (
-                    <div className="pt-1">
+                    <div className="rounded-lg overflow-hidden border border-slate-200 max-w-xs mb-1">
                       <img
                         src={msg.image_url}
-                        alt="Foto da peça"
-                        className="max-h-48 max-w-full rounded-lg border border-slate-200/50 object-cover shadow-2xs"
+                        alt="Peça Anexada"
+                        className="w-full h-32 object-cover"
                       />
                     </div>
                   )}
 
-                  <p className="whitespace-pre-wrap leading-relaxed font-sans">{msg.content}</p>
+                  <div className="whitespace-pre-wrap leading-relaxed text-xs">
+                    {msg.content}
+                  </div>
 
-                  {/* Card de Ação Integrado (quando gerado pelo agente) */}
+                  {/* Card Interativo de Decisão */}
                   {msg.action_card && (
-                    <div className="mt-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 space-y-2">
-                      <div className="flex items-center justify-between font-bold text-xs">
-                        <span>{msg.action_card.title}</span>
+                    <div className="mt-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2 text-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[11px] text-slate-900 truncate">
+                          {msg.action_card.title}
+                        </span>
                       </div>
 
                       {msg.action_card.metrics && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[10px]">
-                          {msg.action_card.metrics.map((m, i) => (
-                            <div key={i} className="bg-white p-1 rounded border border-slate-100">
-                              <span className="text-slate-500 block text-[9px]">{m.label}</span>
-                              <span className="font-bold text-slate-900">{m.value}</span>
+                          {msg.action_card.metrics.map((m, idx) => (
+                            <div key={idx} className="bg-white p-1.5 rounded border border-slate-200">
+                              <span className="text-slate-500 block truncate">{m.label}</span>
+                              <span className="font-bold text-slate-900 block truncate">{m.value}</span>
                             </div>
                           ))}
                         </div>
                       )}
 
                       {msg.action_card.actions && (
-                        <div className="flex gap-2 pt-0.5">
-                          {msg.action_card.actions.map((act, i) => (
+                        <div className="flex items-center gap-1.5 pt-1">
+                          {msg.action_card.actions.map((act, idx) => (
                             <button
-                              key={i}
+                              key={idx}
                               onClick={() => onActionClick(act.action)}
-                              className="px-2.5 py-1 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white text-[10px] font-semibold transition-colors cursor-pointer shadow-xs"
+                              className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+                                idx === 0
+                                  ? 'bg-[#0284c7] hover:bg-[#0369a1] text-white shadow-2xs'
+                                  : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                              }`}
                             >
                               {act.label}
                             </button>
@@ -473,7 +445,7 @@ export function AgentWorkspaceChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 4. Barra de Input Interativa com Botão de Câmera / Foto de Peça */}
+      {/* 4. Barra de Input Interativa com Ícone de Anexo / Câmera */}
       <div className="p-2.5 border-t border-slate-200 bg-white">
         {/* Preview da Imagem Selecionada */}
         {selectedImage && (
@@ -525,10 +497,10 @@ export function AgentWorkspaceChat({
                 ? 'bg-sky-100 text-[#0284c7] border-sky-300'
                 : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
             }`}
-            title="Tirar Foto ou Enviar Imagem da Peça"
+            title="Anexar Imagem / Foto Técnica de Peça"
           >
-            <Camera className="w-4 h-4 text-[#0284c7]" />
-            <span className="hidden md:inline text-[11px]">Foto da Peça</span>
+            <Paperclip className="w-4 h-4 text-[#0284c7]" />
+            <span className="hidden md:inline text-[11px]">Anexar</span>
           </button>
 
           <div className="relative flex-1">
@@ -538,11 +510,7 @@ export function AgentWorkspaceChat({
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isSubmitting}
-              placeholder={
-                selectedImage
-                  ? 'Foto anexada! Pressione Enviar ou adicione detalhes da peça...'
-                  : `Pergunte ao ${activeAgent.name} (ex: buscar peças, estruturar RFQ, auditar)...`
-              }
+              placeholder="Pergunte qualquer coisa — digite / para habilidades dos agentes..."
               className="w-full pl-3 pr-20 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7] transition-all"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">

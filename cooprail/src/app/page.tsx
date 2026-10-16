@@ -506,49 +506,76 @@ export default function Home() {
         setSelectedRfqId(newRFQ.id);
 
         // Gera a pendência de decisão imediata na esteira
+        const hasQuotes = quotes && quotes.length > 0;
         const newTask: Task = {
           id: `task-auto-${Date.now()}`,
-          title: `Decisão de Compra: ${newRFQ.code} (${quotes.length} Cotações Prontas)`,
-          description: `Cotação autônoma realizada para ${params.quantity} ${params.unit} de ${params.material} em ${params.location}. Melhor oferta: ${quotes[0].supplier_name} (${quotes[0].total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}).`,
+          title: hasQuotes
+            ? `Decisão de Compra: ${newRFQ.code} (${quotes.length} Cotações Prontas)`
+            : `Cotação Ativa: Aguardando Propostas para ${newRFQ.code}`,
+          description: hasQuotes
+            ? `Cotação realizada para ${params.quantity} ${params.unit} de ${params.material} em ${params.location}. Melhor oferta: ${quotes[0].supplier_name} (${quotes[0].total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}).`
+            : `Requisição ${newRFQ.code} aberta no mercado para ${params.quantity} ${params.unit} de ${params.material}. Aguardando propostas pelo Portal do Parceiro ou inserção manual.`,
           status: 'needs_you',
           priority: 'high',
           category: 'quote_decision',
           due_date: newRFQ.deadline,
-          badge_text: 'Cotação Pronta',
+          badge_text: hasQuotes ? 'Cotação Pronta' : 'Aguardando Propostas',
         };
         setTasks((prev) => [newTask, ...prev]);
 
         // Responde no Chat com Card Interativo de Decisão
-        const bestQuote = quotes[0];
         const autoReplyMsg: ChatMessage = {
           id: `ast-${Date.now()}`,
           sender_role: 'assistant',
           content: summaryText,
           timestamp: timeStr,
-          slash_command: '/busca',
-          action_card: {
-            type: 'quote_recommendation',
-            title: `Cotação Autônoma: ${newRFQ.code}`,
-            metrics: [
-              {
-                label: 'Melhor Oferta',
-                value: bestQuote.total_amount.toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                }),
+          slash_command: '/demandas',
+          action_card: hasQuotes
+            ? {
+                type: 'quote_recommendation',
+                title: `Cotação Autônoma: ${newRFQ.code}`,
+                metrics: [
+                  {
+                    label: 'Melhor Oferta',
+                    value: quotes[0].total_amount.toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                    }),
+                  },
+                  { label: 'Fornecedor', value: quotes[0].supplier_name },
+                  { label: 'Prazo', value: `${quotes[0].delivery_lead_time_days} dia(s)` },
+                ],
+                actions: [
+                  { label: '📊 Abrir no Comparador', action: 'inspect' },
+                  { label: '✓ Aprovar Menor Preço', action: 'approve' },
+                ],
+              }
+            : {
+                type: 'rfq_scope',
+                title: `Requisição Aberta no Mercado: ${newRFQ.code}`,
+                metrics: [
+                  {
+                    label: 'Orçamento Teto',
+                    value: newRFQ.estimated_budget.toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                    }),
+                  },
+                  { label: 'Status', value: 'Aguardando Propostas' },
+                  { label: 'Prazo', value: newRFQ.deadline || 'Em 24h' },
+                ],
+                actions: [
+                  { label: '📊 Ver no Comparador de Cotações', action: 'inspect' },
+                ],
               },
-              { label: 'Fornecedor', value: bestQuote.supplier_name },
-              { label: 'Prazo', value: `${bestQuote.delivery_lead_time_days} dia(s)` },
-            ],
-            actions: [
-              { label: '📊 Abrir no Comparador', action: 'inspect' },
-              { label: '✓ Aprovar Menor Preço', action: 'approve' },
-            ],
-          },
         };
 
         setChatMessages((prev) => [...prev, autoReplyMsg]);
-        showToast(`Cotação ${newRFQ.code} coletada com ${quotes.length} fornecedores!`);
+        showToast(
+          hasQuotes
+            ? `Cotação ${newRFQ.code} coletada com ${quotes.length} fornecedores!`
+            : `Requisição ${newRFQ.code} aberta com sucesso! Aguardando propostas.`
+        );
         return;
       } catch (err) {
         console.warn('Fallback da cotação autônoma para chat padrão:', err);
