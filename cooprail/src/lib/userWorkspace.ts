@@ -196,13 +196,17 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
         }
       }
 
-      // Se a primeira mensagem ainda for a de boas-vindas antiga, atualiza para o agente de ajuda com comandos
+      // Limpa consultas e respostas anteriores para iniciar nova pesquisa do zero
       if (parsed.chatMessages && parsed.chatMessages.length > 0) {
-        if (
-          parsed.chatMessages[0].content.includes('Bem-vindo ao ambiente corporativo exclusivo') ||
-          parsed.chatMessages[0].content.includes('Este workspace foi criado do zero')
-        ) {
-          parsed.chatMessages[0] = getHelpAgentInitialMessage();
+        const hasOldQueries = parsed.chatMessages.length > 1 || parsed.chatMessages.some(
+          (m) =>
+            m.content.includes('Preciso que estruture') ||
+            m.content.includes('Consulta processada pelo motor') ||
+            m.content.includes('Viga Estrutural de Aço') ||
+            m.content.includes('RFQ-2026-')
+        );
+        if (hasOldQueries) {
+          parsed.chatMessages = [getHelpAgentInitialMessage()];
           localStorage.setItem(key, JSON.stringify(parsed));
         }
       } else {

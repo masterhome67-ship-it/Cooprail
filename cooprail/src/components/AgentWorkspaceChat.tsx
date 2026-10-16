@@ -15,6 +15,7 @@ import {
   Camera,
   X,
   RefreshCw,
+  RotateCcw,
   ChevronUp,
   FileEdit,
   ScanText,
@@ -131,6 +132,7 @@ export const STARTER_ACTIONS = [
 interface AgentWorkspaceChatProps {
   messages: ChatMessage[];
   onSendMessage: (text: string, slashCommand?: string, imageBase64?: string) => Promise<void> | void;
+  onClearChat?: () => void;
   onActionClick: (action: string) => void;
   onOpenUploadDoc: () => void;
   onNewRFQ: () => void;
@@ -140,6 +142,7 @@ interface AgentWorkspaceChatProps {
 export function AgentWorkspaceChat({
   messages,
   onSendMessage,
+  onClearChat,
   onActionClick,
   onOpenUploadDoc,
   onNewRFQ,
@@ -208,9 +211,9 @@ export function AgentWorkspaceChat({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden flex flex-col">
-      {/* 1. Barra de Cabeçalho com Seção Retrátil de Agentes */}
-      <div className="border-b border-slate-200 bg-slate-50/70 p-3 sm:px-4">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden flex flex-col flex-1 h-full min-h-0">
+      {/* 1. Barra de Cabeçalho com Seção Retrátil de Agentes (FIXO NO TOPO) */}
+      <div className="shrink-0 border-b border-slate-200 bg-slate-50/70 p-3 sm:px-4">
         <div className="flex items-center justify-between gap-3">
           {/* Botão de Toggle "Agentes ^" */}
           <button
@@ -231,6 +234,17 @@ export function AgentWorkspaceChat({
 
           {/* Ações Rápidas de Topo */}
           <div className="flex items-center gap-2">
+            {onClearChat && (
+              <button
+                type="button"
+                onClick={onClearChat}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                title="Limpar consultas e iniciar nova pesquisa"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden sm:inline">Nova Pesquisa</span>
+              </button>
+            )}
             <button
               onClick={onOpenUploadDoc}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
@@ -251,7 +265,7 @@ export function AgentWorkspaceChat({
 
         {/* 2. Lista Central de Agentes em 2 Colunas Limpas (Estilo Bido Minimalista) */}
         {isAgentsOpen && (
-          <div className="mt-3 pt-3 border-t border-slate-200/80 animate-in fade-in duration-200 space-y-3">
+          <div className="mt-3 pt-3 border-t border-slate-200/80 animate-in fade-in duration-200 space-y-3 max-h-[36vh] overflow-y-auto pr-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
               {SPECIALIZED_AGENTS.map((agent) => {
                 const Icon = agent.icon;
@@ -307,8 +321,8 @@ export function AgentWorkspaceChat({
         )}
       </div>
 
-      {/* 3. Área de Conversa e Feed de Mensagens */}
-      <div className="p-4 max-h-[340px] min-h-[160px] overflow-y-auto space-y-3 bg-slate-50/30">
+      {/* 3. Área de Conversa e Feed de Mensagens (ROLAGEM EXCLUSIVA DESTE BLOCO) */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 bg-slate-50/30">
         {messages.length === 0 ? (
           <div className="py-6 text-center space-y-1.5">
             <div className="w-9 h-9 rounded-full bg-sky-50 text-[#0284c7] mx-auto flex items-center justify-center border border-sky-200">
@@ -445,8 +459,8 @@ export function AgentWorkspaceChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 4. Barra de Input Interativa com Ícone de Anexo / Câmera */}
-      <div className="p-2.5 border-t border-slate-200 bg-white">
+      {/* 4. Barra de Input Interativa com Ícone de Anexo / Câmera (FIXO NA PARTE INFERIOR) */}
+      <div className="shrink-0 p-2.5 border-t border-slate-200 bg-white">
         {/* Preview da Imagem Selecionada */}
         {selectedImage && (
           <div className="mb-2 p-2 rounded-lg bg-sky-50 border border-sky-200 flex items-center justify-between gap-3 animate-in fade-in">

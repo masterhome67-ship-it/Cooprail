@@ -633,6 +633,25 @@ export default function Home() {
     setChatMessages((prev) => [...prev, fallbackMsg]);
   };
 
+  const handleClearChat = () => {
+    const initialMsg = getHelpAgentInitialMessage();
+    setChatMessages([initialMsg]);
+    if (currentUser) {
+      const key = `cooprail_workspace_tenant_${currentUser.id}`;
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          parsed.chatMessages = [initialMsg];
+          localStorage.setItem(key, JSON.stringify(parsed));
+        }
+      } catch (e) {
+        console.error('Erro ao limpar chat:', e);
+      }
+    }
+    showToast('Histórico limpo. Pronto para nova pesquisa!');
+  };
+
   const pendingTasksCount = tasks.filter((t) => t.status === 'needs_you').length;
 
   if (!isAuthenticated || !currentUser) {
@@ -676,7 +695,7 @@ export default function Home() {
       />
 
       {/* Conteúdo Central */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* 2. Header com Cmd+K, Simulação e Upload */}
         <Header
           lang={lang}
@@ -689,7 +708,13 @@ export default function Home() {
         />
 
         {/* 3. Área Principal de Trabalho */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main
+          className={`flex-1 ${
+            activeTab === 'dashboard'
+              ? 'overflow-hidden p-4 sm:p-5 flex flex-col min-h-0'
+              : 'overflow-y-auto p-6 space-y-6'
+          }`}
+        >
           {/* Toast Notification */}
           {toastMessage && (
             <div className="fixed top-16 right-6 z-50 bg-slate-900 border border-slate-700 text-white text-xs px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
@@ -700,11 +725,12 @@ export default function Home() {
 
           {/* Visão: Painel Inicial — Exclusivo dos Agentes Especializados */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-4">
+            <div className="flex-1 h-full min-h-0 flex flex-col">
               {/* Centro de Início por Agentes Especializados (Protagonista Exclusivo do Painel) */}
               <AgentWorkspaceChat
                 messages={chatMessages}
                 onSendMessage={handleSendMessage}
+                onClearChat={handleClearChat}
                 onActionClick={(action) => {
                   if (action === 'approve') {
                     if (tasks.length > 0) handleApproveTask(tasks[0].id);
