@@ -122,8 +122,7 @@ export async function executeMultiModelChat(payload: AIRequestPayload): Promise<
  * Chamada Multimodal ao Gemini (Texto + Foto de Peça)
  */
 async function callGeminiVision(payload: AIRequestPayload, apiKey: string): Promise<AIResponsePayload | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
+  const models = ['gemini-3.8-flash', 'gemini-3-flash-preview', 'gemini-flash-latest'];
   const cleanBase64 = payload.imageBase64?.replace(/^data:image\/\w+;base64,/, '') || '';
   const mimeType = payload.imageMimeType || 'image/jpeg';
 
@@ -163,35 +162,45 @@ Responda em português com linguagem executiva e técnica.`;
     },
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let lastErrorMsg = '';
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    const msg = err.error?.message || `HTTP ${res.status}`;
-    throw new Error(msg);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        lastErrorMsg = err.error?.message || `HTTP ${res.status}`;
+        continue;
+      }
+
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        return {
+          reply: text.trim(),
+          provider: 'gemini',
+          modelUsed: model,
+          unhomologatedSuppliersFound: text.includes('NÃO HOMOLOGADO') || text.includes('Mercado Aberto'),
+        };
+      }
+    } catch (err: unknown) {
+      lastErrorMsg = err instanceof Error ? err.message : String(err);
+    }
   }
 
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) return null;
-
-  return {
-    reply: text.trim(),
-    provider: 'gemini',
-    modelUsed: 'gemini-1.5-flash-vision',
-    unhomologatedSuppliersFound: text.includes('NÃO HOMOLOGADO') || text.includes('Mercado Aberto'),
-  };
+  throw new Error(lastErrorMsg || 'Falha ao processar imagem no Gemini');
 }
 
 /**
- * Chamada de Texto ao Gemini com Google Search Grounding para busca de fornecedores de mercado
+ * Chamada de Texto ao Gemini para busca e diagnóstico técnico de mercado
  */
 async function callGemini(payload: AIRequestPayload, apiKey: string): Promise<AIResponsePayload | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const models = ['gemini-3.8-flash', 'gemini-3-flash-preview', 'gemini-flash-latest'];
 
   const body = {
     contents: [
@@ -204,39 +213,44 @@ async function callGemini(payload: AIRequestPayload, apiKey: string): Promise<AI
         ],
       },
     ],
-    tools: [
-      {
-        googleSearch: {},
-      },
-    ],
     generationConfig: {
       temperature: 0.2,
       maxOutputTokens: 2500,
     },
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let lastErrorMsg = '';
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    const msg = err.error?.message || `HTTP ${res.status}`;
-    throw new Error(msg);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        lastErrorMsg = err.error?.message || `HTTP ${res.status}`;
+        continue;
+      }
+
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        return {
+          reply: text.trim(),
+          provider: 'gemini',
+          modelUsed: model,
+          unhomologatedSuppliersFound: text.includes('não homologado') || text.includes('mercado aberto') || text.includes('NÃO HOMOLOGADO'),
+        };
+      }
+    } catch (err: unknown) {
+      lastErrorMsg = err instanceof Error ? err.message : String(err);
+    }
   }
 
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) return null;
-
-  return {
-    reply: text.trim(),
-    provider: 'gemini',
-    modelUsed: 'gemini-1.5-flash-grounded',
-    unhomologatedSuppliersFound: text.includes('não homologado') || text.includes('mercado aberto') || text.includes('Google Search'),
-  };
+  throw new Error(lastErrorMsg || 'Falha ao consultar Gemini');
 }
 
 /**
