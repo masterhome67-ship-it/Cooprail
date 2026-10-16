@@ -58,6 +58,11 @@ export interface Quote {
   supplier_city?: string;
   supplier_distance_km?: number;
   market_source?: string;
+  cnpj?: string;
+  contact_name?: string;
+  email?: string;
+  phone?: string;
+  quote_mode?: string;
 }
 
 export interface Sector {

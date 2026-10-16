@@ -546,3 +546,43 @@ export function setActiveSessionUserId(userId: string | null): void {
   }
 }
 
+// Máscara e conversão monetária em padrão brasileiro (R$ 1.234,56)
+export function formatCurrencyBRLInput(value: string | number): string {
+  if (typeof value === 'number') {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+  const digits = (value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  const number = Number(digits) / 100;
+  return number.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
+
+export function parseCurrencyBRL(val: string | number): number {
+  if (typeof val === 'number') return val;
+  if (!val) return 0;
+  const clean = val.replace(/[^\d.,]/g, '').trim();
+  if (!clean) return 0;
+
+  if (clean.includes('.') && clean.includes(',')) {
+    return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  if (clean.includes(',')) {
+    return parseFloat(clean.replace(',', '.')) || 0;
+  }
+  if (clean.includes('.')) {
+    const parts = clean.split('.');
+    if (parts.length === 2 && parts[1].length === 3) {
+      return parseFloat(parts[0] + parts[1]) || 0;
+    }
+    if (parts.length > 2) {
+      return parseFloat(clean.replace(/\./g, '')) || 0;
+    }
+    return parseFloat(clean) || 0;
+  }
+  return parseFloat(clean) || 0;
+}
+
+

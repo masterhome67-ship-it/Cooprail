@@ -41,6 +41,8 @@ import {
   getPublishedRFQByCode,
   getAllPublishedRFQs,
   PublishedRFQ,
+  formatCurrencyBRLInput,
+  parseCurrencyBRL,
 } from '@/lib/userWorkspace';
 
 // Figuras e desenhos técnicos reais extraídos do Memorial Descritivo da Copacol (Cafelândia/PR)
@@ -382,7 +384,7 @@ function SupplierPortalContent() {
     e.preventDefault();
     if (!supplierName.trim() || !totalAmount) return;
 
-    const numericAmount = parseFloat(totalAmount.replace(/[^\d.,]/g, '').replace(',', '.'));
+    const numericAmount = parseCurrencyBRL(totalAmount);
 
     const newQuoteRecord = {
       id: `quote-${Date.now()}`,
@@ -392,6 +394,7 @@ function SupplierPortalContent() {
       contact_name: contactName,
       email: email,
       phone: phone,
+      supplier_phone: phone,
       supplier_rating: 4.8,
       total_amount: numericAmount || 0,
       delivery_lead_time_days: Number(leadTimeDays) || 2,
@@ -1201,7 +1204,7 @@ function SupplierPortalContent() {
                       required
                       placeholder="R$ 0,00"
                       value={totalAmount}
-                      onChange={(e) => setTotalAmount(e.target.value)}
+                      onChange={(e) => setTotalAmount(formatCurrencyBRLInput(e.target.value))}
                       className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-900 font-mono focus:outline-none focus:border-[#0284c7]"
                     />
                   </div>

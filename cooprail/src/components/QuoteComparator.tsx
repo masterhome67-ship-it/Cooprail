@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RFQ, Quote } from '@/lib/mockData';
-import { DEFAULT_UMU_QUOTES } from '@/lib/userWorkspace';
+import { DEFAULT_UMU_QUOTES, formatCurrencyBRLInput, parseCurrencyBRL } from '@/lib/userWorkspace';
 import {
   Check,
   Star,
@@ -23,6 +23,12 @@ import {
   X,
   FilePlus,
   Building2,
+  Eye,
+  Trash2,
+  Mail,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface QuoteComparatorProps {
@@ -43,6 +49,9 @@ export function QuoteComparator({
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [localQuotes, setLocalQuotes] = useState<Quote[]>(rfq?.quotes || []);
 
+  // Modal para inspecionar detalhes completos do fornecedor/cotação
+  const [inspectingQuote, setInspectingQuote] = useState<Quote | null>(null);
+
   // Modal para inserir proposta manual recebida por e-mail/balcão
   const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
   const [manualSupplierName, setManualSupplierName] = useState('');
@@ -53,21 +62,70 @@ export function QuoteComparator({
   const [manualTerms, setManualTerms] = useState('Boleto 30 dias');
   const [manualNotes, setManualNotes] = useState('');
 
+  // Função para normalizar valores truncados acidentalmente (ex: 1.65 vindo de parse com vírgula errada)
+  const sanitizeQuotesList = (quotes: Quote[]): Quote[] => {
+    return quotes.map((q) => {
+      let amount = q.total_amount;
+      if (amount > 0 && amount < 50) {
+        amount = Math.round(amount * 1000);
+      }
+      return {
+        ...q,
+        total_amount: amount,
+        supplier_phone: q.supplier_phone || (q as any).phone,
+      };
+    });
+  };
+
+  const handleDeleteQuote = (quoteId: string) => {
+    const quoteToDelete = localQuotes.find((q) => q.id === quoteId);
+    const updated = localQuotes.filter((q) => q.id !== quoteId);
+    setLocalQuotes(updated);
+
+    if (selectedQuoteId === quoteId) {
+      setSelectedQuoteId(updated[0]?.id || '');
+    }
+
+    if (onUpdateQuotes && rfq?.id) {
+      onUpdateQuotes(rfq.id, updated);
+    }
+
+    // Remove do localStorage para o polling não reinserir
+    try {
+      const raw = localStorage.getItem('cooprail_partner_quotes');
+      if (raw) {
+        const partnerQuotes: any[] = JSON.parse(raw);
+        const filtered = partnerQuotes.filter(
+          (q: any) => q.id !== quoteId && q.supplier_name !== quoteToDelete?.supplier_name
+        );
+        localStorage.setItem('cooprail_partner_quotes', JSON.stringify(filtered));
+      }
+    } catch (e) {
+      console.error('Erro ao remover do storage de parceiros:', e);
+    }
+
+    if (inspectingQuote?.id === quoteId) {
+      setInspectingQuote(null);
+    }
+  };
+
   useEffect(() => {
     if (rfq?.quotes && rfq.quotes.length > 0) {
-      setLocalQuotes(rfq.quotes);
-      if (!selectedQuoteId || !rfq.quotes.some((q) => q.id === selectedQuoteId)) {
-        setSelectedQuoteId(rfq.quotes[0].id);
+      const sanitized = sanitizeQuotesList(rfq.quotes);
+      setLocalQuotes(sanitized);
+      if (!selectedQuoteId || !sanitized.some((q) => q.id === selectedQuoteId)) {
+        setSelectedQuoteId(sanitized[0].id);
       }
     } else if (
       rfq?.code?.includes('UMU') ||
       rfq?.title?.toLowerCase().includes('cimento') ||
       rfq?.scope_description?.toLowerCase().includes('cimento')
     ) {
-      setLocalQuotes(DEFAULT_UMU_QUOTES);
-      setSelectedQuoteId(DEFAULT_UMU_QUOTES[0].id);
+      const sanitized = sanitizeQuotesList(DEFAULT_UMU_QUOTES);
+      setLocalQuotes(sanitized);
+      setSelectedQuoteId(sanitized[0].id);
       if (onUpdateQuotes && rfq?.id) {
-        onUpdateQuotes(rfq.id, DEFAULT_UMU_QUOTES);
+        onUpdateQuotes(rfq.id, sanitized);
       }
     } else if (rfq) {
       const budget = rfq.estimated_budget || 5000;
@@ -145,11 +203,27 @@ export function QuoteComparator({
         const raw = localStorage.getItem('cooprail_partner_quotes');
         if (!raw) return;
         const partnerQuotes: any[] = JSON.parse(raw);
+        let storageChanged = false;
+        partnerQuotes.forEach((pq) => {
+          if (pq.total_amount > 0 && pq.total_amount < 50) {
+            pq.total_amount = Math.round(pq.total_amount * 1000);
+            storageChanged = true;
+          }
+          if (!pq.supplier_phone && pq.phone) {
+            pq.supplier_phone = pq.phone;
+            storageChanged = true;
+          }
+        });
+        if (storageChanged) {
+          localStorage.setItem('cooprail_partner_quotes', JSON.stringify(partnerQuotes));
+        }
+
         const matching = partnerQuotes.filter((q) => q.rfq_id === rfq.code);
         if (matching.length > 0) {
+          const sanitizedMatching = sanitizeQuotesList(matching);
           setLocalQuotes((prev) => {
             const existingIds = new Set(prev.map((p) => p.id));
-            const newProposals = matching.filter((m) => !existingIds.has(m.id));
+            const newProposals = sanitizedMatching.filter((m) => !existingIds.has(m.id));
             if (newProposals.length > 0) {
               const merged = [...prev, ...newProposals];
               if (onUpdateQuotes && rfq.id) {
@@ -278,7 +352,7 @@ export function QuoteComparator({
     e.preventDefault();
     if (!manualSupplierName.trim() || !manualAmount) return;
 
-    const numAmount = parseFloat(manualAmount.replace(/[^\d.,]/g, '').replace(',', '.'));
+    const numAmount = parseCurrencyBRL(manualAmount);
     if (!numAmount || isNaN(numAmount)) return;
 
     const budget = rfq.estimated_budget || numAmount;
@@ -443,24 +517,58 @@ export function QuoteComparator({
                   }`}
                 >
                   {/* Badge de Origem */}
-                  <div className="flex items-center justify-between mb-2">
-                    {isOpenMarket ? (
-                      <span className="flex items-center gap-1 bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200">
-                        <Globe className="w-3 h-3 text-amber-600" />
-                        <span>Mercado Aberto (Descoberto por IA)</span>
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">
-                        <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                        <span>Fornecedor Homologado em Canteiro</span>
-                      </span>
-                    )}
+                  {/* Badge de Origem e Ações Rápidas */}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {isOpenMarket ? (
+                        <span className="flex items-center gap-1 bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200">
+                          <Globe className="w-3 h-3 text-amber-600" />
+                          <span>Mercado Aberto (Descoberto por IA)</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">
+                          <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                          <span>Fornecedor Homologado em Canteiro</span>
+                        </span>
+                      )}
 
-                    {isBest && (
-                      <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
-                        <Star className="w-3 h-3 fill-emerald-600" /> Score IA {quote.ai_score}
-                      </span>
-                    )}
+                      {isBest && (
+                        <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                          <Star className="w-3 h-3 fill-emerald-600" /> Score IA {quote.ai_score}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Botões de Ação: Ver Informações e Excluir */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInspectingQuote(quote);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer"
+                        title="Ver dados cadastrais, CNPJ e proposta completa deste fornecedor"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Ver Informações</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Deseja excluir a cotação de "${quote.supplier_name}" desta requisição?`)) {
+                            handleDeleteQuote(quote.id);
+                          }
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-semibold transition-colors cursor-pointer"
+                        title="Excluir proposta deste fornecedor"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Excluir</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-3">
@@ -593,13 +701,12 @@ export function QuoteComparator({
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Valor Total da Proposta (R$) *</label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text"
                     required
-                    placeholder="Ex: 48500.00"
+                    placeholder="R$ 0,00"
                     value={manualAmount}
-                    onChange={(e) => setManualAmount(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-[#0284c7]"
+                    onChange={(e) => setManualAmount(formatCurrencyBRLInput(e.target.value))}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono font-bold focus:outline-none focus:border-[#0284c7]"
                   />
                 </div>
 
@@ -678,6 +785,174 @@ export function QuoteComparator({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Inspecionar / Verificar Informações Completas do Fornecedor */}
+      {inspectingQuote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="w-full max-w-xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-slate-800 max-h-[92vh]">
+            {/* Cabeçalho */}
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#0284c7] flex items-center justify-center text-white shadow-xs">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">{inspectingQuote.supplier_name}</h3>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                    <span className="flex items-center gap-0.5 text-amber-600 font-bold">
+                      <Star className="w-3 h-3 fill-amber-500" /> {inspectingQuote.supplier_rating} / 5.0
+                    </span>
+                    <span>•</span>
+                    <span className="text-emerald-700 font-bold">
+                      Conformidade Técnica: {inspectingQuote.ai_score} / 10
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectingQuote(null)}
+                className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Conteúdo com Scroll */}
+            <div className="p-5 space-y-4 overflow-y-auto text-xs">
+              {/* Card 1: Identificação Cadastral & Contatos */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <h4 className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[#0284c7]" />
+                  <span>Dados Cadastrais & Contato Oficial</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Razão Social / Nome Comercial:</span>
+                    <span className="font-bold text-slate-900">{inspectingQuote.supplier_name}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">CNPJ Cadastrado:</span>
+                    <span className="font-mono font-semibold text-slate-800">
+                      {inspectingQuote.cnpj || 'Consultado via Base Oficial Receita Federal'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Telefone / WhatsApp Comercial:</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-semibold text-slate-800">
+                        {inspectingQuote.supplier_phone || inspectingQuote.phone || '(44) Comercial'}
+                      </span>
+                      {(inspectingQuote.supplier_phone || inspectingQuote.phone) && (
+                        <button
+                          type="button"
+                          onClick={() => handleWhatsAppShare(inspectingQuote.supplier_phone || inspectingQuote.phone)}
+                          className="text-[10px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded font-bold cursor-pointer"
+                        >
+                          WhatsApp
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Cidade / UF de Atendimento:</span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-semibold text-slate-800">
+                        {inspectingQuote.supplier_city || 'Paraná / Região Sul'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Proposta Comercial & Condições */}
+              <div className="p-3.5 rounded-xl bg-sky-50/50 border border-sky-100 space-y-2.5">
+                <h4 className="text-[11px] font-mono font-bold uppercase tracking-wider text-sky-800 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#0284c7]" />
+                  <span>Condições Comerciais Ofertadas</span>
+                </h4>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Valor Total da Proposta:</span>
+                    <span className="text-base font-extrabold text-slate-900 font-mono">
+                      {inspectingQuote.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Prazo de Entrega no Canteiro:</span>
+                    <span className="font-bold text-slate-900 flex items-center gap-1 mt-0.5">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      {inspectingQuote.delivery_lead_time_days} dias corridos
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Condições de Pagamento:</span>
+                    <span className="font-semibold text-slate-800">{inspectingQuote.payment_terms}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Origem do Cadastro:</span>
+                    <span className="font-semibold text-slate-800">
+                      {inspectingQuote.is_open_market
+                        ? 'Descoberto na Web / Mercado Aberto'
+                        : inspectingQuote.market_source || 'Portal do Parceiro Homologado'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Parecer Técnico da IA */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <span className="font-bold text-slate-900 block">Diagnóstico de Suprimentos & Conformidade:</span>
+                <p className="text-slate-700 leading-relaxed text-[11px]">
+                  {inspectingQuote.ai_analysis_summary}
+                </p>
+              </div>
+            </div>
+
+            {/* Rodapé com Ações */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Deseja excluir a cotação de "${inspectingQuote.supplier_name}" desta requisição?`)) {
+                    handleDeleteQuote(inspectingQuote.id);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold cursor-pointer text-xs"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Excluir Cotação</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInspectingQuote(null)}
+                  className="px-3.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold cursor-pointer text-xs"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const q = inspectingQuote;
+                    setInspectingQuote(null);
+                    onGeneratePO(q);
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold cursor-pointer text-xs shadow-xs"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Aprovar e Emitir Ordem de Compra (PO)</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

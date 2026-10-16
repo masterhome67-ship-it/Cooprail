@@ -45,18 +45,28 @@ export function OrderConfirmationModal({
 
   if (!isOpen || !quote) return null;
 
+  const normalizedAmount =
+    quote.total_amount > 0 && quote.total_amount < 50
+      ? Math.round(quote.total_amount * 1000)
+      : quote.total_amount;
+
+  const safeQuote: Quote = {
+    ...quote,
+    total_amount: normalizedAmount,
+  };
+
   const currentSector = sectors.find((s) => s.id === selectedSectorId);
   const matchingContractor = currentSector?.active_contractors.find(
     (c) =>
-      c.supplier_name.toLowerCase().includes(quote.supplier_name.toLowerCase()) ||
-      quote.supplier_name.toLowerCase().includes(c.supplier_name.toLowerCase())
+      c.supplier_name.toLowerCase().includes(safeQuote.supplier_name.toLowerCase()) ||
+      safeQuote.supplier_name.toLowerCase().includes(c.supplier_name.toLowerCase())
   );
 
   const isExistingContractor = Boolean(matchingContractor);
 
   const handleConfirm = () => {
     onConfirmOrder({
-      quote,
+      quote: safeQuote,
       sectorId: selectedSectorId,
       approvalNotes,
       isExistingContractor,
@@ -113,7 +123,7 @@ export function OrderConfirmationModal({
                   Valor Total da Proposta
                 </span>
                 <p className="text-lg font-extrabold text-slate-900 tracking-tight">
-                  {quote.total_amount.toLocaleString('pt-BR', {
+                  {safeQuote.total_amount.toLocaleString('pt-BR', {
                     style: 'currency',
                     currency: 'BRL',
                   })}
