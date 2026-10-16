@@ -61,7 +61,6 @@ import {
   ShoppingBag,
   CheckCircle2,
   Plus,
-  TrendingDown,
   Layers,
   UploadCloud,
   Lock,
@@ -699,93 +698,9 @@ export default function Home() {
             </div>
           )}
 
-          {/* Visão: Painel Inicial Enxuto & Centro de Agentes */}
+          {/* Visão: Painel Inicial — Exclusivo dos Agentes Especializados */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-5">
-              {/* Barra Executiva de Indicadores em Linha Única */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
-                      Decisões Pendentes
-                    </span>
-                    <span className="text-lg font-bold text-amber-600 leading-tight">
-                      {pendingTasksCount}
-                    </span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs">
-                    ⚡
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
-                      RFQs em Aberto
-                    </span>
-                    <span className="text-lg font-bold text-slate-900 leading-tight">
-                      {rfqs.length}
-                    </span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-sky-50 text-[#0284c7] flex items-center justify-center font-bold text-xs">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
-                      Economia Negociada
-                    </span>
-                    <span className="text-lg font-bold text-emerald-600 leading-tight">
-                      {(() => {
-                        let totalBudget = 0;
-                        let totalSpent = 0;
-                        let validMatches = 0;
-                        orders.forEach((o) => {
-                          const spent = o.total_amount_brl || 0;
-                          const linked = rfqs.find((r) => r.code === o.rfq_code);
-                          if (linked && linked.estimated_budget && linked.estimated_budget > 0) {
-                            const ratio = spent / linked.estimated_budget;
-                            if (ratio >= 0.35 && ratio <= 1.25) {
-                              totalBudget += linked.estimated_budget;
-                              totalSpent += spent;
-                              validMatches++;
-                            }
-                          }
-                        });
-                        if (validMatches > 0 && totalBudget > totalSpent) {
-                          const diff = ((totalBudget - totalSpent) / totalBudget) * 100;
-                          return `+${diff.toFixed(1)}%`;
-                        }
-                        return '0.0%';
-                      })()}
-                    </span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
-                    <TrendingDown className="w-4 h-4" />
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => setActiveTab('suppliers')}
-                  className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors"
-                  title="Ver catálogo de fornecedores homologados"
-                >
-                  <div>
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
-                      Fornecedores Homologados
-                    </span>
-                    <span className="text-lg font-bold text-slate-900 leading-tight">
-                      {customSuppliers.length}
-                    </span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs">
-                    <Building2 className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
-
+            <div className="space-y-4">
               {/* Centro de Início por Agentes Especializados (Protagonista Exclusivo do Painel) */}
               <AgentWorkspaceChat
                 messages={chatMessages}
