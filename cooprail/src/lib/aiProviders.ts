@@ -1,6 +1,6 @@
 /**
  * Cooprail Multi-Provider AI Architecture
- * Suporte a Gemini (Vision + Search Grounding), DeepSeek (R1), Groq e OpenRouter.
+ * Suporte a Gemini (Vision + Search Grounding), DeepSeek (V3/R1), Groq e OpenRouter.
  */
 
 export interface AIRequestPayload {
@@ -17,6 +17,7 @@ export interface AIResponsePayload {
   provider: 'gemini' | 'deepseek' | 'groq' | 'openrouter' | 'local_fallback';
   modelUsed: string;
   unhomologatedSuppliersFound?: boolean;
+  fallbackReason?: string;
   partIdentified?: {
     name: string;
     category: string;
@@ -31,13 +32,16 @@ export async function executeMultiModelChat(payload: AIRequestPayload): Promise<
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
   const openrouterKey = process.env.OPENROUTER_API_KEY;
 
+  const providerErrors: string[] = [];
+
   // 1. SE TEM IMAGEM: O Gemini é prioritário por suporte nativo a visão multimodal (peças industriais)
   if (payload.imageBase64 && geminiKey) {
     try {
       const visionResult = await callGeminiVision(payload, geminiKey);
       if (visionResult) return visionResult;
-    } catch (e) {
-      console.error('Falha no processamento de visão do Gemini:', e);
+    } catch (e: any) {
+      providerErrors.push(`Gemini Vision: ${e.message}`);
+      console.error('Falha no processamento de visão do Gemini:', e.message);
     }
   }
 
@@ -46,43 +50,47 @@ export async function executeMultiModelChat(payload: AIRequestPayload): Promise<
     try {
       const geminiResult = await callGemini(payload, geminiKey);
       if (geminiResult) return geminiResult;
-    } catch (e) {
-      console.warn('Gemini indisponível, testando provedores alternativos...');
+    } catch (e: any) {
+      providerErrors.push(`Gemini: ${e.message}`);
+      console.warn('Gemini indisponível:', e.message);
     }
   }
 
-  // 3. TENTATIVA 2: DeepSeek Oficial ou Groq (DeepSeek-R1 Distill) para raciocínio profundo
-  if (groqKey) {
-    try {
-      const groqResult = await callOpenAICompatible({
-        baseUrl: 'https://api.groq.com/openai/v1',
-        apiKey: groqKey,
-        model: 'deepseek-r1-distill-llama-70b',
-        payload,
-        provider: 'groq',
-      });
-      if (groqResult) return groqResult;
-    } catch (e) {
-      console.warn('Groq indisponível, tentando próximo provedor...');
-    }
-  }
-
+  // 3. TENTATIVA 2: DeepSeek Oficial (deepseek-chat V3 e deepseek-reasoner R1)
   if (deepseekKey) {
     try {
       const deepseekResult = await callOpenAICompatible({
         baseUrl: 'https://api.deepseek.com',
         apiKey: deepseekKey,
-        model: 'deepseek-reasoner',
+        model: 'deepseek-chat',
         payload,
         provider: 'deepseek',
       });
       if (deepseekResult) return deepseekResult;
-    } catch (e) {
-      console.warn('DeepSeek indisponível, tentando próximo provedor...');
+    } catch (e: any) {
+      providerErrors.push(`DeepSeek: ${e.message}`);
+      console.warn('DeepSeek indisponível:', e.message);
     }
   }
 
-  // 4. TENTATIVA 3: OpenRouter (Hub com DeepSeek-R1 e Llama gratuitos)
+  // 4. TENTATIVA 3: Groq (Ultra-baixa latência)
+  if (groqKey) {
+    try {
+      const groqResult = await callOpenAICompatible({
+        baseUrl: 'https://api.groq.com/openai/v1',
+        apiKey: groqKey,
+        model: 'llama-3.3-70b-versatile',
+        payload,
+        provider: 'groq',
+      });
+      if (groqResult) return groqResult;
+    } catch (e: any) {
+      providerErrors.push(`Groq: ${e.message}`);
+      console.warn('Groq indisponível:', e.message);
+    }
+  }
+
+  // 5. TENTATIVA 4: OpenRouter (Hub de modelos)
   if (openrouterKey) {
     try {
       const openRouterResult = await callOpenAICompatible({
@@ -93,16 +101,20 @@ export async function executeMultiModelChat(payload: AIRequestPayload): Promise<
         provider: 'openrouter',
       });
       if (openRouterResult) return openRouterResult;
-    } catch (e) {
-      console.warn('OpenRouter indisponível...');
+    } catch (e: any) {
+      providerErrors.push(`OpenRouter: ${e.message}`);
+      console.warn('OpenRouter indisponível:', e.message);
     }
   }
 
-  // 5. FALLBACK DETERMINÍSTICO INDUSTRIAL
+  // 6. FALLBACK DETERMINÍSTICO INDUSTRIAL
+  const fallbackReason = providerErrors.length > 0 ? providerErrors.join(' | ') : 'Nenhuma chave de IA externa válida configurada no .env.local';
+
   return {
     reply: generateDeterministicFallback(payload),
     provider: 'local_fallback',
     modelUsed: 'Cooprail Engineering Engine v2.0',
+    fallbackReason,
   };
 }
 
@@ -110,7 +122,7 @@ export async function executeMultiModelChat(payload: AIRequestPayload): Promise<
  * Chamada Multimodal ao Gemini (Texto + Foto de Peça)
  */
 async function callGeminiVision(payload: AIRequestPayload, apiKey: string): Promise<AIResponsePayload | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   const cleanBase64 = payload.imageBase64?.replace(/^data:image\/\w+;base64,/, '') || '';
   const mimeType = payload.imageMimeType || 'image/jpeg';
@@ -157,7 +169,12 @@ Responda em português com linguagem executiva e técnica.`;
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const msg = err.error?.message || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
   const data = await res.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) return null;
@@ -165,7 +182,7 @@ Responda em português com linguagem executiva e técnica.`;
   return {
     reply: text.trim(),
     provider: 'gemini',
-    modelUsed: 'gemini-2.5-flash-vision',
+    modelUsed: 'gemini-1.5-flash-vision',
     unhomologatedSuppliersFound: text.includes('NÃO HOMOLOGADO') || text.includes('Mercado Aberto'),
   };
 }
@@ -174,7 +191,7 @@ Responda em português com linguagem executiva e técnica.`;
  * Chamada de Texto ao Gemini com Google Search Grounding para busca de fornecedores de mercado
  */
 async function callGemini(payload: AIRequestPayload, apiKey: string): Promise<AIResponsePayload | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   const body = {
     contents: [
@@ -187,7 +204,6 @@ async function callGemini(payload: AIRequestPayload, apiKey: string): Promise<AI
         ],
       },
     ],
-    // Habilita Google Search Grounding para pesquisar fornecedores externos quando não constarem no catálogo
     tools: [
       {
         googleSearch: {},
@@ -205,7 +221,12 @@ async function callGemini(payload: AIRequestPayload, apiKey: string): Promise<AI
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const msg = err.error?.message || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
   const data = await res.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) return null;
@@ -213,7 +234,7 @@ async function callGemini(payload: AIRequestPayload, apiKey: string): Promise<AI
   return {
     reply: text.trim(),
     provider: 'gemini',
-    modelUsed: 'gemini-2.5-flash-grounded',
+    modelUsed: 'gemini-1.5-flash-grounded',
     unhomologatedSuppliersFound: text.includes('não homologado') || text.includes('mercado aberto') || text.includes('Google Search'),
   };
 }
@@ -245,7 +266,12 @@ async function callOpenAICompatible(options: {
     }),
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const msg = err.error?.message || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
   const data = await res.json();
   const text = data.choices?.[0]?.message?.content;
   if (!text) return null;
@@ -258,13 +284,38 @@ async function callOpenAICompatible(options: {
 }
 
 /**
- * Fallback industrial em caso de falta de conectividade
+ * Fallback industrial em caso de falta de conectividade externa
  */
 function generateDeterministicFallback(payload: AIRequestPayload): string {
   const lower = payload.message.toLowerCase();
   const cmd = payload.slashCommand || '';
 
-  // 1. Comando ou intenção /compare (Comparador de Cotações)
+  // 1. Comando ou intenção /busca (Busca de Fornecedores & Peças)
+  if (cmd === '/busca' || lower.startsWith('/busca') || lower.includes('fornecedor') || lower.includes('distribuidor')) {
+    if (lower.includes('cimento')) {
+      return `[Módulo de Busca de Fornecedores & Mercado]\n\n🏭 **Fornecedores e Distribuidores de Cimento Identificados:**\n\n• **Distribuidora Regional Líder (Homologada):**\n  - Localização: Umuarama / Maringá - PR\n  - Marcas: Votoran CP II-E / Itambé CP IV\n  - Prazo Médio: 24 a 48 horas | Frete paletizado no canteiro\n  - Contato: (44) 3622-1000\n\n• **Comercial & Insumos Industriais Sul:**\n  - Localização: Cascavel - PR (atendimento imediato regional)\n  - Capacidade: Cargas fechadas (truck ou carreta 30t)\n\n• **Fornecedor in-loco (Cafelândia/PR):**\n  - Caso sua obra seja na Copacol Cafelândia, verifique a *Metalúrgica Ferro & Aço Nacional* (CTR-2026-ENG-04) já mobilizada no canteiro com frete zero.\n\n💡 **Recomendação:** Digite \`/demandas cotar 50 sacos de cimento em Umuarama\` para abrir o edital de cotação formal.`;
+    }
+
+    if (lower.includes('cal')) {
+      return `[Módulo de Busca de Fornecedores & Mercado]\n\n🏭 **Fornecedores de Cal Hidratada (Argamassa e Pintura):**\n\n• **Depósito Regional Paraná Materiais:**\n  - Especialidade: Cal Hidratada CH-I (sacos 20kg conforme NBR 7175)\n  - Prazo: Pronta-entrega (1 dia útil)\n  - Referência Balizadora SINAPI: ~R$ 18,50 / saco\n\n• **Calpar / Dagoberto Barcellos (Distribuidores PR):**\n  - Atendimento para atacado industrial e bases de infraestrutura\n\n💡 **Recomendação:** Digite \`/demandas cotar 50 sacos de cal em Umuarama\` para disparar a requisição de mercado.`;
+    }
+
+    if (lower.includes('brita') || lower.includes('pedra')) {
+      return `[Módulo de Busca de Fornecedores & Mercado]\n\n🪨 **Pedreiras e Distribuidores de Brita Graduada:**\n\n• **Pedreira Basalto Paraná Ltda:**\n  - Materiais: Brita 1, Brita 2, Brita 3 e Rachão para Drenagem\n  - Entrega: Basculante caçamba trucada (14m³) ou carreta (28m³)\n  - Balizador SINAPI PR: ~R$ 95,00 / m³ posto canteiro\n\n💡 **Recomendação:** Digite \`/demandas cotar 50 metros de brita\` para estruturar a cotação formal.`;
+    }
+
+    if (lower.includes('madeira')) {
+      return `[Módulo de Busca de Fornecedores & Mercado]\n\n🪵 **Madeireiras e Fornecedores de Pinus Tratado:**\n\n• **Madeireira & Esquadrias Oeste PR:**\n  - Especialidade: Sarrafos 2,5x5cm, tábuas de pinus para caixaria e dormentes\n  - Tratamento: Autoclave CCA conforme norma ABNT\n  - Balizador SINAPI PR: ~R$ 28,00 / metro\n\n💡 **Recomendação:** Digite \`/demandas cotar 30 metros de madeira\` para gerar a requisição.`;
+    }
+
+    if (lower.includes('pead') || lower.includes('tubo') || lower.includes('válvula') || lower.includes('drenagem')) {
+      return `[Módulo de Busca de Fornecedores & Mercado]\n\nIdentificação de Material de Via/Drenagem:\n• Especificação: Tubos PEAD Corrugados DN 400mm/1000mm conforme NBR 8890 e Válvulas Industriais de Retenção.\n• Fornecedores Homologados Próximos:\n  - Hidráulica Oeste Paraná Ltda (Cascavel/PR - 12 km)\n  - Drenagem Toledo S.A. (Toledo/PR - 45 km)\n• Fornecedores Externos de Mercado (Não Homologados):\n  - Tigre ADS Brasil (Joinville/SC) • Tubos corrugados de grande diâmetro\n  - PeadBrasil Tubulações Industriais (Curitiba/PR)\n\nRecomendação: Para cotar, envie \`/demandas cotar tubos PEAD DN 1000mm\`.`;
+    }
+
+    return `[Módulo de Busca de Fornecedores & Mercado]\n\n🔎 **Pesquisa de Insumos e Fornecedores Ativa:**\n• O sistema consulta a base de homologados regionais, empresas com contrato ativo nos canteiros da Cooprail e fabricantes do mercado B2B.\n• Para localizar fornecedores com precisão, informe o material e a cidade (ex: \`/busca fornecedores de cal em Umuarama\`, \`/busca cimento em Cascavel\` ou anexe a foto da peça).`;
+  }
+
+  // 2. Comando ou intenção /compare (Comparador de Cotações)
   if (cmd === '/compare' || lower.startsWith('/compare') || lower.includes('compare') || lower.includes('proposta') || lower.includes('comparador')) {
     let itemContext = 'insumos para obras civis e industriais';
     let referenceInfo = 'Referência de balizadores oficiais SINAPI Paraná.';
@@ -284,11 +335,6 @@ function generateDeterministicFallback(payload: AIRequestPayload): string {
     }
 
     return `[Módulo de Comparação de Cotações & Propostas]\n\n📊 **Análise Comparativa de Mercado (${itemContext}):**\n• **${referenceInfo}**\n• **Análise de Dispersão:** No Paraná, a dispersão média entre distribuidores locais e atacado direto de fábrica varia entre 6% e 12%.\n• **Gestão de Propostas:** As propostas recebidas de parceiros e cotações de mercado aberto são centralizadas e gerenciadas na aba **Comparador de Cotações**.\n• **Como Abrir Cotação Formal:** Para publicar esta requisição aos fornecedores da região, digite \`/demandas cotar 50 sacos de cal\` ou clique em "+ Nova Cotação (RFQ)".`;
-  }
-
-  // 2. PEAD / Tubos / Drenagem
-  if (lower.includes('pead') || lower.includes('tubo') || lower.includes('válvula') || lower.includes('drenagem')) {
-    return `[Módulo de Suprimentos & Engenharia]\n\nIdentificação de Material de Via/Drenagem:\n• Especificação: Tubos PEAD Corrugados DN 400mm conforme NBR 8890 e Válvulas Industriais de Retenção.\n• Fornecedores Homologados Próximos:\n  - Hidráulica Oeste Paraná Ltda (Cascavel/PR - 12 km)\n  - Drenagem Toledo S.A. (Toledo/PR - 45 km)\n• Fornecedores Externos de Mercado (Não Homologados recomendados para cotação):\n  - Tigre ADS Brasil (Joinville/SC) • Tubos corrugados de grande diâmetro\n  - PeadBrasil Tubulações Industriais (Curitiba/PR)\n\nRecomendação: Para cotar, envie \`/demandas cotar tubos PEAD DN 1000mm\` para publicar na esteira de RFQs.`;
   }
 
   // 3. Comando /controle

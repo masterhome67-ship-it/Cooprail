@@ -156,6 +156,7 @@ DIRETRIZES DE ATUAÇÃO CONFORME O AGENTE ATIVO:
       provider: aiResult.provider,
       modelUsed: aiResult.modelUsed,
       unhomologatedSuppliersFound: aiResult.unhomologatedSuppliersFound,
+      fallbackReason: aiResult.fallbackReason,
     });
   } catch (err: any) {
     console.error('Erro na API de chat:', err);
