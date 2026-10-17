@@ -71,12 +71,12 @@ export const SPECIALIZED_AGENTS: SpecializedAgent[] = [
   },
   {
     id: 'finance',
-    name: 'Ordens de Compra & Liquidação',
+    name: 'Ordens de Compra & Faturamento',
     roleTag: 'Módulo de Pedidos & Ordens de Compra',
     slashCommand: '/pedido',
-    badge: 'Smart Escrow & PO',
-    shortDesc: 'Emite Purchase Orders formais e executa garantia on-chain via Solana.',
-    fullDesc: 'Conecta o aceite da cotação à emissão de Purchase Orders (POs) formais com liquidação garantida via Solana Smart Escrow.',
+    badge: 'Faturamento & PO',
+    shortDesc: 'Emite Purchase Orders formais e autorizações de fornecimento B2B.',
+    fullDesc: 'Conecta o aceite da cotação à emissão de Purchase Orders (POs) formais com faturamento direto e boleto corporativo.',
     icon: ShoppingBag,
   },
   {
@@ -148,16 +148,12 @@ export function AgentWorkspaceChat({
   onNewRFQ,
   lang,
 }: AgentWorkspaceChatProps) {
-  const [selectedAgentId, setSelectedAgentId] = useState<string>('supplies');
-  const [isAgentsOpen, setIsAgentsOpen] = useState<boolean>(true);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('auto');
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const activeAgent =
-    SPECIALIZED_AGENTS.find((a) => a.id === selectedAgentId) || SPECIALIZED_AGENTS[0];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -209,7 +205,13 @@ export function AgentWorkspaceChat({
     const text = (textToSend || inputText).trim();
     if ((!text && !selectedImage) || isSubmitting) return;
 
-    let slashCmd = activeAgent.slashCommand;
+    let slashCmd: string | undefined = undefined;
+    if (selectedAgentId === 'supplies') slashCmd = '/busca';
+    else if (selectedAgentId === 'rfqs') slashCmd = '/demandas';
+    else if (selectedAgentId === 'comparator') slashCmd = '/compare';
+    else if (selectedAgentId === 'compliance') slashCmd = '/controle';
+    else if (selectedAgentId === 'finance') slashCmd = '/pedido';
+
     if (text.startsWith('/')) {
       const firstWord = text.split(' ')[0].toLowerCase();
       if (['/busca', '/demandas', '/pedido', '/controle', '/compare'].includes(firstWord)) {
@@ -243,25 +245,28 @@ export function AgentWorkspaceChat({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden flex flex-col flex-1 h-full min-h-0">
-      {/* 1. Barra de Cabeçalho com Seção Retrátil de Agentes (FIXO NO TOPO) */}
-      <div className="shrink-0 border-b border-slate-200 bg-slate-50/70 p-3 sm:px-4">
+      {/* 1. Barra de Cabeçalho Executiva (Limpa e Focada) */}
+      <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          {/* Botão de Toggle "Agentes ^" */}
-          <button
-            type="button"
-            onClick={() => setIsAgentsOpen(!isAgentsOpen)}
-            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-[#0284c7] transition-colors cursor-pointer group"
-          >
-            <span>Agentes Especializados</span>
-            <span className="text-[10px] bg-sky-100 text-[#0284c7] font-mono px-1.5 py-0.2 rounded-full font-semibold">
-              6 disponíveis
-            </span>
-            <ChevronUp
-              className={`w-3.5 h-3.5 text-slate-400 group-hover:text-[#0284c7] transition-transform duration-200 ${
-                isAgentsOpen ? '' : 'rotate-180'
-              }`}
-            />
-          </button>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-sky-50 text-[#0284c7] flex items-center justify-center border border-sky-200 shadow-2xs">
+              <Bot className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-bold text-slate-900">
+                  Assistente Autônomo de Suprimentos
+                </h2>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Online
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Pesquisa regional de mercado, cotações e análise de fornecedores
+              </p>
+            </div>
+          </div>
 
           {/* Ações Rápidas de Topo */}
           <div className="flex items-center gap-2">
@@ -269,87 +274,23 @@ export function AgentWorkspaceChat({
               <button
                 type="button"
                 onClick={onClearChat}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-                title="Limpar consultas e iniciar nova pesquisa"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                title="Limpar conversa e iniciar nova pesquisa"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                <span className="hidden sm:inline">Nova Pesquisa</span>
+                <span>Nova Pesquisa</span>
               </button>
             )}
             <button
               onClick={onOpenUploadDoc}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
               title="Importar Proposta em PDF"
             >
               <UploadCloud className="w-3.5 h-3.5 text-slate-600" />
-              <span className="hidden sm:inline">Anexar PDF</span>
-            </button>
-            <button
-              onClick={onNewRFQ}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Novo Pedido (RFQ)</span>
+              <span>Anexar Proposta (PDF)</span>
             </button>
           </div>
         </div>
-
-        {/* 2. Lista Central de Agentes em 2 Colunas Limpas (Estilo Bido Minimalista) */}
-        {isAgentsOpen && (
-          <div className="mt-3 pt-3 border-t border-slate-200/80 animate-in fade-in duration-200 space-y-3 max-h-[36vh] overflow-y-auto pr-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-              {SPECIALIZED_AGENTS.map((agent) => {
-                const Icon = agent.icon;
-                const isSelected = agent.id === selectedAgentId;
-
-                return (
-                  <button
-                    key={agent.id}
-                    onClick={() => {
-                      setSelectedAgentId(agent.id);
-                      setInputText(`${agent.slashCommand} `);
-                    }}
-                    className={`flex items-start gap-2.5 p-2 rounded-lg text-left transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-sky-50/80 text-[#0284c7] font-semibold ring-1 ring-sky-200'
-                        : 'hover:bg-slate-100 text-slate-700 hover:text-slate-900'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${isSelected ? 'text-[#0284c7]' : 'text-slate-400'}`} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-medium truncate">{agent.name}</span>
-                        <span className="text-[10px] font-mono text-slate-600 bg-white border border-slate-200 px-1 py-0.2 rounded shrink-0">
-                          {agent.slashCommand}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-600 line-clamp-1 mt-0.5">
-                        {agent.shortDesc}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Sugestões de Ações Rápidas com ↳ */}
-            <div className="pt-2 border-t border-slate-200/60 space-y-1">
-              {STARTER_ACTIONS.map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setSelectedAgentId(item.agentId);
-                    handleSend(item.prompt);
-                  }}
-                  className="w-full flex items-center gap-2 text-left py-1 px-1.5 rounded hover:bg-slate-100 text-[11px] text-slate-600 hover:text-[#0284c7] transition-colors cursor-pointer group"
-                >
-                  <span className="text-slate-600 group-hover:text-[#0284c7] font-mono">↳</span>
-                  <span className="truncate">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 3. Área de Conversa e Feed de Mensagens (ROLAGEM EXCLUSIVA DESTE BLOCO) */}
@@ -482,7 +423,7 @@ export function AgentWorkspaceChat({
             </div>
             <div className="bg-white text-slate-600 border border-slate-200 rounded-xl p-2.5 shadow-2xs flex items-center gap-2">
               <RefreshCw className="w-3 h-3 text-[#0284c7] animate-spin" />
-              <span>O {activeAgent.name} está analisando os dados e buscando mercado...</span>
+              <span>O Assistente de Suprimentos está analisando as especificações e pesquisando mercado...</span>
             </div>
           </div>
         )}
@@ -523,6 +464,65 @@ export function AgentWorkspaceChat({
           </div>
         )}
 
+        {/* Pílulas de Modos Especializados (Discretas e sem poluição) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] mb-2">
+          <button
+            type="button"
+            onClick={() => setSelectedAgentId('auto')}
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+              selectedAgentId === 'auto'
+                ? 'bg-[#0284c7] text-white shadow-2xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+            }`}
+          >
+            ⚡ Automático (IA)
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedAgentId('supplies')}
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+              selectedAgentId === 'supplies'
+                ? 'bg-[#0284c7] text-white shadow-2xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+            }`}
+          >
+            🔍 Buscar Mercado
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedAgentId('rfqs')}
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+              selectedAgentId === 'rfqs'
+                ? 'bg-[#0284c7] text-white shadow-2xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+            }`}
+          >
+            📋 Estruturar Demanda
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedAgentId('comparator')}
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+              selectedAgentId === 'comparator'
+                ? 'bg-[#0284c7] text-white shadow-2xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+            }`}
+          >
+            ⚖️ Comparar Cotações
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedAgentId('compliance')}
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+              selectedAgentId === 'compliance'
+                ? 'bg-[#0284c7] text-white shadow-2xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+            }`}
+          >
+            🛡️ Compliance Fiscal
+          </button>
+        </div>
+
         <div className="flex items-center gap-2">
           {/* Input oculto para upload de imagem ou captura de câmera */}
           <input
@@ -555,7 +555,7 @@ export function AgentWorkspaceChat({
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isSubmitting}
-              placeholder="Pergunte qualquer coisa — digite / para habilidades dos agentes..."
+              placeholder="Digite o material e quantidade (ex: 50 sacos de cimento em Umuarama)..."
               className="w-full pl-3 pr-20 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7] transition-all"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">

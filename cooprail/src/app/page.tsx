@@ -776,6 +776,46 @@ export default function Home() {
                     if (tasks.length > 0) handleApproveTask(tasks[0].id);
                     else showToast('Nenhuma decisão pendente para aprovar.');
                   } else if (action === 'create_rfq') {
+                    const lastUserMsg = [...chatMessages].reverse().find((m) => m.sender_role === 'user')?.content || '';
+                    const parsed = parseQuotationParams(lastUserMsg || '50 sacos de cimento em Umuarama');
+                    
+                    const draftRFQ: RFQ = {
+                      id: `rfq-draft-${Date.now()}`,
+                      code: `RFQ-2026-${Math.floor(100 + Math.random() * 900)}`,
+                      title: parsed.items && parsed.items.length > 1
+                        ? `Aquisição de Lote de Insumos (${parsed.items.length} itens) — ${parsed.location}`
+                        : `Aquisição de ${parsed.quantity} ${parsed.unit} de ${parsed.material} (${parsed.location})`,
+                      scope_description: parsed.items && parsed.items[0]?.specification
+                        ? parsed.items[0].specification
+                        : `Fornecimento e descarga no canteiro de ${parsed.location} conforme normas técnicas ABNT aplicáveis.`,
+                      status: 'draft',
+                      deadline: 'Em 48 horas',
+                      target_delivery_date: 'Em 7 dias',
+                      estimated_budget: parsed.totalBudget,
+                      items: parsed.items && parsed.items.length > 0
+                        ? parsed.items.map((it, idx) => ({
+                            id: `item-${Date.now()}-${idx}`,
+                            item_name: it.name,
+                            specification: it.specification,
+                            quantity: it.quantity,
+                            unit: it.unit,
+                            target_unit_price: it.estimatedUnitPrice,
+                          }))
+                        : [
+                            {
+                              id: `item-${Date.now()}-0`,
+                              item_name: parsed.material,
+                              specification: 'Conforme normas ABNT aplicáveis.',
+                              quantity: parsed.quantity,
+                              unit: parsed.unit,
+                              target_unit_price: parsed.estimatedUnitPrice,
+                            },
+                          ],
+                      quotes: [],
+                      location: parsed.location,
+                    };
+
+                    setEditingRFQ(draftRFQ);
                     setIsCreateRFQOpen(true);
                   } else {
                     setActiveTab('comparator');

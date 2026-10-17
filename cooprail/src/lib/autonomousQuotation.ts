@@ -342,7 +342,7 @@ export async function executeAutonomousQuotation(
             supplier_rating: sup.rating || 4.7,
             total_amount: quoteAmount,
             delivery_lead_time_days: sup.delivery_lead_time_days || (idx === 0 ? 1 : 2),
-            payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto',
+            payment_terms: 'Faturamento Corporativo (Boleto 30dd / TED)',
             status: 'received',
             ai_score: Number((9.1 + (idx === 0 ? 0.6 : 0.2)).toFixed(1)),
             ai_analysis_summary:

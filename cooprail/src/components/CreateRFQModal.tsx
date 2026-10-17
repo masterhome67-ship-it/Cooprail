@@ -57,15 +57,15 @@ export function CreateRFQModal({
         initialRFQ.items && initialRFQ.items.length > 0
           ? initialRFQ.items
           : [
-              {
-                id: 'item-1',
-                item_name: '',
-                specification: '',
-                quantity: 1,
-                unit: 'unidades',
-                target_unit_price: 0,
-              },
-            ]
+            {
+              id: 'item-1',
+              item_name: '',
+              specification: '',
+              quantity: 1,
+              unit: 'unidades',
+              target_unit_price: 0,
+            },
+          ]
       );
     } else {
       setTitle('');

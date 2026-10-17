@@ -85,13 +85,10 @@ export function getHelpAgentInitialMessage(): ChatMessage {
   return {
     id: `msg-help-init`,
     sender_role: 'assistant',
-    content: `Sou o seu Assistente Operacional de Suprimentos. Estou aqui para auxiliar você na navegação e nos fluxos de compras industriais da plataforma.
+    content: `Olá! Sou o seu Assistente de Suprimentos & Engenharia.
+Posso cotar materiais na região, localizar fornecedores industriais ou analisar propostas comerciais.
 
-Você pode me fazer perguntas diretas ou utilizar os comandos especializados:
-• /busca [termo ou cidade] — Módulo de Busca: pesquisa materiais, fornecedores homologados e empresas mobilizadas no canteiro.
-• /controle — Módulo de Controle & Compliance: audita status orçamentário, centros de custo e conformidade da esteira de compras.
-• /pedido — Módulo de Pedidos: instruções para emissão de ordens formais (PO) e liquidação via Smart Escrow on-chain.
-• /demandas — Módulo de Planejamento de Demandas: ajuda a consolidar necessidades técnicas dos setores para novas RFQs.`,
+💡 **Como começar:** Digite diretamente o que precisa (ex: *"Preciso cotar 50 sacos de cimento em Umuarama"*) ou anexe uma foto/documento de peça.`,
     timestamp: 'Agora',
   };
 }
