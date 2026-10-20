@@ -184,7 +184,7 @@ export function LandingPage({
                 }}
                 className="py-2.5 px-3 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold text-center hover:bg-slate-50 transition-colors"
               >
-                {lang === 'pt' ? 'Já Cadastrado' : 'Sign In'}
+                {lang === 'pt' ? 'Entrar' : 'Sign In'}
               </button>
               <button
                 type="button"
@@ -194,7 +194,7 @@ export function LandingPage({
                 }}
                 className="py-2.5 px-3 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold text-center shadow-md shadow-sky-600/20"
               >
-                {lang === 'pt' ? 'Primeiro Acesso' : 'Get Started'}
+                {lang === 'pt' ? 'Criar Conta' : 'Sign Up'}
               </button>
             </div>
           </nav>
@@ -235,9 +235,9 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={onOpenSignup || onOpenLogin}
-                  className="w-full sm:w-[240px] h-[50px] rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white text-sm font-bold shadow-lg shadow-sky-600/30 hover:shadow-sky-600/40 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap shrink-0 group"
+                  className="w-full sm:w-auto px-7 h-[50px] rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white text-sm font-bold shadow-lg shadow-sky-600/30 hover:shadow-sky-600/40 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap shrink-0 group"
                 >
-                  <span>{lang === 'pt' ? 'Começar Agora • Primeiro Acesso' : 'Get Started for Free'}</span>
+                  <span>{lang === 'pt' ? 'Criar Conta Corporativa' : 'Create Account'}</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
                 </button>
 

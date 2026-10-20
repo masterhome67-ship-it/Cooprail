@@ -8,10 +8,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Building2,
-  UserPlus,
   Briefcase,
   User,
-  Zap,
   KeyRound,
   CheckCircle2,
 } from 'lucide-react';
@@ -24,7 +22,6 @@ import {
   getRegisteredAccounts,
   registerNewAccount,
   hashPassword,
-  ensureDemoAccount,
   resetAccountPassword,
   DEMO_ACCOUNT_EMAIL,
 } from '@/lib/userWorkspace';
@@ -271,19 +268,6 @@ export function LoginModal({
     }
   };
 
-  const handleQuickDemoLogin = async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const demoAccount = await ensureDemoAccount();
-      setLoading(false);
-      onLoginSuccess(demoAccount);
-    } catch (err) {
-      setLoading(false);
-      setErrorMsg(lang === 'pt' ? 'Falha ao acessar conta de demonstração.' : 'Failed to access demo account.');
-    }
-  };
-
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotEmail.trim() || !forgotNewPassword) {
@@ -327,15 +311,25 @@ export function LoginModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
       <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col text-slate-800">
-        {/* Topo Off-White */}
+        {/* Topo com Título Dedicado por Modo (Sem abas no topo) */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-2.5">
             <img src="/cooprail-logo.png" alt="COOPRAIL" className="h-7 w-auto object-contain" />
             <div className="border-l border-slate-200 pl-2.5">
               <h3 className="text-xs font-bold text-slate-900">
-                {lang === 'pt' ? 'Acesso ao Portal Corporativo' : 'Enterprise Portal Access'}
+                {tab === 'signup'
+                  ? (lang === 'pt' ? 'Criar Conta Corporativa' : 'Create Corporate Account')
+                  : tab === 'forgot'
+                  ? (lang === 'pt' ? 'Redefinir Senha de Acesso' : 'Reset Password')
+                  : (lang === 'pt' ? 'Entrar no Portal Corporativo' : 'Sign In')}
               </h3>
-              <p className="text-[10px] text-slate-500">Enterprise Procurement System</p>
+              <p className="text-[10px] text-slate-500">
+                {tab === 'signup'
+                  ? (lang === 'pt' ? 'Primeiro acesso e onboarding da sua empresa' : 'Company registration and onboarding')
+                  : tab === 'forgot'
+                  ? (lang === 'pt' ? 'Recuperação de credenciais corporativas' : 'Corporate credentials recovery')
+                  : (lang === 'pt' ? 'Informe suas credenciais corporativas' : 'Enter your corporate credentials')}
+              </p>
             </div>
           </div>
           <button
@@ -343,39 +337,6 @@ export function LoginModal({
             className="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-200/60 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Abas: Entrar vs Criar Conta */}
-        <div className="flex border-b border-slate-200 bg-slate-100/60 text-xs font-semibold">
-          <button
-            onClick={() => {
-              setTab('signin');
-              setErrorMsg(null);
-              setSuccessMsg(null);
-            }}
-            className={`flex-1 py-3 text-center transition-all cursor-pointer border-b-2 ${
-              tab === 'signin'
-                ? 'border-[#0284c7] text-[#0284c7] bg-white font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {lang === 'pt' ? 'Já sou Cadastrado' : 'Sign In'}
-          </button>
-          <button
-            onClick={() => {
-              setTab('signup');
-              setErrorMsg(null);
-              setSuccessMsg(null);
-            }}
-            className={`flex-1 py-3 text-center transition-all cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
-              tab === 'signup'
-                ? 'border-[#0284c7] text-[#0284c7] bg-white font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            <span>{lang === 'pt' ? 'Primeiro Acesso / Cadastrar' : 'Sign Up'}</span>
           </button>
         </div>
 
@@ -484,21 +445,21 @@ export function LoginModal({
                 </button>
               </form>
 
-              {/* Botão de Demonstração Rápida (1 Clique) */}
-              <div className="pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={handleQuickDemoLogin}
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-all shadow-2xs cursor-pointer group"
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500 group-hover:scale-110 transition-transform" />
-                  <span>{lang === 'pt' ? '⚡ Acesso Rápido de Demonstração (1 Clique)' : '⚡ Quick Demo Access (1 Click)'}</span>
-                </button>
-                <p className="text-[10px] text-slate-500 text-center mt-1">
-                  {lang === 'pt'
-                    ? 'Acesso instantâneo homologado como Diretor de Suprimentos da Cooprail'
-                    : 'Instant access as approved Cooprail Procurement Director'}
+              {/* Alternar para Criar Conta */}
+              <div className="pt-2 text-center border-t border-slate-100">
+                <p className="text-xs text-slate-500">
+                  {lang === 'pt' ? 'Ainda não tem conta corporativa?' : "Don't have an account?"}{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab('signup');
+                      setErrorMsg(null);
+                      setSuccessMsg(null);
+                    }}
+                    className="text-[#0284c7] hover:text-[#0369a1] font-bold hover:underline cursor-pointer"
+                  >
+                    {lang === 'pt' ? 'Criar Conta' : 'Sign Up'}
+                  </button>
                 </p>
               </div>
             </div>
@@ -628,13 +589,31 @@ export function LoginModal({
                   ) : (
                     <>
                       <span>
-                        {lang === 'pt' ? 'Concluir Cadastro & Abrir Painel' : 'Create Corporate Account'}
+                        {lang === 'pt' ? 'Criar Conta Corporativa' : 'Create Corporate Account'}
                       </span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>
               </form>
+
+              {/* Alternar para Login */}
+              <div className="pt-2 text-center border-t border-slate-100">
+                <p className="text-xs text-slate-500">
+                  {lang === 'pt' ? 'Já possui conta corporativa?' : 'Already have an account?'}{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab('signin');
+                      setErrorMsg(null);
+                      setSuccessMsg(null);
+                    }}
+                    className="text-[#0284c7] hover:text-[#0369a1] font-bold hover:underline cursor-pointer"
+                  >
+                    {lang === 'pt' ? 'Fazer Login' : 'Sign In'}
+                  </button>
+                </p>
+              </div>
             </div>
           )}
 
