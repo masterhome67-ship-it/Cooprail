@@ -10,6 +10,9 @@ export interface AIRequestPayload {
   imageMimeType?: string;
   systemInstruction: string;
   history?: { role: string; content: string }[];
+  rfqs?: any[];
+  orders?: any[];
+  sectors?: any[];
 }
 
 export interface AIResponsePayload {
@@ -316,7 +319,97 @@ function generateDeterministicFallback(payload: AIRequestPayload): string {
   - Para buscar fornecedores do setor no mercado: \`/busca fornecedores de equipamentos e materiais no Paraná\`.`;
   }
 
-  // 1. Comando ou intenção /busca (Busca de Fornecedores & Peças)
+  // 1. CONEXÃO DIRETA COM O PAINEL: Pergunta sobre cotações abertas, demandas ou status
+  const rfqs = (payload.rfqs || []).filter(
+    (r: any) =>
+      r &&
+      r.code !== 'RFQ-2026-UMU-01' &&
+      r.id !== 'rfq-umu-cimento-01' &&
+      !r.code?.toLowerCase().includes('umu') &&
+      !r.title?.toLowerCase().includes('umuarama') &&
+      !r.title?.toLowerCase().includes('copacol')
+  );
+
+  const isAskingAboutOpenRFQs =
+    lower.includes('cotações abertas') ||
+    lower.includes('cotacoes abertas') ||
+    lower.includes('cotação aberta') ||
+    lower.includes('cotacao aberta') ||
+    lower.includes('o que temos') ||
+    lower.includes('quais cotações') ||
+    lower.includes('quais cotacoes') ||
+    lower.includes('quais demandas') ||
+    lower.includes('demandas abertas') ||
+    lower.includes('quais editais') ||
+    lower.includes('minhas cotações') ||
+    lower.includes('minhas demandas') ||
+    (cmd === '/demandas' && (lower.includes('abertas') || lower.includes('temos') || lower.includes('listar') || lower.includes('quais') || lower.includes('status')));
+
+  if (isAskingAboutOpenRFQs) {
+    if (rfqs.length === 0) {
+      return `[Módulo de Gestão de Demandas & Cotações]\n\n📂 **Status Atual do Painel:**\n• Não há nenhuma cotação aberta ou rascunho pendente no momento.\n• **Como iniciar:** Anexe um memorial descritivo ou projeto em PDF pelo botão "Importar por Documento" ou digite o material desejado.`;
+    }
+
+    let out = `[Módulo de Gestão de Demandas & Cotações]\n\n📋 **Você possui ${rfqs.length} ${rfqs.length === 1 ? 'demanda registrada' : 'demandas registradas'} no painel:**\n\n`;
+    rfqs.forEach((r: any, idx: number) => {
+      const itemsCount = Array.isArray(r.itens) ? r.itens.length : Array.isArray(r.items) ? r.items.length : 0;
+      const statusLabel = r.status === 'published' ? '🟢 Aberta para Cotações' : '🟡 Rascunho / Pendente de Confirmação';
+      const loc = r.localizacao || r.location || 'Local a definir';
+      out += `**${idx + 1}. ${r.codigo || r.code || 'RFQ'}** — *${r.titulo || r.title}*\n`;
+      out += `• **Status:** ${statusLabel} | **Local:** ${loc}\n`;
+      out += `• **Quantitativo:** ${itemsCount} itens cadastrados\n`;
+      const itemList = Array.isArray(r.itens) ? r.itens : Array.isArray(r.items) ? r.items : [];
+      if (itemList.length > 0) {
+        const preview = itemList.slice(0, 3).map((it: any) => `*${it.item || it.item_name}*`).join(', ');
+        out += `• **Amostra de Itens:** ${preview}${itemList.length > 3 ? ` *(+${itemList.length - 3} itens)*` : ''}\n`;
+      }
+      out += `\n`;
+    });
+    out += `💡 **Como proceder:** Clique em **"Confirmar"** no card da demanda para publicá-la aos fornecedores ou **"Ver Cotações"** para comparar propostas.`;
+    return out;
+  }
+
+  // 2. CONEXÃO DIRETA COM O PAINEL: Pergunta sobre o que precisamos cotar / quais produtos
+  const isAskingAboutProductsToQuote =
+    lower.includes('precisamos cotar') ||
+    lower.includes('produtos a cotar') ||
+    lower.includes('quais produtos') ||
+    lower.includes('quais itens') ||
+    lower.includes('itens do documento') ||
+    lower.includes('itens do memorial') ||
+    lower.includes('quais materiais') ||
+    lower.includes('o que cotar') ||
+    lower.includes('lista de produtos') ||
+    (lower.includes('produtos') && (lower.includes('cotar') || lower.includes('temos') || lower.includes('quais')));
+
+  if (isAskingAboutProductsToQuote) {
+    if (rfqs.length === 0) {
+      return `[Módulo de Suprimentos & Engenharia]\n\n📦 **Produtos e Insumos:**\n• Nenhuma demanda foi carregada ainda no sistema.\n• Para extrair os produtos automaticamente, anexe seu memorial descritivo em PDF pelo botão "Importar por Documento".`;
+    }
+
+    let out = `[Módulo de Suprimentos & Engenharia]\n\n📦 **Relação de Produtos e Insumos Requisitados nas Demandas Ativas:**\n\n`;
+    rfqs.forEach((r: any) => {
+      const itemList = Array.isArray(r.itens) ? r.itens : Array.isArray(r.items) ? r.items : [];
+      out += `📁 **Demanda ${r.codigo || r.code}** — *${r.titulo || r.title}* (${r.localizacao || r.location || 'Canteiro'}):\n`;
+      if (itemList.length > 0) {
+        itemList.slice(0, 8).forEach((it: any, i: number) => {
+          const qty = it.quantidade || (it.quantity ? `${it.quantity} ${it.unit || 'un'}` : '');
+          const spec = it.especificacao || it.specification ? ` — ${it.especificacao || it.specification}` : '';
+          out += `  ${i + 1}. **${it.item || it.item_name}** ${qty ? `(${qty})` : ''}${spec}\n`;
+        });
+        if (itemList.length > 8) {
+          out += `  *(... e mais ${itemList.length - 8} itens cadastrados no memorial completo)*\n`;
+        }
+      } else {
+        out += `  • Demanda em estruturação de escopo.\n`;
+      }
+      out += `\n`;
+    });
+    out += `💡 Para pesquisar preços ou fornecedores específicos de qualquer um destes materiais, digite \`/busca [nome do material]\`.`;
+    return out;
+  }
+
+  // 3. Comando ou intenção /busca (Busca de Fornecedores & Peças)
   if (cmd === '/busca' || lower.startsWith('/busca') || lower.includes('fornecedor') || lower.includes('distribuidor')) {
     if (lower.includes('cimento')) {
       return `[Módulo de Busca de Fornecedores & Mercado]\n\n🏭 **Fornecedores e Distribuidores de Cimento Identificados:**\n\n• **Distribuidora Regional Homologada:**\n  - Marcas: Votoran CP II-E / Itambé CP IV / Cimento Campeão\n  - Prazo Médio: 24 a 48 horas | Frete paletizado no canteiro\n  - Capacidade: Cargas fracionadas ou fechadas (truck ou carreta 30t)\n\n• **Comercial & Insumos Industriais:**\n  - Atendimento para atacado e bases operacionais de infraestrutura\n\n💡 **Recomendação:** Digite \`/demandas cotar 50 sacos de cimento\` para abrir o edital de cotação formal.`;

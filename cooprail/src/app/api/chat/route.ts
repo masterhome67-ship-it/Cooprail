@@ -183,6 +183,9 @@ DIRETRIZES DE ATUAÇÃO POR AGENTE:
       imageMimeType,
       systemInstruction,
       history: safeHistory,
+      rfqs: userRfqsContext,
+      orders,
+      sectors,
     });
 
     return NextResponse.json({
