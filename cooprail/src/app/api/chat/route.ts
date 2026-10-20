@@ -105,22 +105,34 @@ export async function POST(req: NextRequest) {
       })),
     }));
 
-    // 3. Contexto das Requisições e Memoriais do Usuário
-    const userRfqsContext = (Array.isArray(rfqs) ? rfqs : []).map((r: any) => ({
-      codigo: r.code,
-      titulo: r.title,
-      escopo: r.scope_description,
-      localizacao: r.location,
-      status: r.status,
-      itens: Array.isArray(r.items)
-        ? r.items.map((it: any) => ({
-            item: it.item_name,
-            especificacao: it.specification,
-            quantidade: `${it.quantity} ${it.unit}`,
-            preco_alvo: it.target_unit_price,
-          }))
-        : [],
-    }));
+    // 3. Contexto das Requisições e Memoriais do Usuário (Filtra rigorosamente qualquer resquício de teste de Umuarama/Cimento)
+    const userRfqsContext = (Array.isArray(rfqs) ? rfqs : [])
+      .filter(
+        (r: any) =>
+          r &&
+          r.code !== 'RFQ-2026-UMU-01' &&
+          r.id !== 'rfq-umu-cimento-01' &&
+          !r.code?.toLowerCase().includes('umu') &&
+          !r.id?.toLowerCase().includes('umu') &&
+          !r.title?.toLowerCase().includes('umuarama') &&
+          !r.scope_description?.toLowerCase().includes('umuarama') &&
+          !r.title?.toLowerCase().includes('copacol')
+      )
+      .map((r: any) => ({
+        codigo: r.code,
+        titulo: r.title,
+        escopo: r.scope_description,
+        localizacao: r.location,
+        status: r.status,
+        itens: Array.isArray(r.items)
+          ? r.items.map((it: any) => ({
+              item: it.item_name,
+              especificacao: it.specification,
+              quantidade: `${it.quantity} ${it.unit}`,
+              preco_alvo: it.target_unit_price,
+            }))
+          : [],
+      }));
 
     // 4. Instrução de Sistema Enriquecida com Foco Estrito no Pedido do Usuário
     const systemInstruction = `Você é o ${activeAgent} da plataforma corporativa Cooprail (Enterprise Industrial Procurement).
@@ -131,7 +143,8 @@ REGRAS MANDATÓRIAS DE FORMATO E SÍNTESE EXECUTIVA (SEM TEXTÃO):
 - NUNCA use expressões vagas ou termos infantis.
 - NUNCA mencione termos de blockchain, Solana, criptomoedas ou Smart Escrow. A plataforma opera em modelo B2B tradicional brasileiro (Boleto Bancário 30dd / TED / PIX Corporativo).
 - NUNCA invente itens ou materiais não solicitados.
-- Se o usuário perguntar sobre itens do memorial ou demanda cadastrada (ex: "quais são os itens do memorial"), CONSULTE OS DADOS DE "REQUISIÇÕES E MEMORIAIS DO USUÁRIO" ABAIXO e responda listando fielmente os itens, quantitativos e especificações cadastrados na demanda! NUNCA invente trilhos, grampos ou peças que não estão no memorial dele.
+- Se o usuário perguntar sobre itens do memorial ou demanda cadastrada (ex: "quais são os itens do memorial", "separe os itens"), CONSULTE EXCLUSIVAMENTE OS DADOS DE "REQUISIÇÕES E MEMORIAIS DO USUÁRIO" ABAIXO e responda listando fielmente os itens, quantitativos e especificações cadastrados no memorial do documento anexado pelo usuário.
+- Se o usuário perguntar se o cimento estava no documento ou sobre Umuarama: esclareça de forma direta que NÃO, o documento anexado é estritamente de instalações elétricas (UNESPAR Campus Paranaguá) e que cimento/Umuarama era um resquício de teste do sistema anterior que não faz parte do documento.
 - Limite sua resposta a NO MÁXIMO 150 a 200 palavras, estruturada em blocos visuais e compactos:
   1. 📦 **Demanda Técnica:** [Material/Peça, Quantitativo, Local de Entrega e Norma ABNT/NBR pertinente].
   2. 💰 **Estimativa de Preço:** [Preço de mercado médio / balizador regional por unidade e total].

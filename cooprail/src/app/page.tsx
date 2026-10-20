@@ -686,7 +686,16 @@ export default function Home() {
           slashCommand,
           imageBase64,
           history: chatMessages.slice(-6),
-          rfqs,
+          rfqs: (rfqs || []).filter(
+            (r) =>
+              r &&
+              r.id !== 'rfq-umu-cimento-01' &&
+              r.code !== 'RFQ-2026-UMU-01' &&
+              !r.id?.toLowerCase().includes('umu') &&
+              !r.code?.toLowerCase().includes('umu') &&
+              !r.title?.toLowerCase().includes('umuarama') &&
+              !r.title?.toLowerCase().includes('copacol')
+          ),
           orders,
           sectors,
         }),
