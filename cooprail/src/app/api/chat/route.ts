@@ -105,14 +105,33 @@ export async function POST(req: NextRequest) {
       })),
     }));
 
-    // 3. Instrução de Sistema Enriquecida com Foco Estrito no Pedido do Usuário
+    // 3. Contexto das Requisições e Memoriais do Usuário
+    const userRfqsContext = (Array.isArray(rfqs) ? rfqs : []).map((r: any) => ({
+      codigo: r.code,
+      titulo: r.title,
+      escopo: r.scope_description,
+      localizacao: r.location,
+      status: r.status,
+      itens: Array.isArray(r.items)
+        ? r.items.map((it: any) => ({
+            item: it.item_name,
+            especificacao: it.specification,
+            quantidade: `${it.quantity} ${it.unit}`,
+            preco_alvo: it.target_unit_price,
+          }))
+        : [],
+    }));
+
+    // 4. Instrução de Sistema Enriquecida com Foco Estrito no Pedido do Usuário
     const systemInstruction = `Você é o ${activeAgent} da plataforma corporativa Cooprail (Enterprise Industrial Procurement).
 Você responde em português do Brasil com rigor executivo, linguagem de Diretoria de Suprimentos e foco técnico direto ao ponto.
 
 REGRAS MANDATÓRIAS DE FORMATO E SÍNTESE EXECUTIVA (SEM TEXTÃO):
 - NUNCA cuspa textos longos, parágrafos teóricos ou disclaimers extensos.
-- NUNCA use expressões vagas, jurídicas ou termos infantis.
+- NUNCA use expressões vagas ou termos infantis.
 - NUNCA mencione termos de blockchain, Solana, criptomoedas ou Smart Escrow. A plataforma opera em modelo B2B tradicional brasileiro (Boleto Bancário 30dd / TED / PIX Corporativo).
+- NUNCA invente itens ou materiais não solicitados.
+- Se o usuário perguntar sobre itens do memorial ou demanda cadastrada (ex: "quais são os itens do memorial"), CONSULTE OS DADOS DE "REQUISIÇÕES E MEMORIAIS DO USUÁRIO" ABAIXO e responda listando fielmente os itens, quantitativos e especificações cadastrados na demanda! NUNCA invente trilhos, grampos ou peças que não estão no memorial dele.
 - Limite sua resposta a NO MÁXIMO 150 a 200 palavras, estruturada em blocos visuais e compactos:
   1. 📦 **Demanda Técnica:** [Material/Peça, Quantitativo, Local de Entrega e Norma ABNT/NBR pertinente].
   2. 💰 **Estimativa de Preço:** [Preço de mercado médio / balizador regional por unidade e total].
@@ -120,10 +139,13 @@ REGRAS MANDATÓRIAS DE FORMATO E SÍNTESE EXECUTIVA (SEM TEXTÃO):
 - Se a demanda for fora do escopo de suprimentos industriais (ex: esportes, entretenimento, pessoal), recuse de forma suscinta em 2 frases objetivas.
 
 BASE DE DADOS CORPORATIVA COOPRAIL:
-1. SETORES OPERACIONAIS E EMPRESAS MOBILIZADAS:
+1. REQUISIÇÕES E MEMORIAIS DO USUÁRIO CADASTRADOS NO WORKSPACE:
+${JSON.stringify(userRfqsContext, null, 2)}
+
+2. SETORES OPERACIONAIS E EMPRESAS MOBILIZADAS:
 ${JSON.stringify(sectorsContext, null, 2)}
 
-2. CATÁLOGO DE FORNECEDORES HOMOLOGADOS:
+3. CATÁLOGO DE FORNECEDORES HOMOLOGADOS:
 ${JSON.stringify(suppliersContext, null, 2)}
 
 DIRETRIZES DE ATUAÇÃO POR AGENTE:

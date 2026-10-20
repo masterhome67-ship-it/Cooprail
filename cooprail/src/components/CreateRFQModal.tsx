@@ -25,7 +25,7 @@ export function CreateRFQModal({
 }: CreateRFQModalProps) {
   const [title, setTitle] = useState('');
   const [scopeDescription, setScopeDescription] = useState('');
-  const [location, setLocation] = useState('Umuarama - PR');
+  const [location, setLocation] = useState('');
   const [estimatedBudget, setEstimatedBudget] = useState('');
   const [targetDeliveryDate, setTargetDeliveryDate] = useState('Em 7 dias');
   const [deadline, setDeadline] = useState('Em 48 horas');
@@ -48,7 +48,7 @@ export function CreateRFQModal({
     if (initialRFQ) {
       setTitle(initialRFQ.title || '');
       setScopeDescription(initialRFQ.scope_description || '');
-      setLocation(initialRFQ.location || 'Umuarama - PR');
+      setLocation(initialRFQ.location || '');
       setEstimatedBudget(initialRFQ.estimated_budget ? String(initialRFQ.estimated_budget) : '');
       setTargetDeliveryDate(initialRFQ.target_delivery_date || 'Em 7 dias');
       setDeadline(initialRFQ.deadline || 'Em 48 horas');
@@ -70,7 +70,7 @@ export function CreateRFQModal({
     } else {
       setTitle('');
       setScopeDescription('');
-      setLocation('Umuarama - PR');
+      setLocation('');
       setEstimatedBudget('');
       setTargetDeliveryDate('Em 7 dias');
       setDeadline('Em 48 horas');
@@ -192,12 +192,12 @@ export function CreateRFQModal({
       const updatedRFQ: RFQ = {
         ...initialRFQ,
         title: title.trim(),
-        scope_description: scopeDescription.trim() || `Cotação de fornecimento para ${location}.`,
+        scope_description: scopeDescription.trim() || (location.trim() ? `Cotação de fornecimento para ${location.trim()}.` : 'Cotação de fornecimento e entrega.'),
         deadline: deadline || 'Em 48 horas',
         target_delivery_date: targetDeliveryDate || 'Em 7 dias',
         estimated_budget: calculatedTotal,
         items: items.filter((i) => i.item_name.trim() !== ''),
-        location: location || 'Umuarama - PR',
+        location: location.trim() || 'Local a combinar',
         sector_id: selectedSectorId,
       };
       savePublishedRFQ(updatedRFQ);
@@ -210,13 +210,14 @@ export function CreateRFQModal({
       id: `rfq-${Date.now()}`,
       code: generatedCode,
       title: title.trim(),
-      scope_description: scopeDescription.trim() || `Cotação de fornecimento para ${location}.`,
+      scope_description: scopeDescription.trim() || (location.trim() ? `Cotação de fornecimento para ${location.trim()}.` : 'Cotação de fornecimento e entrega.'),
       status: 'published',
       deadline: deadline || 'Em 48 horas',
       target_delivery_date: targetDeliveryDate || 'Em 7 dias',
       estimated_budget: calculatedTotal,
       items: items.filter((i) => i.item_name.trim() !== ''),
       quotes: initialQuotes,
+      location: location.trim() || 'Local a combinar',
     };
 
     savePublishedRFQ(newRFQ);
@@ -277,7 +278,7 @@ export function CreateRFQModal({
               </label>
               <input
                 type="text"
-                placeholder="Ex: Cafelândia / PR"
+                placeholder="Informe a cidade ou canteiro da obra"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 required

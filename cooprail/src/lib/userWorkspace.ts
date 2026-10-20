@@ -102,9 +102,9 @@ export function getHelpAgentInitialMessage(): ChatMessage {
     id: `msg-help-init`,
     sender_role: 'assistant',
     content: `Olá! Sou o seu Assistente de Suprimentos & Engenharia.
-Posso cotar materiais na região, localizar fornecedores industriais ou analisar propostas comerciais.
+Posso cotar materiais e serviços, localizar fornecedores homologados ou analisar memoriais descritivos e propostas comerciais.
 
-💡 **Como começar:** Digite diretamente o que precisa (ex: *"Preciso cotar 50 sacos de cimento em Umuarama"*) ou anexe uma foto/documento de peça.`,
+💡 **Como começar:** Digite o que sua obra ou setor necessita (ex: *"Cotar disjuntores e cabos"* ou *"Preciso de 50 sacos de cimento"*) ou anexe seu projeto/memorial técnico em PDF/planilha.`,
     timestamp: 'Agora',
   };
 }
@@ -118,8 +118,8 @@ export function getNewUserWelcomeMessage(userName: string, companyName: string):
 
 Seu workspace está **100% ativo e configurado**. Estou pronto para operar suas aquisições e engenharia de suprimentos:
 
-• **Nova Cotação:** Digite o que sua obra necessita (ex: *"Cotar 50 sacos de cimento em Umuarama"*)
-• **Leitura de Memorial:** Anexe um projeto ou memorial descritivo em PDF para extração automática
+• **Nova Cotação:** Digite os itens que sua obra necessita
+• **Leitura de Memorial:** Anexe um projeto ou memorial descritivo em PDF para extração automática dos quantitativos
 • **Portal de Fornecedores:** Seus editais públicos já geram link seguro instantâneo para fornecedores
 
 Como deseja iniciar hoje?`,
@@ -163,38 +163,9 @@ function initializeCleanWorkspace(user: RegisteredAccount): UserWorkspaceData {
   return cleanData;
 }
 
-// Carregar dados guiados de demonstração sob demanda (quando o usuário pedir)
-export function loadDemoDataIntoWorkspace(userId: string): { rfq: RFQ; task: Task } | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const key = getWorkspaceStorageKey(userId);
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const ws: UserWorkspaceData = JSON.parse(raw);
-    const defaultUmuRFQ = {
-      ...DEFAULT_PUBLISHED_RFQS[0],
-      id: `rfq-demo-${Date.now()}`,
-    };
-    const demoTask: Task = {
-      id: `task-rfq-demo-${Date.now()}`,
-      title: `Cotação Ativa: Propostas para ${defaultUmuRFQ.code}`,
-      description: `Requisição de compra aberta para 50 sacos de cimento em Umuarama/PR. Envie o link do Portal do Parceiro aos fornecedores ou avalie cotações de mercado.`,
-      status: 'needs_you',
-      priority: 'high',
-      category: 'quote_decision',
-      due_date: defaultUmuRFQ.deadline,
-      badge_text: 'Cotação em Andamento',
-    };
-    ws.rfqs = [defaultUmuRFQ, ...(ws.rfqs || [])];
-    ws.tasks = [demoTask, ...(ws.tasks || [])];
-    ws.isNewUser = false;
-    ws.is_initialized = true;
-    localStorage.setItem(key, JSON.stringify(ws));
-    return { rfq: defaultUmuRFQ, task: demoTask };
-  } catch (err) {
-    console.error('Erro ao carregar dados de demonstração:', err);
-    return null;
-  }
+// Carregar dados guiados de demonstração sob demanda (desativado a pedido do usuário)
+export function loadDemoDataIntoWorkspace(_userId: string): { rfq: RFQ; task: Task } | null {
+  return null;
 }
 
 // Redefinição rápida de senha local para primeiro acesso / recuperação
@@ -346,42 +317,7 @@ export interface PublishedRFQ extends RFQ {
 
 export const DEFAULT_UMU_QUOTES: Quote[] = [];
 
-export const DEFAULT_PUBLISHED_RFQS: PublishedRFQ[] = [
-  {
-    id: 'rfq-umu-cimento-01',
-    code: 'RFQ-2026-UMU-01',
-    title: 'Aquisição de 50 Sacos de Cimento CP II-Z / CP IV (Umuarama - PR)',
-    scope_description:
-      'Fornecimento imediato com frete incluso e descarga paletizada de 50 sacos de 50kg de Cimento Portland para manutenção civil e drenagem no canteiro regional de Umuarama - PR. Fornecimento com nota fiscal e laudo ABNT NBR 16697.',
-    status: 'published',
-    deadline: 'Em 24 horas',
-    target_delivery_date: 'Em até 2 dias úteis',
-    estimated_budget: 1750,
-    items: [
-      {
-        id: 'umu-1',
-        item_name: 'Cimento Portland CP II-Z ou CP IV (Saco 50kg)',
-        specification:
-          'Em conformidade com ABNT NBR 16697, marca de primeira linha homologada (Votoran, Itambé ou equivalente técnico), sacaria intacta sem umidade.',
-        quantity: 50,
-        unit: 'sacos (50kg)',
-        target_unit_price: 34.0,
-      },
-      {
-        id: 'umu-2',
-        item_name: 'Frete e Descarga no Canteiro de Obras (Umuarama/PR)',
-        specification:
-          'Entrega CIF no perímetro urbano de Umuarama - PR, com descarga paletizada ou manual direta no depósito de obra.',
-        quantity: 1,
-        unit: 'frete/descarga',
-        target_unit_price: 50.0,
-      },
-    ],
-    quotes: DEFAULT_UMU_QUOTES,
-    location: 'Umuarama - PR',
-    hasCopacolDrawings: false,
-  },
-];
+export const DEFAULT_PUBLISHED_RFQS: PublishedRFQ[] = [];
 
 const SHARED_RFQS_KEY = 'cooprail_shared_rfqs_v1';
 
@@ -452,9 +388,11 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
     const shared: PublishedRFQ[] = raw ? JSON.parse(raw) : [];
 
     const globalDeletedIds = new Set<string>();
-    // Bloqueia permanentemente resquícios de Copacol e IDs deletados
+    // Bloqueia permanentemente resquícios de Copacol, Umuarama mock e IDs deletados
     globalDeletedIds.add('rfq-copacol-01');
     globalDeletedIds.add('RFQ-2026-COPACOL-01');
+    globalDeletedIds.add('rfq-umu-cimento-01');
+    globalDeletedIds.add('RFQ-2026-UMU-01');
 
     const rawDeleted = localStorage.getItem('cooprail_deleted_rfq_ids');
     if (rawDeleted) {
@@ -476,12 +414,14 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
               parsed.deleted_rfq_ids.forEach((id: string) => globalDeletedIds.add(id));
             }
             if (Array.isArray(parsed.rfqs)) {
-              // Somente RFQs com status 'published' explícito (NUNCA rascunhos) e sem Copacol
+              // Somente RFQs com status 'published' explícito (NUNCA rascunhos) e sem Copacol ou mock Umuarama
               const publishedOnly = parsed.rfqs.filter(
                 (r: any) =>
                   r.status === 'published' &&
                   !r.code?.toLowerCase().includes('copacol') &&
                   !r.title?.toLowerCase().includes('copacol') &&
+                  !r.code?.toLowerCase().includes('umu') &&
+                  !r.title?.toLowerCase().includes('umuarama') &&
                   !r.title?.toLowerCase().includes('preciso que estruture') &&
                   !globalDeletedIds.has(r.id) &&
                   !globalDeletedIds.has(r.code)
@@ -512,7 +452,9 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
         !globalDeletedIds.has(t.id) &&
         !globalDeletedIds.has(t.code) &&
         !t.code.toLowerCase().includes('copacol') &&
-        !t.title.toLowerCase().includes('copacol')
+        !t.title.toLowerCase().includes('copacol') &&
+        !t.code.toLowerCase().includes('umu') &&
+        !t.title.toLowerCase().includes('umuarama')
       ) {
         map.set(t.code, { ...map.get(t.code), ...t });
       }
@@ -526,6 +468,8 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
         !globalDeletedIds.has(s.code) &&
         !s.code.toLowerCase().includes('copacol') &&
         !s.title.toLowerCase().includes('copacol') &&
+        !s.code.toLowerCase().includes('umu') &&
+        !s.title.toLowerCase().includes('umuarama') &&
         !s.title.toLowerCase().includes('preciso que estruture')
     );
     validShared.forEach((s) => {

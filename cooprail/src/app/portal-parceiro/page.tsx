@@ -517,8 +517,8 @@ function SupplierPortalContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: activeRfq.hasCopacolDrawings
-            ? `[DÚVIDA TÉCNICA ESTRITA DO MEMORIAL COPACOL CAFELÂNDIA]: ${q}. RESPONDA EXCLUSIVAMENTE COM BASE NO DOCUMENTO FORNECIDO.`
-            : `[DÚVIDA TÉCNICA DA COTAÇÃO ${activeRfq.code} - ${activeRfq.title}]: ${q}. Escopo: ${activeRfq.scope_description}. Itens: ${JSON.stringify(activeRfq.items)}. Local de Entrega: ${activeRfq.location || 'Umuarama/PR'}.`,
+            ? `[DÚVIDA TÉCNICA ESTRITA DO MEMORIAL TÉCNICO]: ${q}. RESPONDA EXCLUSIVAMENTE COM BASE NO DOCUMENTO FORNECIDO.`
+            : `[DÚVIDA TÉCNICA DA COTAÇÃO ${activeRfq.code} - ${activeRfq.title}]: ${q}. Escopo: ${activeRfq.scope_description}. Itens: ${JSON.stringify(activeRfq.items)}. Local de Entrega: ${activeRfq.location || 'Local a combinar'}.`,
           slashCommand: '/busca',
         }),
       });
@@ -545,9 +545,9 @@ function SupplierPortalContent() {
     setTimeout(() => {
       let reply = '';
       if (activeRfq.hasCopacolDrawings) {
-        reply = 'Conforme o Memorial Técnico da Copacol (Cafelândia/PR), os 740 metros de tubos PEAD DN 1000mm são fornecidos pela CONTRATANTE (Copacol). A CONTRATADA é responsável pela escavação de 370m de vala, 5 caixas de inspeção estruturadas, reaterro com compactação e canal de descida 3x3m até o rio receptor.';
+        reply = 'Conforme o Memorial Técnico, os itens especificados são fornecidos pela CONTRATANTE ou CONTRATADA conforme a planilha de quantitativos.';
       } else {
-        reply = `Para esta solicitação (${activeRfq.title} • ${activeRfq.code}), a entrega é para ${activeRfq.location || 'Umuarama - PR'}. Os materiais devem atender às normas ABNT NBR aplicáveis, sacaria intacta de 50kg, com entrega CIF e descarga no canteiro. A liquidação é garantida pela Cooprail.`;
+        reply = `Para esta solicitação (${activeRfq.title} • ${activeRfq.code}), a entrega é para ${activeRfq.location || 'o canteiro de obras acordado'}. Os materiais devem atender às normas ABNT aplicáveis e especificações do memorial descritivo, com entrega CIF e descarga no local. A liquidação é garantida pela Cooprail.`;
       }
       setChatMessages((prev) => [...prev, { sender: 'assistant', text: reply, time: timeStr }]);
       setIsChatLoading(false);
@@ -958,7 +958,7 @@ function SupplierPortalContent() {
               <span className="text-[10px] font-bold text-slate-400 block uppercase">Local de Entrega / Região</span>
               <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
                 <MapPin className="w-3.5 h-3.5 text-[#0284c7]" />
-                {activeRfq.location || 'Umuarama - PR'}
+                {activeRfq.location || 'Local a combinar'}
               </span>
             </div>
             <div>
@@ -1043,7 +1043,7 @@ function SupplierPortalContent() {
                   Planilha Oficial de Itens & Insumos Requisitados
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Itens e quantidades requeridas para fornecimento imediato em {activeRfq.location || 'Umuarama/PR'}:
+                  Itens e quantidades requeridas para fornecimento imediato {activeRfq.location ? `em ${activeRfq.location}` : 'no canteiro de obras'}:
                 </p>
               </div>
               <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded border border-slate-200 self-start sm:self-auto">
@@ -1079,7 +1079,7 @@ function SupplierPortalContent() {
                       </td>
                       <td className="py-3 px-3">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border bg-sky-50 text-[#0284c7] border-sky-200">
-                          Fornecido pela Proponente (CIF {activeRfq.location || 'Umuarama/PR'})
+                          Fornecido pela Proponente (CIF {activeRfq.location || 'Canteiro de Obras'})
                         </span>
                       </td>
                     </tr>
@@ -1180,7 +1180,7 @@ function SupplierPortalContent() {
             <div className="border-b border-slate-100 pb-3">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-[#0284c7]" />
-                Diretrizes Técnicas de Qualidade & Entrega em {activeRfq.location || 'Umuarama/PR'}
+                Diretrizes Técnicas de Qualidade & Entrega {activeRfq.location ? `em ${activeRfq.location}` : 'no Canteiro de Obras'}
               </h2>
               <p className="text-xs text-slate-500">
                 Critérios de conformidade exigidos pela Cooprail para homologação, faturamento e liquidação financeira:
@@ -1192,9 +1192,9 @@ function SupplierPortalContent() {
                 <div className="w-8 h-8 rounded-lg bg-sky-100 text-[#0284c7] flex items-center justify-center font-bold">
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
-                <h3 className="text-xs font-bold text-slate-900">Norma ABNT & Sacaria</h3>
+                <h3 className="text-xs font-bold text-slate-900">Conformidade & Normas ABNT</h3>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Insumos em conformidade com as normas ABNT NBR aplicáveis (NBR 16697). Sacaria intacta, sem umidade, empedramento ou rasgos, com lote e validade visíveis.
+                  Insumos e materiais em estrita conformidade com as normas ABNT vigentes e memorial descritivo, com lote e laudos técnicos correspondentes.
                 </p>
               </div>
 
@@ -1204,7 +1204,7 @@ function SupplierPortalContent() {
                 </div>
                 <h3 className="text-xs font-bold text-slate-900">Descarga no Local (CIF)</h3>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Entrega no canteiro de obras de {activeRfq.location || 'Umuarama - PR'}. Carga paletizada com filme protetor ou descarregamento manual direto no depósito.
+                  Entrega no canteiro de obras {activeRfq.location ? `de ${activeRfq.location}` : 'acordado'}. Carga devidamente protegida e descarregamento no depósito ou local da obra.
                 </p>
               </div>
 

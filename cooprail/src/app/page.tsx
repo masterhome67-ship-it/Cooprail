@@ -29,7 +29,6 @@ import {
   loadUserWorkspace,
   saveUserWorkspace,
   deletePublishedRFQ,
-  loadDemoDataIntoWorkspace,
   getActiveSessionUserId,
   setActiveSessionUserId,
   getRegisteredAccounts,
@@ -412,16 +411,6 @@ export default function Home() {
     setSelectedRfqId(rfqId);
     setActiveTab('comparator');
     showToast('Requisição carregada no Comparador de Cotações!');
-  };
-
-  const handleLoadDemoData = () => {
-    if (!currentUser) return;
-    const res = loadDemoDataIntoWorkspace(currentUser.id);
-    if (res) {
-      setRfqs((prev) => [res.rfq, ...prev]);
-      setTasks((prev) => [res.task, ...prev]);
-      showToast('Cotação guiada de exemplo (Umuarama/PR) carregada com sucesso!');
-    }
   };
 
   // Escuta atalho Cmd+K / Ctrl+K
@@ -817,7 +806,7 @@ export default function Home() {
                     else showToast('Nenhuma decisão pendente para aprovar.');
                   } else if (action === 'create_rfq') {
                     const lastUserMsg = [...chatMessages].reverse().find((m) => m.sender_role === 'user')?.content || '';
-                    const parsed = parseQuotationParams(lastUserMsg || '50 sacos de cimento em Umuarama');
+                    const parsed = parseQuotationParams(lastUserMsg || 'Demanda técnica de materiais');
                     
                     const draftRFQ: RFQ = {
                       id: `rfq-draft-${Date.now()}`,
@@ -950,14 +939,6 @@ export default function Home() {
                       className="px-3.5 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer shadow-xs transition-colors"
                     >
                       Importar por Documento
-                    </button>
-                    <button
-                      onClick={handleLoadDemoData}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-semibold cursor-pointer shadow-xs transition-colors"
-                      title="Carrega a cotação de exemplo de Cimento CP-II em Umuarama/PR para testes guiados"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Carregar Cotação de Exemplo (Umuarama/PR)</span>
                     </button>
                   </div>
                 </div>

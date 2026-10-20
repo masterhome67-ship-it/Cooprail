@@ -147,7 +147,7 @@ export function parseQuotationParams(message: string): QuotationIntentParams {
   const lower = text.toLowerCase();
 
   // 1. Extrai Localidade / Cidade
-  let location = 'Umuarama - PR';
+  let location = '';
   const cities = [
     'umuarama',
     'cafelândia',
@@ -174,6 +174,10 @@ export function parseQuotationParams(message: string): QuotationIntentParams {
       if (city.includes('maringa') || city.includes('maringá')) location = 'Maringá - PR';
       break;
     }
+  }
+
+  if (!location) {
+    location = 'Local a combinar';
   }
 
   // 2. Extrai múltiplos itens se separados por '/', ',', ';' ou ' e '

@@ -511,7 +511,7 @@ export function TeamBuyersView({
                     type="text"
                     required
                     list="sectors-list"
-                    placeholder="Ex: Frente de Obras Umuarama"
+                    placeholder="Ex: Frente de Obras / Suprimentos"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7]"

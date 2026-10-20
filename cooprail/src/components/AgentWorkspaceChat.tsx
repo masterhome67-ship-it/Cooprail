@@ -555,7 +555,7 @@ export function AgentWorkspaceChat({
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isSubmitting}
-              placeholder="Digite o material e quantidade (ex: 50 sacos de cimento em Umuarama)..."
+              placeholder="Digite os materiais e quantidades desejadas ou anexe um documento..."
               className="w-full pl-3 pr-20 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7] transition-all"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">

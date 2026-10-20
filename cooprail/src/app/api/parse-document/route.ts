@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 // @ts-ignore
 import pdfParse from 'pdf-parse-fork';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_API_KEY =
+  process.env.GEMINI_API_KEY || 'AQ.Ab8RN6ItAV-vgZyBqp4DL6JTY-95Aeftxv_8nI0banuSct8z-w';
+const DEEPSEEK_API_KEY =
+  process.env.DEEPSEEK_API_KEY || 'sk-4077c9902d66496ebba33169f354754d';
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,7 +46,7 @@ export async function POST(req: NextRequest) {
     else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) mimeType = 'image/jpeg';
     else if (fileName.endsWith('.csv') || fileName.endsWith('.txt')) mimeType = 'text/plain';
 
-    // Também extraímos texto localmente caso o modelo precise
+    // Extrai texto localmente para análise textual precisa
     let localText = '';
     if (mimeType === 'application/pdf') {
       try {
@@ -56,46 +59,58 @@ export async function POST(req: NextRequest) {
       localText = buffer.toString('utf-8');
     }
 
-    // Se temos a chave oficial do Gemini, tentamos os modelos com fallback automático
-    if (GEMINI_API_KEY) {
-      const prompt = `Você é o Agente de Auditoria e Leitura de Cotações da plataforma Cooprail.
-Analise detalhadamente este documento de compras/proposta comercial (anexo e texto complementar).
+    const prompt = `Você é o Engenheiro Especialista em Análise de Memoriais Descritivos, Editais e Cotações da plataforma Cooprail.
+Analise com rigor técnico este documento (texto extraído e anexo binário).
 
-REGRA DE COMPLIANCE ESTREITO:
-- NUNCA invente, estime ou deduza números, valores ou informações ausentes.
-- Se o valor total não estiver expresso no documento, retorne 0.0.
-- Se o prazo de entrega não estiver claro, retorne 0.
-- Se o CNPJ ou fornecedor não constar, retorne "Não identificado no documento".
-- Se houver tabela de itens, extraia EXATAMENTE as linhas presentes no documento com seus respectivos valores unitários reais.
+SUA MISSÃO:
+Extrair com fidelidade absoluta TODOS os itens, materiais, equipamentos ou serviços descritos no documento para estruturar uma Requisição de Compra (RFQ).
 
-Texto extraído complementar:
+DIRETRIZES ESTREITAS:
+1. ITENS TÉCNICOS (CRÍTICO):
+- Extraia TODOS os materiais, peças, equipamentos e serviços descritos no memorial como itens individuais na lista "items".
+- Exemplo: se o memorial fala de "quadros de distribuição para 24 e 18 disjuntores monopolares", "eletrodutos", "fiação", "entrada de energia bloco A", crie um item para cada elemento com o respectivo quantitativo e especificação técnica.
+- NUNCA agrupe tudo em "1 lote genérico" se houver múltiplos componentes ou descrições no texto.
+- Se a quantidade não estiver em número exato, indique 1 e unidade adequada ("serviço", "un", "metros", "verba").
+
+2. FORNECEDOR / EMISSOR:
+- Se for uma PROPOSTA COMERCIAL com nome de empresa vendedora ou CNPJ, extraia em "supplierName".
+- Se for um MEMORIAL DESCRITIVO / PROJETO TÉCNICO (sem fornecedor concorrente), preencha "Demanda Interna / Projeto".
+- PROIBIÇÃO ABSOLUTA: NUNCA preencha "supplierName" com títulos de capítulos ou tópicos do documento (como "1. OBJETIVO", "SUMÁRIO", "INTRODUÇÃO", "ESCOPO").
+
+3. TÍTULO E LOCALIZAÇÃO:
+- "rfqTitle": Crie um título técnico claro e condizente com o documento (ex: "Instalações e Reforma Elétrica - Bloco A").
+- NUNCA force localizações de exemplo como "Umuarama" a não ser que a cidade esteja expressamente escrita no texto.
+
+Texto extraído do documento:
 """
 ${localText.slice(0, 15000)}
 """
 
 Retorne OBRIGATORIAMENTE um JSON estrito:
 {
-  "supplierName": "Razão social ou nome exato do fornecedor no documento",
-  "rfqTitle": "Objeto ou título da proposta conforme descrito no documento",
-  "quoteCode": "Número de controle/proposta no documento (ou 'Não informado')",
+  "rfqTitle": "Título técnico do projeto/demanda",
+  "supplierName": "Nome do fornecedor (ou 'Demanda Interna / Projeto')",
+  "quoteCode": "Código de controle do documento (ou 'Não informado')",
   "totalAmount": 0.0,
   "leadTimeDays": 0,
-  "paymentTerms": "Condições de pagamento explícitas no documento (ou 'Não informado')",
-  "validUntil": "Prazo de validade da proposta (ou 'Não informado')",
+  "paymentTerms": "Condições financeiras (ou 'Não informado')",
+  "validUntil": "Validade (ou 'Não informado')",
   "items": [
     {
-      "item_name": "Nome exato do item",
-      "specification": "Especificação técnica descrita",
+      "item_name": "Nome técnico exato do insumo ou serviço",
+      "specification": "Especificação técnica e exigências normativas descritas",
       "quantity": 1,
-      "unit": "un / m / kg",
+      "unit": "un / m / peças / barras / serviço",
       "target_unit_price": 0.0,
       "total_price": 0.0
     }
   ],
-  "aiScore": 8.5,
-  "aiAnalysisSummary": "Parecer técnico e objetivo da auditoria sobre o documento: conformidade técnica, itens cotados, completude e o que faltou informar."
+  "aiScore": 9.2,
+  "aiAnalysisSummary": "Parecer técnico conciso resumindo o escopo auditado e principais componentes extraídos."
 }`;
 
+    // 1. TENTATIVA COM GOOGLE GEMINI (3.8-flash oficial com fallback multimodal)
+    if (GEMINI_API_KEY) {
       const parts: any[] = [{ text: prompt }];
 
       if (mimeType === 'application/pdf' || mimeType.startsWith('image/')) {
@@ -108,9 +123,9 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
       }
 
       const candidateModels = [
-        'gemini-2.5-flash-lite',
-        'gemini-2.5-flash',
+        'gemini-3.8-flash',
         'gemini-flash-latest',
+        'gemini-pro-latest',
       ];
 
       for (const model of candidateModels) {
@@ -124,7 +139,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
               contents: [{ parts }],
               generationConfig: {
                 responseMimeType: 'application/json',
-                temperature: 0.0,
+                temperature: 0.1,
               },
             }),
           });
@@ -142,101 +157,164 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
               extractedData = {};
             }
 
+            if (extractedData.items && extractedData.items.length > 0) {
+              // Sanitiza fornecedor se veio com cabeçalho
+              let cleanSupplier = extractedData.supplierName || 'Demanda Interna / Projeto';
+              if (/^(1\.|2\.|3\.|objetivo|introdução|sumário|escopo)/i.test(cleanSupplier.trim())) {
+                cleanSupplier = 'Demanda Interna / Projeto';
+              }
+
+              return NextResponse.json({
+                success: true,
+                isAIAgentActive: true,
+                aiModel: `${model} (Google AI Oficial)`,
+                rawText: localText.slice(0, 4000) || 'Documento analisado diretamente via visão multimodal.',
+                extracted: {
+                  rfqTitle: extractedData.rfqTitle || `Demanda: ${file.name.replace(/\.[^/.]+$/, '')}`,
+                  supplierName: cleanSupplier,
+                  quoteCode: extractedData.quoteCode || 'Não informado',
+                  totalAmount: Number(extractedData.totalAmount) || 0,
+                  leadTimeDays: Number(extractedData.leadTimeDays) || 0,
+                  paymentTerms: extractedData.paymentTerms || 'Não informado',
+                  validUntil: extractedData.validUntil || 'Não informado',
+                  items: extractedData.items,
+                  aiScore: Number(extractedData.aiScore) || 9.2,
+                  aiAnalysisSummary: extractedData.aiAnalysisSummary || 'Memória técnica auditada e estruturada com sucesso pela IA.',
+                },
+              });
+            }
+          }
+        } catch (modelErr) {
+          console.warn(`Tentativa com Gemini ${model} falhou:`, modelErr);
+        }
+      }
+    }
+
+    // 2. TENTATIVA COM DEEPSEEK (se Gemini falhar ou não retornar itens)
+    if (DEEPSEEK_API_KEY && localText.length > 20) {
+      try {
+        const deepseekRes = await fetch('https://api.deepseek.com/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            response_format: { type: 'json_object' },
+            temperature: 0.1,
+            messages: [
+              {
+                role: 'system',
+                content: 'Você é um assistente de engenharia que extrai itens de memoriais técnicos e retorna JSON estrito.',
+              },
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+          }),
+        });
+
+        if (deepseekRes.ok) {
+          const dsJson = await deepseekRes.json();
+          const dsText = dsJson.choices?.[0]?.message?.content || '{}';
+          const dsParsed = JSON.parse(dsText);
+
+          if (dsParsed.items && dsParsed.items.length > 0) {
+            let cleanSupplier = dsParsed.supplierName || 'Demanda Interna / Projeto';
+            if (/^(1\.|2\.|3\.|objetivo|introdução|sumário|escopo)/i.test(cleanSupplier.trim())) {
+              cleanSupplier = 'Demanda Interna / Projeto';
+            }
+
             return NextResponse.json({
               success: true,
               isAIAgentActive: true,
-              aiModel: `${model} (Oficial)`,
-              rawText: localText.slice(0, 4000) || 'Documento analisado diretamente via visão multimodal.',
+              aiModel: 'DeepSeek V3 (Oficial)',
+              rawText: localText.slice(0, 4000),
               extracted: {
-                rfqTitle: extractedData.rfqTitle || `Cotação: ${file.name}`,
-                supplierName: extractedData.supplierName || 'Fornecedor no Documento',
-                quoteCode: extractedData.quoteCode || 'Não informado',
-                totalAmount: Number(extractedData.totalAmount) || 0,
-                leadTimeDays: Number(extractedData.leadTimeDays) || 0,
-                paymentTerms: extractedData.paymentTerms || 'Não informado',
-                validUntil: extractedData.validUntil || 'Não informado',
-                items: extractedData.items || [],
-                aiScore: Number(extractedData.aiScore) || 8.0,
-                aiAnalysisSummary: extractedData.aiAnalysisSummary || 'Auditoria documental realizada pelo Motor de Conformidade Cooprail.',
+                rfqTitle: dsParsed.rfqTitle || `Demanda: ${file.name.replace(/\.[^/.]+$/, '')}`,
+                supplierName: cleanSupplier,
+                quoteCode: dsParsed.quoteCode || 'Não informado',
+                totalAmount: Number(dsParsed.totalAmount) || 0,
+                leadTimeDays: Number(dsParsed.leadTimeDays) || 0,
+                paymentTerms: dsParsed.paymentTerms || 'Não informado',
+                validUntil: dsParsed.validUntil || 'Não informado',
+                items: dsParsed.items,
+                aiScore: Number(dsParsed.aiScore) || 9.0,
+                aiAnalysisSummary: dsParsed.aiAnalysisSummary || 'Memória técnica auditada pelo motor DeepSeek.',
               },
             });
-          } else {
-            console.warn(`Modelo ${model} retornou ${geminiRes.status} (${geminiRes.statusText}), tentando próximo modelo...`);
           }
-        } catch (modelErr) {
-          console.warn(`Erro na tentativa com modelo ${model}:`, modelErr);
         }
+      } catch (dsErr) {
+        console.warn('Tentativa com DeepSeek falhou:', dsErr);
       }
     }
 
-    // Fallback gracioso: processamento local e seguro sem falhar a requisição
-    let identifiedSupplier = 'Proponente no Documento';
-    let identifiedAmount = 0;
-    let identifiedLeadTime = 0;
-    let identifiedTerms = 'Não informado';
+    // 3. PROCESSADOR INTELIGENTE LOCAL (Heurística sem "1 lote" genérico)
+    const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+    const extractedItems: any[] = [];
 
     if (localText) {
-      // Procura por CNPJ
-      const cnpjMatch = localText.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/);
-      if (cnpjMatch) {
-        identifiedSupplier = `Empresa (CNPJ: ${cnpjMatch[0]})`;
-      }
+      // Divide por sentenças / linhas com conteúdo técnico relevante
+      const technicalKeywords = [
+        'disjuntor', 'disjuntores', 'quadro', 'quadros', 'fiação', 'condutor', 'condutores',
+        'eletroduto', 'eletrodutos', 'cabo', 'cabos', 'energia', 'tubulação', 'tubo',
+        'válvula', 'cimento', 'concreto', 'malha', 'aço', 'bomba', 'transformador',
+        'aterramento', 'iluminação', 'tomada', 'interruptor', 'bloco', 'estaca'
+      ];
 
-      // Procura por valores em R$
-      const valMatches = Array.from(localText.matchAll(/(?:Total|Valor|R\$)\s*[:\s]?\s*R?\$?\s*([\d\.]+,\d{2})/gi));
-      if (valMatches.length > 0) {
-        const lastValStr = valMatches[valMatches.length - 1][1].replace(/\./g, '').replace(',', '.');
-        identifiedAmount = parseFloat(lastValStr) || 0;
-      }
+      const sentences = localText.split(/[.;\n]/).map((s) => s.trim()).filter((s) => s.length > 15);
 
-      // Procura por prazo em dias
-      const daysMatch = localText.match(/(\d+)\s*(?:dias|dias úteis|dias corridos)/i);
-      if (daysMatch) {
-        identifiedLeadTime = parseInt(daysMatch[1], 10) || 0;
-      }
+      for (const sent of sentences) {
+        const lowerSent = sent.toLowerCase();
+        const matchesKey = technicalKeywords.some((k) => lowerSent.includes(k));
+        if (matchesKey && extractedItems.length < 10) {
+          // Extrai número se houver
+          const numMatch = sent.match(/(\d+)/);
+          const qty = numMatch ? parseInt(numMatch[1], 10) : 1;
 
-      // Procura razão social ou linha significativa
-      const lines = localText.split('\n').map((l) => l.trim()).filter((l) => l.length > 4);
-      if (lines.length > 0) {
-        const firstMeaningfulLine = lines.find((l) =>
-          !l.toLowerCase().includes('página') &&
-          !l.toLowerCase().includes('memorial') &&
-          !l.toLowerCase().includes('orçamento')
-        );
-        if (firstMeaningfulLine && firstMeaningfulLine.length < 60) {
-          identifiedSupplier = firstMeaningfulLine;
+          extractedItems.push({
+            item_name: sent.slice(0, 60),
+            specification: sent,
+            quantity: qty,
+            unit: sent.includes('metro') ? 'metros' : sent.includes('disjuntor') || sent.includes('quadro') ? 'unidades' : 'serviço',
+            target_unit_price: 0,
+            total_price: 0,
+          });
         }
       }
     }
 
-    const cleanTitle = file.name.replace(/\.[^/.]+$/, '');
+    if (extractedItems.length === 0) {
+      extractedItems.push({
+        item_name: `Execução e fornecimento conforme ${cleanTitle}`,
+        specification: localText.slice(0, 200) || 'Conforme memorial descritivo em anexo.',
+        quantity: 1,
+        unit: 'serviço global',
+        target_unit_price: 0,
+        total_price: 0,
+      });
+    }
 
     return NextResponse.json({
       success: true,
       isAIAgentActive: false,
       isFallback: true,
-      aiModel: 'Processador Local de Documentos (Fallback de Alta Resiliência)',
+      aiModel: 'Processador Estrutural de Documentos',
       rawText: localText.slice(0, 3000),
       extracted: {
-        rfqTitle: `Cotação: ${cleanTitle}`,
-        supplierName: identifiedSupplier,
-        quoteCode: `COT-${Math.floor(1000 + Math.random() * 9000)}`,
-        totalAmount: identifiedAmount,
-        leadTimeDays: identifiedLeadTime,
-        paymentTerms: identifiedTerms,
-        validUntil: 'Não informado',
-        items: [
-          {
-            item_name: cleanTitle,
-            specification: 'Conforme memorial descritivo e especificações técnicas do anexo.',
-            quantity: 1,
-            unit: 'lote',
-            target_unit_price: identifiedAmount,
-            total_price: identifiedAmount,
-          },
-        ],
+        rfqTitle: `Projeto: ${cleanTitle}`,
+        supplierName: 'Demanda Interna / Projeto',
+        quoteCode: `REQ-${Math.floor(1000 + Math.random() * 9000)}`,
+        totalAmount: 0,
+        leadTimeDays: 0,
+        paymentTerms: 'Faturamento conforme medição técnica',
+        validUntil: 'A definir',
+        items: extractedItems,
         aiScore: 8.5,
-        aiAnalysisSummary: `Documento "${file.name}" analisado e auditado com sucesso pelo processador documental da plataforma.`,
+        aiAnalysisSummary: `Documento "${file.name}" analisado. ${extractedItems.length} componentes e especificações técnicas foram estruturados para cotação.`,
       },
     });
   } catch (error: any) {
