@@ -119,9 +119,16 @@ export function TeamBuyersView({
   onSelectActiveBuyer,
   showToast,
 }: TeamBuyersViewProps) {
-  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>(() => {
+    if (typeof window === 'undefined') return [];
+    return getSavedTeamMembers();
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentActiveId, setCurrentActiveId] = useState<string>(activeBuyerId || '');
+  const [currentActiveId, setCurrentActiveId] = useState<string>(() => {
+    if (activeBuyerId) return activeBuyerId;
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem(ACTIVE_BUYER_KEY) || (getSavedTeamMembers()[0]?.id || '');
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'buyer' | 'requester' | 'approver'>('all');
 
@@ -134,14 +141,6 @@ export function TeamBuyersView({
   const [roleTitle, setRoleTitle] = useState('');
   const [approvalLimit, setApprovalLimit] = useState('50000');
 
-  useEffect(() => {
-    const list = getSavedTeamMembers();
-    setMembers(list);
-    if (!currentActiveId && list.length > 0) {
-      const savedActive = localStorage.getItem(ACTIVE_BUYER_KEY) || list[0].id;
-      setCurrentActiveId(savedActive);
-    }
-  }, []);
 
   const handleSetActive = (member: TeamMember) => {
     setCurrentActiveId(member.id);
@@ -535,7 +534,7 @@ export function TeamBuyersView({
                   </label>
                   <select
                     value={role}
-                    onChange={(e) => setRole(e.target.value as any)}
+                    onChange={(e) => setRole(e.target.value as 'buyer' | 'requester' | 'approver')}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]/20 focus:border-[#0284c7]"
                   >
                     <option value="buyer">Comprador (Negocia e Emite Pedidos)</option>

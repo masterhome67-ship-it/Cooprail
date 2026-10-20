@@ -90,7 +90,7 @@ export function QuoteComparator({
       onUpdateQuotes(rfq.id, updated);
     }
 
-    // Remove do localStorage para o polling não reinserir
+    // Remove do localStorage e da API centralizada para o polling não reinserir
     try {
       const raw = localStorage.getItem('cooprail_partner_quotes');
       if (raw) {
@@ -103,6 +103,11 @@ export function QuoteComparator({
     } catch (e) {
       console.error('Erro ao remover do storage de parceiros:', e);
     }
+
+    // Deleta também no backend centralizado
+    fetch(`/api/partner-quotes?id=${encodeURIComponent(quoteId)}`, { method: 'DELETE' }).catch((err) => {
+      console.warn('Falha ao remover cotação na API central:', err);
+    });
 
     if (inspectingQuote?.id === quoteId) {
       setInspectingQuote(null);
@@ -142,11 +147,40 @@ export function QuoteComparator({
   // Sincronização em tempo real com propostas enviadas pelo Portal do Parceiro (/portal-parceiro)
   useEffect(() => {
     if (!rfq?.code) return;
-    const syncPartnerQuotes = () => {
+    const syncPartnerQuotes = async () => {
       try {
+        let partnerQuotes: any[] = [];
+
+        // 1. Busca da API centralizada no servidor
+        try {
+          const res = await fetch(`/api/partner-quotes?rfq_id=${encodeURIComponent(rfq.code)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data.quotes)) {
+              partnerQuotes = data.quotes;
+            }
+          }
+        } catch {
+          // fallback offline
+        }
+
+        // 2. Mescla com localStorage para redundância offline
         const raw = localStorage.getItem('cooprail_partner_quotes');
-        if (!raw) return;
-        const partnerQuotes: any[] = JSON.parse(raw);
+        if (raw) {
+          const localList: any[] = JSON.parse(raw);
+          const matchingLocal = localList.filter((q) => q.rfq_id === rfq.code);
+          matchingLocal.forEach((lq) => {
+            const exists = partnerQuotes.some(
+              (pq) => pq.id === lq.id || (pq.cnpj && lq.cnpj && pq.cnpj === lq.cnpj)
+            );
+            if (!exists) {
+              partnerQuotes.push(lq);
+            }
+          });
+        }
+
+        if (partnerQuotes.length === 0) return;
+
         let storageChanged = false;
         partnerQuotes.forEach((pq) => {
           if (pq.total_amount > 0 && pq.total_amount < 50) {
@@ -162,24 +196,21 @@ export function QuoteComparator({
           localStorage.setItem('cooprail_partner_quotes', JSON.stringify(partnerQuotes));
         }
 
-        const matching = partnerQuotes.filter((q) => q.rfq_id === rfq.code);
-        if (matching.length > 0) {
-          const sanitizedMatching = sanitizeQuotesList(matching);
-          setLocalQuotes((prev) => {
-            const existingIds = new Set(prev.map((p) => p.id));
-            const newProposals = sanitizedMatching.filter((m) => !existingIds.has(m.id));
-            if (newProposals.length > 0) {
-              const merged = [...prev, ...newProposals];
-              if (onUpdateQuotes && rfq.id) {
-                onUpdateQuotes(rfq.id, merged);
-              }
-              return merged;
+        const sanitizedMatching = sanitizeQuotesList(partnerQuotes);
+        setLocalQuotes((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newProposals = sanitizedMatching.filter((m) => !existingIds.has(m.id));
+          if (newProposals.length > 0) {
+            const merged = [...prev, ...newProposals];
+            if (onUpdateQuotes && rfq.id) {
+              onUpdateQuotes(rfq.id, merged);
             }
-            return prev;
-          });
-        }
+            return merged;
+          }
+          return prev;
+        });
       } catch (e) {
-        console.error('Erro ao ler propostas do portal:', e);
+        console.error('Erro ao sincronizar propostas do portal:', e);
       }
     };
 

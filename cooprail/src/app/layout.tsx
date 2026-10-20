@@ -27,8 +27,9 @@ export default function RootLayout({
     <html
       lang="pt"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         {children}
       </body>

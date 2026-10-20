@@ -3,112 +3,119 @@ export type Language = 'pt' | 'en';
 export const translations = {
   pt: {
     // Landing Page Navigation
-    navOnSite: 'Funcionalidades & Diferenciais',
-    navGovernance: 'Governança & Canteiros',
+    navOnSite: 'Funcionalidades',
+    navGovernance: 'Governança',
     navHowItWorks: 'Modelo Operacional',
     navFaq: 'Dúvidas Frequentes',
     navEnter: 'Acessar Plataforma',
     navSignIn: 'Entrar',
 
     // Hero Section
-    heroBadge: 'PLATAFORMA CORPORATIVA DE SUPRIMENTOS & COTAÇÕES INDUSTRIAIS',
-    heroTitlePrefix: 'Suprimentos Inteligentes & Cotações com ',
-    heroTitleHighlight: 'Auditoria Técnica e Governança Blindada',
+    heroBadge: 'AUDITORIA TÉCNICA & GOVERNANÇA BLINDADA',
+    heroTitlePrefix: 'Compras Inteligentes através de ',
+    heroTitleHighlight: 'Cotações Integradas.',
     heroTitleSuffix: '',
     heroSubtitle:
-      'A Cooprail transforma memoriais descritivos e projetos de engenharia em demandas estruturadas, homologa parceiros em 3 segundos via Receita Federal e conecta suas frentes de obra com máxima agilidade, transparência e economia.',
-    heroCtaPrimary: 'Acessar Portal Corporativo',
+      'Centralize toda a gestão de suprimentos da sua obra em um só lugar. Automatize cotações, audite parceiros e garanta o melhor negócio com governança total.',
+    heroCtaPrimary: 'Solicitar demonstração',
     heroCtaSecondary: 'Conhecer Funcionalidades',
     heroCtaSupplier: 'Fornecedor',
+    heroBenefit1: 'Homologação em 3s',
+    heroBenefit1Sub: 'via Receita Federal',
+    heroBenefit2: '+ Agilidade',
+    heroBenefit2Sub: 'Cotações Equalizadas',
+    heroBenefit3: 'Transparência',
+    heroBenefit3Sub: 'Auditoria & Compliance',
+    heroBenefit4: 'Governança Blindada',
+    heroBenefit4Sub: 'Segregação de Funções',
 
-    // Seção de Funcionalidades & Diferenciais Centrais
-    diffHeading: 'FUNCIONALIDADES & DIFERENCIAIS DA PLATAFORMA',
-    diffTitle: 'A Solução Completa de Suprimentos para Indústrias e Cooperativas',
+    // 2.1 Antes × Depois (Comparativo)
+    beforeAfterHeading: 'COMPARAÇÃO DE PROCESSO',
+    beforeAfterTitle: 'Esqueça as planilhas. Compre com base técnica.',
+    beforeAfterSubtitle:
+      'Veja como a Cooprail transforma a rotina de compras da sua operação eliminando retrabalho, riscos de fraude e compras com sobrepreço.',
+    beforeAfterCol1Title: 'Hoje (Processo Tradicional)',
+    beforeAfterCol1Item1: 'Planilhas manuais dispersas e retrabalho constante de digitação',
+    beforeAfterCol1Item2: 'Portais lentos e semanas de espera para homologar novos fornecedores',
+    beforeAfterCol1Item3: 'Cotações sem base técnica comparável e preços distorcidos',
+    beforeAfterCol1Item4: 'Aprovações descentralizadas sem rastreabilidade ou trilha de auditoria',
+    beforeAfterCol2Title: 'Com a Cooprail',
+    beforeAfterCol2Item1: 'Extração automática de itens, tabelas e normas por Inteligência Artificial',
+    beforeAfterCol2Item2: 'Homologação instantânea via Receita Federal sem cadastro demorado',
+    beforeAfterCol2Item3: 'Matriz comparativa equalizada com alerta automático de sobrepreço',
+    beforeAfterCol2Item4: 'Segregação de funções e histórico 100% auditável para a diretoria',
+
+    // 2.2 Três Diferenciais em Destaque
+    diffHeading: 'DIFERENCIAIS EXCLUSIVOS',
+    diffTitle: 'Tecnologia projetada para a complexidade da indústria pesada.',
     diffSubtitle:
-      'Elimine planilhas manuais, semanas de espera em cadastros burocráticos de fornecedores e a lentidão do Mercado Eletrônico tradicional.',
+      'Da leitura de pranchas de engenharia à decisão de compra: veja como a plataforma resolve os três maiores gargalos de suprimentos.',
 
-    // Card 1: Leitura de Memoriais por IA
-    feature1Tag: 'ENGENHARIA & IA',
-    feature1Title: 'Leitura e Estruturação de Memoriais Técnicos (PDF / Planilhas)',
-    feature1Desc:
-      'Faça upload de projetos e memoriais descritivos complexos. O motor de conformidade técnica audita o escopo, identifica normas regulatórias e extrai tabelas de quantitativos e itens automaticamente sem necessidade de digitação manual.',
-    feature1Check1: 'Extração instantânea de itens, unidades e especificações técnicas',
-    feature1Check2: 'Zero cotações fictícias: demandas reais estruturadas para concorrência',
-    feature1Check3: 'Redução de 80% no tempo gasto na preparação de cadernos de concorrência',
+    // Diferencial 1: Leitura de Memoriais por IA
+    diff1Tag: 'IA & ENGENHARIA',
+    diff1Title: 'IA que lê memoriais técnicos e cadernos de encargos',
+    diff1Desc:
+      'Suba arquivos em PDF ou planilhas de projetos. Nossa Inteligência Artificial identifica escopos, quantitativos e normas regulatórias em segundos, eliminando a digitação manual.',
+    diff1Bullet1: 'Extração instantânea de itens, tolerâncias e memoriais de cálculo',
+    diff1Bullet2: 'Zero cotações fictícias: demandas reais formatadas para concorrência',
+    diff1Bullet3: 'Dossiê técnico padronizado pronto para envio imediato aos fornecedores',
 
-    // Card 2: Homologação Receita Federal
-    feature2Tag: 'SUPERIOR AO MERCADO ELETRÔNICO (ME)',
-    feature2Title: 'Portal do Fornecedor com Homologação em 3 Segundos via Receita Federal',
-    feature2Desc:
-      'Fim da burocracia que afasta novos parceiros. O fornecedor informa o CNPJ e o sistema consulta a Receita Federal em tempo real, validando Razão Social, CNAE e Situação Cadastral ATIVA, habilitando o envio imediato da proposta.',
-    feature2Check1: 'Reconhecimento e cadastro instantâneo de novos parceiros comerciais',
-    feature2Check2: 'Caderno técnico oficial com fotos e plantas em tela cheia com zoom',
-    feature2Check3: 'Cotação simplificada: Turnkey (Material + Serviço) ou Fornecimento Parcial',
+    // Diferencial 2: Equalização Automática de Propostas
+    diff2Tag: 'DECISÃO & EQUALIZAÇÃO',
+    diff2Title: 'Comparação e equalização automática de propostas',
+    diff2Desc:
+      'Avalie orçamentos concorrentes exatamente na mesma régua. Nosso algoritmo decompõe materiais, fretes e serviços, sinalizando discrepâncias e calculando o score técnico de cada fornecedor.',
+    diff2Bullet1: 'Equalização algorítmica entre propostas Turnkey e fornecimento parcial',
+    diff2Bullet2: 'Alerta visual de preços fora da curva e sobrepreço em relação à média',
+    diff2Bullet3: 'Histórico auditável completo para embasar aprovações de diretoria',
 
-    // Card 3: Canteiros & Obras
-    feature3Tag: 'OPERAÇÃO DE CAMPO & LOGÍSTICA',
-    feature3Title: 'Gestão de Canteiros, Plantas Industriais e Frentes de Obra',
-    feature3Desc:
-      'Equipes de campo abrem chamados operacionais anexando fotos das peças com avaria e listas dinâmicas de múltiplos materiais. A plataforma verifica prestadores já mobilizados no local para cortar custos de frete e atrasos.',
-    feature3Check1: 'Segregação rigorosa: a obra apenas requisita; compras centraliza a negociação',
-    feature3Check2: 'Upload de fotos técnicas e croquis direto do smartphone ou canteiro',
-    feature3Check3: 'Reaproveitamento de contratos in-loco para evitar custos de mobilização',
+    // Diferencial 3: Segregação Canteiro × Compras
+    diff3Tag: 'SEGREGAÇÃO DE FUNÇÕES',
+    diff3Title: 'O canteiro requisita a obra. Compras negocia e aprova.',
+    diff3Desc:
+      'Blinde sua empresa contra fraudes e favorecimentos. O pessoal de campo relata a necessidade técnica com fotos e croquis sem nunca ter acesso a preços ou contato direto com fornecedores.',
+    diff3Bullet1: 'Abertura rápida de chamados com fotos e especificações in-loco',
+    diff3Bullet2: 'Mesa de suprimentos centraliza a negociação e concorrência comercial',
+    diff3Bullet3: 'Rastreabilidade com data, hora e responsável por cada liberação',
 
-    // Card 4: Comparador & Compliance
-    feature4Tag: 'DECISÃO & EQUALIZAÇÃO',
-    feature4Title: 'Matriz Comparativa de Propostas & Equalização de Escopo',
-    feature4Desc:
-      'Equalize orçamentos concorrentes lado a lado com algoritmo de conformidade técnica. Identifique disparidades de prazos, divergências de escopo e aprove pedidos com segurança jurídica e governança blindada.',
-    feature4Check1: 'Equalização automática entre preços de materiais e serviços',
-    feature4Check2: 'Score técnico de confiabilidade e conformidade com o memorial',
-    feature4Check3: 'Histórico auditável completo para comissões e diretorias',
+    // 2.4 Funcionalidades de Apoio (4 Colunas)
+    supportHeading: 'RECURSOS DE APOIO',
+    supportTitle: 'Robustez operacional de ponta a ponta',
+    supportSubtitle:
+      'Tudo o que sua equipe precisa para operar com velocidade e conformidade contínua.',
+    support1Title: 'Homologação por CNPJ',
+    support1Desc:
+      'Consulta em tempo real à Receita Federal para validar situação fiscal e cadastral de novos parceiros sem burocracia.',
+    support2Title: 'Consolidação de Fretes',
+    support2Desc:
+      'Agrupamento inteligente de demandas de diferentes frentes de obra para cortar custos de frete e mobilização.',
+    support3Title: 'Conta de Garantia (Opcional)',
+    support3Desc:
+      'Custódia financeira flexível (Smart Escrow): os recursos ficam protegidos e só são liberados após o aceite técnico.',
+    support4Title: 'Trilha de Auditoria',
+    support4Desc:
+      'Histórico imutável de acessos, cotações recebidas, pareceres e assinaturas digitais com conformidade corporativa.',
 
-    // Card 5: Smart Escrow
-    feature5Tag: 'SEGURANÇA FINANCEIRA FLEXÍVEL',
-    feature5Title: 'Faturamento Corporativo a Prazo ou Liquidação com Smart Escrow',
-    feature5Desc:
-      'Adapta-se à política de cada organização: continue operando no boleto faturado tradicional (30/60/90 dias) ou utilize Smart Escrow on-chain, onde o valor do pedido fica protegido em custódia e só é liberado após a aprovação da entrega.',
-    feature5Check1: 'Garantia de pagamento para fornecedores homologados',
-    feature5Check2: 'Proteção total do comprador contra entregas fora do padrão técnico',
-    feature5Check3: 'Liquidação instantânea com recibo criptográfico irrevogável',
-
-    // Seção Governança
-    govHeading: 'SEGREGAÇÃO DE FUNÇÕES & BLINDAGEM',
-    govTitle: 'O canteiro requisita a necessidade. O setor de compras negocia e aprova.',
-    govSubtitle:
-      'Para blindar sua organização contra fraudes, favorecimentos e desvios orçamentários, o pessoal de campo nunca tem acesso a preços ou contato comercial com fornecedores. Eles apenas abrem chamados técnicos auditados.',
-    govBullet1:
-      'Abertura Rápida: Engenheiros e técnicos relatam materiais com fotos e grau de urgência em segundos.',
-    govBullet2:
-      'Triagem de Suprimentos: A equipe central de compras analisa o chamado e decide a melhor estratégia.',
-    govBullet3:
-      'Aprovações Rastreadas: Histórico completo com data, hora e responsável por cada liberação.',
-
-    // Seção Como Funciona o Pagamento & Operação (Responde as dúvidas do cliente)
-    howHeading: 'MODELO FINANCEIRO & OPERACIONAL TRANSPARENTE',
-    howTitle: 'Como funciona a operação na prática? É necessário instalar sistemas?',
-    howSubtitle:
-      'Tudo foi desenhado para se adequar à realidade da sua empresa, sem burocracia ou exigências complexas.',
-    
-    howStep1Title: '1. Preciso instalar algum sistema antes?',
-    howStep1Desc:
-      'Não. A Cooprail é 100% web em nuvem (SaaS). Você e sua equipe só precisam acessar o portal pelo navegador e começar a estruturar demandas imediatamente.',
-
-    howStep2Title: '2. E se minha empresa não quiser usar custódia antecipada?',
-    howStep2Desc:
-      'Não tem problema! O uso da conta de garantia é 100% opcional. Você pode operar no modelo padrão de faturamento corporativo a prazo (boleto bancário 30/60/90 dias com Nota Fiscal).',
-
-    howStep3Title: '3. Como funciona se eu optar pela garantia de pagamento?',
-    howStep3Desc:
-      'O valor da ordem é alocado em uma custódia segura programável. Os fundos ficam protegidos e só são liberados após o fiscal da obra atestar o recebimento do material.',
-
-    howStep4Title: '4. Como o parceiro/fornecedor recebe o pagamento?',
-    howStep4Desc:
-      'Assim que a comissão técnica assina o aceite de entrega na plataforma, a liberação ocorre direto para a conta bancária ou digital da empresa parceira.',
+    // 2.6 FAQ Reformulado (Acordeão)
+    faqHeading: 'TIRA-DÚVIDAS',
+    faqTitle: 'Perguntas Frequentes',
+    faqSubtitle:
+      'Esclarecimentos diretos sobre implantação, modalidades de faturamento e governança da plataforma.',
+    faqQ1: 'Preciso instalar algum software ou servidor na minha empresa?',
+    faqA1:
+      'Não. A Cooprail é 100% em nuvem (SaaS). Você e sua equipe só precisam de um navegador web para acessar o portal seguro e começar a estruturar demandas imediatamente.',
+    faqQ2: 'E se a minha empresa não quiser usar a conta de garantia?',
+    faqA2:
+      'O uso da conta de garantia é 100% opcional. Sua empresa pode continuar operando no modelo corporativo tradicional a prazo (faturado 30/60/90 dias com boleto bancário e Nota Fiscal direta).',
+    faqQ3: 'Como funciona a operação se optarmos pela conta de garantia?',
+    faqA3:
+      'O valor da ordem de compra fica protegido em uma custódia de garantia segura e só é liberado ao parceiro após o fiscal da obra validar tecnicamente a entrega no canteiro.',
+    faqQ4: 'Como o fornecedor parceiro recebe o pagamento?',
+    faqA4:
+      'Assim que a comissão técnica assina o aceite de entrega na plataforma, a liberação ocorre diretamente para a conta bancária homologada da empresa parceira.',
 
     ctaFinalTitle: 'Pronto para modernizar a esteira de suprimentos da sua operação?',
-    ctaFinalSubtitle:
-      'Acesse o ambiente corporativo da Cooprail e experimente cotações sem burocracia.',
+    ctaFinalSubtitle: 'Fale com nossa equipe e veja a Cooprail em operação.',
     ctaFinalBtn: 'Acessar Ambiente Corporativo',
     footerRights: 'Todos os direitos reservados © 2026 Cooprail Enterprise',
     footerSub: 'Plataforma Corporativa de Suprimentos, Cotações & Governança B2B',
@@ -134,112 +141,119 @@ export const translations = {
 
   en: {
     // Landing Page Navigation
-    navOnSite: 'Features & Differentiators',
-    navGovernance: 'Field Governance',
+    navOnSite: 'Features',
+    navGovernance: 'Governance',
     navHowItWorks: 'Operating Model',
     navFaq: 'FAQ',
     navEnter: 'Launch Platform',
     navSignIn: 'Sign In',
 
     // Hero Section
-    heroBadge: 'ENTERPRISE PROCUREMENT & INDUSTRIAL SOURCING PLATFORM',
-    heroTitlePrefix: 'Intelligent Procurement & Sourcing with ',
-    heroTitleHighlight: 'Technical Audit & Governance',
+    heroBadge: 'TECHNICAL AUDIT & RIGOROUS GOVERNANCE',
+    heroTitlePrefix: 'Intelligent Procurement through ',
+    heroTitleHighlight: 'Integrated Quotes.',
     heroTitleSuffix: '',
     heroSubtitle:
-      'Cooprail transforms complex engineering specifications into structured RFQs, verifies new vendors in 3 seconds via Federal Registry, and connects job sites with peak efficiency and cost savings.',
-    heroCtaPrimary: 'Launch Corporate Portal',
-    heroCtaSecondary: 'Explore Platform Features',
-    heroCtaSupplier: 'Supplier',
+      'Centralize all supply chain management for your construction and industrial projects in one place. Automate RFQs, audit partners, and secure the best deal with total governance.',
+    heroCtaPrimary: 'Request a Demo',
+    heroCtaSecondary: 'Explore Features',
+    heroCtaSupplier: 'Supplier Portal',
+    heroBenefit1: 'Verification in 3s',
+    heroBenefit1Sub: 'Federal Registry API',
+    heroBenefit2: '+ Agility',
+    heroBenefit2Sub: 'Equalized Proposals',
+    heroBenefit3: 'Transparency',
+    heroBenefit3Sub: 'Audit & Compliance',
+    heroBenefit4: 'Rigorous Governance',
+    heroBenefit4Sub: 'Duty Segregation',
 
-    // Core Features & Differentials
-    diffHeading: 'PLATFORM FEATURES & DIFFERENTIATORS',
-    diffTitle: 'The Complete Procurement Solution for Heavy Industry & Cooperatives',
+    // 2.1 Before × After
+    beforeAfterHeading: 'PROCESS COMPARISON',
+    beforeAfterTitle: 'Forget spreadsheets. Procure with technical precision.',
+    beforeAfterSubtitle:
+      'See how Cooprail transforms your industrial procurement routine by eliminating manual rework, fraud risks, and overpriced bids.',
+    beforeAfterCol1Title: 'Traditional Process (Today)',
+    beforeAfterCol1Item1: 'Scattered manual spreadsheets and tedious data re-entry',
+    beforeAfterCol1Item2: 'Slow legacy portals and weeks spent onboarding vendors',
+    beforeAfterCol1Item3: 'Bids lacking comparable technical baselines and hidden margins',
+    beforeAfterCol1Item4: 'Decentralized approvals without traceable audit records',
+    beforeAfterCol2Title: 'With Cooprail',
+    beforeAfterCol2Item1: 'Instant extraction of items, units, and engineering tolerances via AI',
+    beforeAfterCol2Item2: 'Fast tax ID onboarding via Federal Registry with zero red tape',
+    beforeAfterCol2Item3: 'Equalized comparison matrix with real-time price outlier alerts',
+    beforeAfterCol2Item4: 'Strict segregation of duties and 100% auditable managerial trail',
+
+    // 2.2 Three Core Differentiators
+    diffHeading: 'EXCLUSIVE DIFFERENTIATORS',
+    diffTitle: 'Technology engineered for heavy industry complexity.',
     diffSubtitle:
-      'Eliminate manual spreadsheets, weeks of vendor registration bottlenecks, and the slowness of legacy portals.',
+      'From blueprint parsing to purchase approvals: discover how Cooprail resolves the three biggest procurement bottlenecks.',
 
-    // Card 1: Specs AI
-    feature1Tag: 'ENGINEERING & AI',
-    feature1Title: 'Automated Extraction of Technical Specifications (PDF / Sheets)',
-    feature1Desc:
-      'Upload complex project files and engineering specs. The compliance engine parses scopes, identifies regulatory standards, and generates itemized bill-of-quantities in seconds without manual entry.',
-    feature1Check1: 'Instant extraction of items, units and engineering tolerances',
-    feature1Check2: 'Zero fictitious data: genuine requests ready for market bidding',
-    feature1Check3: '80% time reduction in preparing competitive bidding dossiers',
+    // Differential 1: AI Tech Spec Reading
+    diff1Tag: 'AI & ENGINEERING',
+    diff1Title: 'AI that extracts engineering specs with zero manual entry',
+    diff1Desc:
+      'Upload technical PDFs and project spreadsheets. Our AI parses scopes, bill-of-quantities, and regulatory standards in seconds, eliminating manual data entry.',
+    diff1Bullet1: 'Instant parsing of technical scopes, tables, and tolerances',
+    diff1Bullet2: 'Zero fictitious data: genuine demands structured for market bidding',
+    diff1Bullet3: 'Standardized bidding dossier ready for immediate vendor dispatch',
 
-    // Card 2: Federal Registry
-    feature2Tag: 'SUPERIOR TO LEGACY PORTALS',
-    feature2Title: 'Supplier Portal with 3-Second Verification via Federal Registry',
-    feature2Desc:
-      'No more weeks waiting for manual onboarding. Partners enter their tax ID and the system queries the Federal Registry in real time, validating corporate status and business classifications instantly.',
-    feature2Check1: 'Instant recognition and pre-qualification of new commercial vendors',
-    feature2Check2: 'Official technical dossier with full-screen zoomable drawings',
-    feature2Check3: 'Flexible bidding: Turnkey (Equipment + Service) or Partial Supply',
+    // Differential 2: Automated Proposal Equalization
+    diff2Tag: 'DECISION & EQUALIZATION',
+    diff2Title: 'Automated proposal comparison and equalization',
+    diff2Desc:
+      'Evaluate competing bids against the exact same baseline. Our algorithm isolates materials, freight, and services, highlighting cost anomalies and scoring vendor compliance.',
+    diff2Bullet1: 'Algorithmic equalization between Turnkey and partial supply bids',
+    diff2Bullet2: 'Visual alerts for markups and historical pricing outliers',
+    diff2Bullet3: 'Comprehensive audit trail supporting executive board approvals',
 
-    // Card 3: Job Sites
-    feature3Tag: 'FIELD OPERATIONS & LOGISTICS',
-    feature3Title: 'Job Site & Plant Management with Visual Verification',
-    feature3Desc:
-      'Field personnel submit requests with photo evidence and itemized lists. The platform identifies contractors already on-site to slash transit fees and prevent schedule delays.',
-    feature3Check1: 'Strict segregation: field logs tickets; procurement leads negotiations',
-    feature3Check2: 'Upload photos and engineering sketches straight from the site',
-    feature3Check3: 'Reuse on-site agreements to eliminate costly mobilization expenses',
+    // Differential 3: Segregation Field × Procurement
+    diff3Tag: 'DUTY SEGREGATION',
+    diff3Title: 'Job sites request needs. Procurement negotiates and approves.',
+    diff3Desc:
+      'Safeguard your company against fraud and favoritism. Field crews log technical requests with photos and sketches without ever accessing pricing or contacting vendors.',
+    diff3Bullet1: 'Fast mobile ticket creation with on-site photos and specs',
+    diff3Bullet2: 'Central procurement desk conducts commercial negotiations',
+    diff3Bullet3: 'Complete audit trail with timestamps and sign-off identification',
 
-    // Card 4: Comparator
-    feature4Tag: 'DECISION & EQUALIZATION',
-    feature4Title: 'Comparative Bid Matrix & Technical Compliance Scoring',
-    feature4Desc:
-      'Equalize competing vendor bids side-by-side with algorithmic compliance checks. Identify lead time variances, scope disparities, and approve purchase orders with full legal backing.',
-    feature4Check1: 'Automated price equalization across equipment and labor breakdown',
-    feature4Check2: 'Technical reliability score aligned with original project specs',
-    feature4Check3: 'Complete audit trail for corporate oversight boards',
+    // 2.4 Support Features (4 Columns)
+    supportHeading: 'SUPPORT CAPABILITIES',
+    supportTitle: 'End-to-end operational robustness',
+    supportSubtitle:
+      'Everything your procurement organization needs to operate fast and with continuous compliance.',
+    support1Title: 'Instant Tax ID Check',
+    support1Desc:
+      'Real-time Federal Registry queries validating fiscal standing and partner registration instantly.',
+    support2Title: 'Freight Consolidation',
+    support2Desc:
+      'Intelligent batching of demands across active job sites to cut transit and mobilization expenses.',
+    support3Title: 'Guarantee Custody Account',
+    support3Desc:
+      'Flexible escrow protection: funds stay locked and are only released after formal site delivery acceptance.',
+    support4Title: 'Tamper-Proof Audit Trail',
+    support4Desc:
+      'Immutable logs of RFQ submissions, technical reviews, and digital sign-offs for oversight committees.',
 
-    // Card 5: Smart Escrow
-    feature5Tag: 'FLEXIBLE SETTLEMENT',
-    feature5Title: 'Corporate Invoiced Terms or Programmable Smart Escrow',
-    feature5Desc:
-      'Fits your enterprise treasury policies: operate on standard corporate net-30 / net-60 invoiced terms, or leverage programmable Smart Escrow where funds are guaranteed and only released upon site acceptance.',
-    feature5Check1: 'Payment assurance for vetted suppliers',
-    feature5Check2: 'Buyer protection against substandard deliveries',
-    feature5Check3: 'Instant settlement with irrevocable cryptographically signed receipt',
-
-    // Seção Governança
-    govHeading: 'SEGREGATION OF DUTIES',
-    govTitle: 'Field personnel log requirements. Procurement negotiates and approves.',
-    govSubtitle:
-      'To safeguard against fraud and budget overruns, field personnel never see pricing or commercial vendor margins. They only submit technical tickets.',
-    govBullet1:
-      'Fast Submission: Engineers log items with photos and urgency levels in seconds.',
-    govBullet2:
-      'Procurement Triage: Central buyers review the ticket and decide procurement strategy.',
-    govBullet3:
-      'Traceable Approvals: Full audit trail with time-stamps and managerial sign-offs.',
-
-    // Seção Como Funciona o Pagamento & Operação
-    howHeading: 'TRANSPARENT OPERATIONS & PAYMENTS',
-    howTitle: 'How does it work in practice? Do we need to install software?',
-    howSubtitle:
-      'Engineered to adapt to your company’s existing corporate financial habits, without friction.',
-
-    howStep1Title: '1. Do we need to install any protocol or software beforehand?',
-    howStep1Desc:
-      'No. Cooprail is a 100% cloud web SaaS. You and your team only need to sign in and begin organizing requirements immediately.',
-
-    howStep2Title: '2. What if my company does not want to pre-fund or use escrow?',
-    howStep2Desc:
-      'No problem! Digital escrow is 100% optional. You can continue operating on standard corporate net-30 / net-60 invoiced terms with official tax invoices.',
-
-    howStep3Title: '3. How does it work if we choose guaranteed escrow?',
-    howStep3Desc:
-      'Order funds are deposited into an autonomous escrow vault. Funds stay locked and protected until technical delivery is verified by site supervisors.',
-
-    howStep4Title: '4. How does the partner/vendor receive payment?',
-    howStep4Desc:
-      'As soon as your field engineer inspects the delivery and signs off on the platform, payment is released directly to the partner’s bank account or digital wallet.',
+    // 2.6 Revamped FAQ (Accordion)
+    faqHeading: 'FAQ',
+    faqTitle: 'Frequently Asked Questions',
+    faqSubtitle:
+      'Clear answers regarding deployment, corporate invoicing options, and platform governance.',
+    faqQ1: 'Do I need to install software or servers on premise?',
+    faqA1:
+      'No. Cooprail is 100% cloud SaaS. You and your team only need a modern web browser to access the secure portal and start structuring demands right away.',
+    faqQ2: 'What if our company prefers standard invoiced corporate terms?',
+    faqA2:
+      'The custody guarantee account is 100% optional. You can continue operating on standard corporate net-30 / net-60 invoiced terms with official direct tax invoices.',
+    faqQ3: 'How does it work if we choose the guarantee custody account?',
+    faqA3:
+      'Order funds are placed in a secure custody vault. Funds stay protected and are only released to the vendor after your site engineer officially validates delivery.',
+    faqQ4: 'How does the supplier partner receive the payment?',
+    faqA4:
+      'As soon as site supervisors confirm delivery receipt on the platform, funds are settled directly into the supplier’s verified corporate bank account.',
 
     ctaFinalTitle: 'Ready to modernize your industrial supply chain?',
-    ctaFinalSubtitle:
-      'Access the Cooprail corporate workspace and experience frictionless procurement.',
+    ctaFinalSubtitle: 'Talk to our team and experience Cooprail in action.',
     ctaFinalBtn: 'Access Enterprise Portal',
     footerRights: 'All rights reserved © 2026 Cooprail Enterprise',
     footerSub: 'Enterprise Cloud Platform for B2B Supply Chain & Governance',
@@ -263,3 +277,4 @@ export const translations = {
     complianceActive: 'Compliance Engine Active',
   },
 };
+

@@ -173,6 +173,39 @@ function SupplierPortalContent() {
   const [receitaError, setReceitaError] = useState<string | null>(null);
   const [isNewSupplier, setIsNewSupplier] = useState(false);
 
+  // Restaura sessão persistente do fornecedor ao carregar a página (F5)
+  useEffect(() => {
+    try {
+      const savedSession = localStorage.getItem('cooprail_partner_session');
+      if (savedSession) {
+        const sess = JSON.parse(savedSession);
+        if (sess && sess.cnpj) {
+          setAuthCnpj(sess.cnpj);
+          setCnpj(sess.cnpj);
+          if (sess.receitaData) setReceitaData(sess.receitaData);
+          if (sess.contactName) {
+            setAuthContactName(sess.contactName);
+            setContactName(sess.contactName);
+          }
+          if (sess.email) {
+            setAuthEmail(sess.email);
+            setEmail(sess.email);
+          }
+          if (sess.phone) {
+            setAuthPhone(sess.phone);
+            setPhone(sess.phone);
+          }
+          if (sess.supplierName || sess.receitaData?.name) {
+            setSupplierName(sess.supplierName || sess.receitaData?.name);
+          }
+          setIsSupplierAuthenticated(true);
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao restaurar sessão do parceiro:', e);
+    }
+  }, []);
+
   useEffect(() => {
     const list = getAllPublishedRFQs();
     setAvailableRfqs(list);
@@ -248,9 +281,25 @@ function SupplierPortalContent() {
     setEmail(authEmail);
     setPhone(authPhone);
     setIsSupplierAuthenticated(true);
+
+    try {
+      localStorage.setItem(
+        'cooprail_partner_session',
+        JSON.stringify({
+          cnpj: authCnpj,
+          supplierName: receitaData?.name || supplierName,
+          contactName: authContactName,
+          email: authEmail,
+          phone: authPhone,
+          receitaData,
+        })
+      );
+    } catch (err) {
+      console.error('Erro ao salvar sessão do parceiro:', err);
+    }
   };
 
-  // Campos do Formulário de Cotação (Iniciam limpos, sem dados mockados)
+  // Campos do Formulário de Cotação
   const [supplierName, setSupplierName] = useState('');
   const [cnpj, setCnpj] = useState('');
   const [contactName, setContactName] = useState('');
@@ -270,6 +319,105 @@ function SupplierPortalContent() {
     model?: string;
   } | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [existingQuote, setExistingQuote] = useState<any | null>(null);
+  const [isSavingProposal, setIsSavingProposal] = useState(false);
+  const [isCheckingExisting, setIsCheckingExisting] = useState(false);
+
+  // Carrega e verifica se já existe proposta salva para esta RFQ e este fornecedor
+  useEffect(() => {
+    if (!isSupplierAuthenticated || !cnpj || !activeRfq?.code) return;
+
+    let isMounted = true;
+    setIsCheckingExisting(true);
+
+    const checkExisting = async () => {
+      const clean = cnpj.replace(/\D/g, '');
+      let found: any = null;
+
+      // 1. Tenta API centralizada no servidor
+      try {
+        const res = await fetch(
+          `/api/partner-quotes?rfq_id=${encodeURIComponent(activeRfq.code)}&cnpj=${clean}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.quotes) && data.quotes.length > 0) {
+            found = data.quotes[0];
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao consultar API de propostas:', err);
+      }
+
+      // 2. Fallback no localStorage
+      if (!found) {
+        try {
+          const raw = localStorage.getItem('cooprail_partner_quotes');
+          if (raw) {
+            const list: any[] = JSON.parse(raw);
+            found = list.find((q) => {
+              const qClean = (q.cnpj || '').replace(/\D/g, '');
+              return (
+                (q.rfq_id === activeRfq.code || q.rfq_code === activeRfq.code) &&
+                qClean === clean
+              );
+            });
+          }
+        } catch {}
+      }
+
+      if (!isMounted) return;
+
+      if (found) {
+        setExistingQuote(found);
+        setIsSubmitted(true);
+        if (found.supplier_name) setSupplierName(found.supplier_name);
+        if (found.total_amount) {
+          setTotalAmount(
+            typeof found.total_amount === 'number'
+              ? found.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+              : String(found.total_amount)
+          );
+        }
+        if (found.delivery_lead_time_days) setLeadTimeDays(found.delivery_lead_time_days);
+        if (found.warranty_months) setWarrantyMonths(found.warranty_months);
+        if (found.quote_mode) setQuoteMode(found.quote_mode);
+        if (found.parts_amount) {
+          setPartsAmount(
+            typeof found.parts_amount === 'number'
+              ? found.parts_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+              : String(found.parts_amount)
+          );
+        }
+        if (found.service_amount) {
+          setServiceAmount(
+            typeof found.service_amount === 'number'
+              ? found.service_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+              : String(found.service_amount)
+          );
+        }
+        if (found.commercial_notes) setCommercialNotes(found.commercial_notes);
+        if (found.ai_score || found.ai_analysis_summary) {
+          setAiAuditReport({
+            score: found.ai_score,
+            summary: found.ai_analysis_summary,
+            model: 'Motor de Auditoria Técnica Cooprail',
+          });
+        }
+        if (found.proposal_file_name) setProposalPdfName(found.proposal_file_name);
+      } else {
+        setExistingQuote(null);
+        setIsSubmitted(false);
+      }
+      setIsCheckingExisting(false);
+    };
+
+    checkExisting();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isSupplierAuthenticated, cnpj, activeRfq?.code]);
 
   // Upload de Proposta Comercial Real do Fornecedor para Leitura Automática por IA
   const handleProcessProposalFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -380,14 +528,15 @@ function SupplierPortalContent() {
   };
 
   // Submeter Cotação
-  const handleSubmitProposal = (e: React.FormEvent) => {
+  const handleSubmitProposal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supplierName.trim() || !totalAmount) return;
 
+    setIsSavingProposal(true);
     const numericAmount = parseCurrencyBRL(totalAmount);
 
-    const newQuoteRecord = {
-      id: `quote-${Date.now()}`,
+    const quoteRecord = {
+      id: existingQuote?.id || `quote-${Date.now()}`,
       rfq_id: activeRfq.code,
       supplier_name: supplierName,
       cnpj: cnpj || 'Não informado',
@@ -395,9 +544,13 @@ function SupplierPortalContent() {
       email: email,
       phone: phone,
       supplier_phone: phone,
-      supplier_rating: 4.8,
+      supplier_rating: existingQuote?.supplier_rating || 4.8,
       total_amount: numericAmount || 0,
       delivery_lead_time_days: Number(leadTimeDays) || 2,
+      warranty_months: Number(warrantyMonths) || 24,
+      parts_amount: partsAmount ? parseCurrencyBRL(partsAmount) : undefined,
+      service_amount: serviceAmount ? parseCurrencyBRL(serviceAmount) : undefined,
+      commercial_notes: commercialNotes || undefined,
       payment_terms: 'Liquidação Garantida via Solana Smart Escrow / Boleto',
       status: 'received',
       ai_score: aiAuditReport?.score || 9.4,
@@ -410,18 +563,45 @@ function SupplierPortalContent() {
       }. Documento: ${proposalPdfName || 'Preenchimento Manual'}.`,
       savings_percentage: 5.0,
       quote_mode: quoteMode,
+      submitted_at: existingQuote?.submitted_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      proposal_file_name: proposalPdfName || undefined,
     };
 
+    // 1. Salva no backend centralizado via API
+    try {
+      await fetch('/api/partner-quotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quoteRecord),
+      });
+    } catch (apiErr) {
+      console.warn('Aviso: Falha ao sincronizar com backend central:', apiErr);
+    }
+
+    // 2. Salva localmente no navegador (garantia redundante)
     try {
       const existing = localStorage.getItem('cooprail_partner_quotes');
-      const list = existing ? JSON.parse(existing) : [];
-      list.push(newQuoteRecord);
+      const list: any[] = existing ? JSON.parse(existing) : [];
+      const clean = (quoteRecord.cnpj || '').replace(/\D/g, '');
+      const idx = list.findIndex(
+        (q) =>
+          q.id === quoteRecord.id ||
+          ((q.cnpj || '').replace(/\D/g, '') === clean && q.rfq_id === quoteRecord.rfq_id)
+      );
+      if (idx >= 0) {
+        list[idx] = quoteRecord;
+      } else {
+        list.push(quoteRecord);
+      }
       localStorage.setItem('cooprail_partner_quotes', JSON.stringify(list));
     } catch (err) {
       console.error(err);
     }
 
+    setExistingQuote(quoteRecord);
     setIsSubmitted(true);
+    setIsSavingProposal(false);
   };
 
   const activeImg = DEFAULT_MEMORIAL_IMAGES[activeImageIndex];
@@ -466,6 +646,10 @@ function SupplierPortalContent() {
                 onClick={() => {
                   setIsSupplierAuthenticated(false);
                   setReceitaData(null);
+                  setExistingQuote(null);
+                  try {
+                    localStorage.removeItem('cooprail_partner_session');
+                  } catch {}
                 }}
                 className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
                 title="Encerrar Sessão"
@@ -1100,31 +1284,96 @@ function SupplierPortalContent() {
             </div>
           </div>
 
-          {isSubmitted ? (
-            <div className="p-8 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-3 animate-in fade-in">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-bold text-emerald-900">
-                Proposta Registrada com Sucesso!
-              </h3>
-              <p className="text-xs text-emerald-700 max-w-md mx-auto leading-relaxed">
-                Sua proposta comercial foi transmitida para a comissão de suprimentos. Os valores e prazos já estão computados para análise concorrencial.
-              </p>
-              <div className="pt-2">
+          {isSubmitted && existingQuote ? (
+            <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-b from-emerald-50/80 to-white border border-emerald-200 shadow-xs space-y-5 animate-in fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200 uppercase">
+                        Proposta Salva no Sistema
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-mono">
+                        {existingQuote.updated_at
+                          ? `Atualizada em ${new Date(existingQuote.updated_at).toLocaleString('pt-BR')}`
+                          : existingQuote.submitted_at
+                          ? `Enviada em ${new Date(existingQuote.submitted_at).toLocaleString('pt-BR')}`
+                          : 'Registrada'}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-extrabold text-slate-900 mt-0.5">
+                      Sua proposta comercial está ativa e disponível para a Cooprail
+                    </h3>
+                  </div>
+                </div>
+
                 <button
-                  onClick={() => {
-                    setIsSubmitted(false);
-                    setSupplierName('');
-                    setCnpj('');
-                    setTotalAmount('');
-                    setProposalPdfName(null);
-                    setAiAuditReport(null);
-                  }}
-                  className="text-xs text-emerald-700 underline font-semibold cursor-pointer"
+                  type="button"
+                  onClick={() => setIsSubmitted(false)}
+                  className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
                 >
-                  Submeter outra proposta ou atualizar valores
+                  <Wrench className="w-3.5 h-3.5 text-[#0284c7]" />
+                  <span>Editar / Atualizar Proposta</span>
                 </button>
+              </div>
+
+              {/* Resumo dos Valores Registrados */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 bg-white rounded-xl border border-emerald-100 shadow-2xs">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Valor Total</span>
+                  <span className="text-base font-extrabold text-emerald-700 font-mono">
+                    {typeof existingQuote.total_amount === 'number'
+                      ? existingQuote.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                      : existingQuote.total_amount}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-emerald-100 shadow-2xs">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Prazo de Obra/Entrega</span>
+                  <span className="text-sm font-bold text-slate-800 font-mono">
+                    {existingQuote.delivery_lead_time_days} dias
+                  </span>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-emerald-100 shadow-2xs">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Garantia Técnica</span>
+                  <span className="text-sm font-bold text-slate-800 font-mono">
+                    {existingQuote.warranty_months || 24} meses
+                  </span>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-emerald-100 shadow-2xs">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Modalidade</span>
+                  <span className="text-xs font-bold text-slate-800">
+                    {existingQuote.quote_mode === 'turnkey'
+                      ? 'Pacote Completo (Turnkey)'
+                      : existingQuote.quote_mode === 'parts_only'
+                      ? 'Apenas Peças/Material'
+                      : 'Mão de Obra'}
+                  </span>
+                </div>
+              </div>
+
+              {existingQuote.proposal_file_name && (
+                <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <FileCheck2 className="w-4 h-4 text-[#0284c7]" />
+                    <span>Arquivo Comercial Anexado: <strong>{existingQuote.proposal_file_name}</strong></span>
+                  </div>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-bold">
+                    Auditado por IA
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-xs text-slate-500 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  Dados sincronizados no servidor da Cooprail e vinculados ao CNPJ <strong>{cnpj}</strong>. Se você recarregar a página (F5), os dados continuarão salvos.
+                </span>
               </div>
             </div>
           ) : (
@@ -1284,11 +1533,25 @@ function SupplierPortalContent() {
               {/* Botão de Envio */}
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs shadow-md shadow-sky-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                disabled={isSavingProposal}
+                className="w-full py-3.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs shadow-md shadow-sky-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FileCheck2 className="w-4 h-4" />
-                <span>Enviar Cotação Formal para a Comissão de Suprimentos</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                {isSavingProposal ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Gravando e transmitindo proposta para o servidor...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileCheck2 className="w-4 h-4" />
+                    <span>
+                      {existingQuote
+                        ? 'Atualizar Cotação Formal no Sistema'
+                        : 'Enviar Cotação Formal para a Comissão de Suprimentos'}
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
               </button>
             </form>
           )}

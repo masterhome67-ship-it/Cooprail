@@ -15,10 +15,14 @@
   --success-emerald: #059669;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
 }
@@ -37,4 +41,30 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Animação sutil de entrada para cards flutuantes (opacity + translateY) */
+@keyframes heroFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-hero-float-in {
+    animation: heroFloatIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-float-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

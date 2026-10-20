@@ -92,8 +92,8 @@ export function findEligibleSuppliers(
   const results = allSuppliers
     .filter((sup) => sup.status === 'homologado')
     .map((supplier) => {
-      let matchedCategories: string[] = [];
-      let reasons: string[] = [];
+      const matchedCategories: string[] = [];
+      const reasons: string[] = [];
       let score = 0;
 
       // Correspondência por categorias ou CNAE
