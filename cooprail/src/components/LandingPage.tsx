@@ -28,10 +28,17 @@ interface LandingPageProps {
   lang: Language;
   onToggleLang: (lang: Language) => void;
   onOpenLogin: () => void;
+  onOpenSignup?: () => void;
   onEnterDemo?: () => void;
 }
 
-export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: LandingPageProps) {
+export function LandingPage({
+  lang,
+  onToggleLang,
+  onOpenLogin,
+  onOpenSignup,
+  onEnterDemo,
+}: LandingPageProps) {
   const t = translations[lang];
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -63,7 +70,7 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
         </nav>
 
         {/* Seletor de Idioma & Botões de Acesso */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Toggle de Idioma PT / EN */}
           <div className="flex items-center bg-slate-100 border border-slate-200 p-0.5 rounded-lg text-xs font-mono">
             <button
@@ -95,17 +102,26 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
             href="/portal-parceiro"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-bold transition-all shadow-2xs cursor-pointer"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             <span>{t.heroCtaSupplier}</span>
           </a>
 
+          {/* Botão Já Cadastrado (Login) */}
           <button
             onClick={onOpenLogin}
-            className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
           >
-            <span>{t.navEnter}</span>
+            <span>{lang === 'pt' ? 'Entrar' : 'Sign In'}</span>
+          </button>
+
+          {/* Botão Primeiro Acesso (Cadastro) */}
+          <button
+            onClick={onOpenSignup || onOpenLogin}
+            className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all cursor-pointer"
+          >
+            <span>{lang === 'pt' ? 'Criar Conta' : 'Sign Up'}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
 
@@ -159,16 +175,26 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
               </div>
               <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-sky-100">Portal</span>
             </a>
-            <div className="pt-2 border-t border-slate-100">
+            <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   onOpenLogin();
                 }}
-                className="w-full py-3 px-4 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold text-center shadow-md shadow-sky-600/20"
+                className="py-2.5 px-3 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold text-center hover:bg-slate-50 transition-colors"
               >
-                {t.navEnter}
+                {lang === 'pt' ? 'Já Cadastrado' : 'Sign In'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  (onOpenSignup || onOpenLogin)();
+                }}
+                className="py-2.5 px-3 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold text-center shadow-md shadow-sky-600/20"
+              >
+                {lang === 'pt' ? 'Primeiro Acesso' : 'Get Started'}
               </button>
             </div>
           </nav>
@@ -203,21 +229,21 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
                 {t.heroSubtitle}
               </p>
 
-              {/* Chamadas para Ação: Primário 'Solicitar demonstração' (#contato) e Secundário 'Conhecer Funcionalidades' */}
+              {/* Chamadas para Ação: Primário 'Primeiro Acesso Gratuito' e Secundário 'Conhecer Funcionalidades' */}
               <div className="flex flex-wrap items-center gap-4">
-                {/* CTA Primário: Solicitar demonstração */}
-                {/* TODO: Integrar modal ou formulário dedicado de demonstração na âncora #contato */}
-                <a
-                  href="#contato"
-                  className="w-full sm:w-[230px] h-[50px] rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white text-sm font-bold shadow-lg shadow-sky-600/30 hover:shadow-sky-600/40 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap shrink-0 group"
+                {/* CTA Primário: Abrir Cadastro / Primeiro Acesso */}
+                <button
+                  type="button"
+                  onClick={onOpenSignup || onOpenLogin}
+                  className="w-full sm:w-[240px] h-[50px] rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white text-sm font-bold shadow-lg shadow-sky-600/30 hover:shadow-sky-600/40 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap shrink-0 group"
                 >
-                  <span>{t.heroCtaPrimary}</span>
+                  <span>{lang === 'pt' ? 'Começar Agora • Primeiro Acesso' : 'Get Started for Free'}</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
-                </a>
+                </button>
 
                 <a
                   href="#diferenciais"
-                  className="w-full sm:w-[230px] h-[50px] rounded-xl bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-700 text-sm font-bold transition-all shadow-xs hover:-translate-y-0.5 flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                  className="w-full sm:w-[210px] h-[50px] rounded-xl bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-700 text-sm font-bold transition-all shadow-xs hover:-translate-y-0.5 flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
                 >
                   <span>{t.heroCtaSecondary}</span>
                 </a>

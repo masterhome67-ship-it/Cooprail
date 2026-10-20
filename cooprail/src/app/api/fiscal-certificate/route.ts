@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import tls from 'tls';
 import crypto from 'crypto';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -48,6 +48,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Nenhum arquivo de certificado (.pfx ou .p12) foi enviado.' },
         { status: 400 }
+      );
+    }
+
+    // Proteção contra DoS: certificados A1 têm tipicamente < 50KB; limite estrito de 5MB
+    const MAX_CERT_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_CERT_SIZE) {
+      return NextResponse.json(
+        { success: false, error: 'O arquivo de certificado excede o limite máximo de 5MB.' },
+        { status: 413 }
+      );
+    }
+
+    const certFileName = (file.name || '').toLowerCase();
+    if (!certFileName.endsWith('.pfx') && !certFileName.endsWith('.p12')) {
+      return NextResponse.json(
+        { success: false, error: 'Formato inválido. Apenas certificados A1 nos formatos .pfx ou .p12 são aceitos.' },
+        { status: 415 }
       );
     }
 
@@ -100,9 +117,16 @@ export async function POST(req: NextRequest) {
     try {
       fs.writeFileSync(tmpFile, certBuffer);
 
-      // Extrai o certificado público em PEM a partir do PFX com a senha
-      const opensslCmd = `openssl pkcs12 -in "${tmpFile}" -passin pass:"${password.replace(/"/g, '\\"')}" -nokeys 2>/dev/null`;
-      const pemOutput = execSync(opensslCmd).toString();
+      // Extrai o certificado público em PEM de forma segura sem invocar shell (previne RCE)
+      const pemOutput = execFileSync(
+        'openssl',
+        ['pkcs12', '-in', tmpFile, '-passin', `pass:${password}`, '-nokeys'],
+        {
+          stdio: ['pipe', 'pipe', 'ignore'],
+          encoding: 'utf-8',
+          maxBuffer: 10 * 1024 * 1024,
+        }
+      );
 
       if (pemOutput && pemOutput.includes('-----BEGIN CERTIFICATE-----')) {
         // Encontra o primeiro certificado (folha/assinante)

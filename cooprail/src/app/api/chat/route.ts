@@ -11,8 +11,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mensagem ou imagem necessária' }, { status: 400 });
     }
 
+    // Proteção contra payload DoS e estouro de contexto
+    if (message && typeof message === 'string' && message.length > 8000) {
+      return NextResponse.json(
+        { error: 'Mensagem excede o limite máximo permitido de 8.000 caracteres.' },
+        { status: 413 }
+      );
+    }
+
+    if (imageBase64 && typeof imageBase64 === 'string' && imageBase64.length > 12 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'Imagem em base64 excede o limite máximo permitido de 10MB.' },
+        { status: 413 }
+      );
+    }
+
     const trimmedMsg = (message || '').trim();
     const lower = trimmedMsg.toLowerCase();
+
+    // Sanitiza e delimita histórico para evitar injeção e estouro de contexto
+    const safeHistory = (Array.isArray(history) ? history : []).slice(-20).map((h: any) => ({
+      role: h?.role === 'model' || h?.role === 'assistant' ? 'assistant' : 'user',
+      content: String(h?.content || '').slice(0, 3000),
+    }));
 
     // Determina o agente ativo com base no slash command ou no conteúdo
     let activeAgent = 'Módulo de Busca de Fornecedores & Peças';
@@ -70,16 +91,16 @@ export async function POST(req: NextRequest) {
       condicoes: s.payment_terms_standard,
     }));
 
-    // 2. Contexto dos Setores e Empresas In-Loco (Diferencial Estratégico)
-    const sectorsContext = (sectors || []).map((sec: any) => ({
-      setor: sec.name,
-      codigo: sec.code,
-      localizacao: sec.location,
-      centroCusto: sec.cost_center,
-      empresasMobilizadasNoLocal: (sec.active_contractors || []).map((c: any) => ({
-        empresa: c.supplier_name,
-        contrato: c.contract_code,
-        escopo: c.scope,
+    // 2. Contexto dos Setores e Empresas In-Loco (Sanitizado com tipagem defensiva)
+    const sectorsContext = (Array.isArray(sectors) ? sectors : []).slice(0, 10).map((sec: any) => ({
+      setor: String(sec?.name || '').slice(0, 100),
+      codigo: String(sec?.code || '').slice(0, 50),
+      localizacao: String(sec?.location || '').slice(0, 100),
+      centroCusto: String(sec?.cost_center || '').slice(0, 50),
+      empresasMobilizadasNoLocal: (Array.isArray(sec?.active_contractors) ? sec.active_contractors : []).slice(0, 5).map((c: any) => ({
+        empresa: String(c?.supplier_name || '').slice(0, 100),
+        contrato: String(c?.contract_code || '').slice(0, 50),
+        escopo: String(c?.scope || '').slice(0, 150),
         aproveitamentoCanteiro: 'Atendimento imediato e zero frete de mobilização',
       })),
     }));
@@ -126,7 +147,7 @@ DIRETRIZES DE ATUAÇÃO POR AGENTE:
       imageBase64,
       imageMimeType,
       systemInstruction,
-      history: history || [],
+      history: safeHistory,
     });
 
     return NextResponse.json({

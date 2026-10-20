@@ -8,15 +8,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Item ou descrição da cotação é obrigatório' }, { status: 400 });
     }
 
-    const geminiKey =
-      process.env.GEMINI_API_KEY || 'AQ.Ab8RN6JHQj9CgF1IkhwGxofNjLPuU7dS953tW-BH4cf7DOR8NA';
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
+      return NextResponse.json(
+        { error: 'Chave de API de inteligência artificial não configurada no servidor (GEMINI_API_KEY).' },
+        { status: 503 }
+      );
+    }
+
+    // Higienização estrita contra Prompt Injection
+    const sanitizeInput = (val: any, maxLen: number) =>
+      String(val || '')
+        .replace(/[\r\n\t]/g, ' ')
+        .replace(/["`\\{}]/g, '')
+        .trim()
+        .slice(0, maxLen);
+
+    const safeItem = sanitizeInput(item, 200);
+    const safeQuantity = sanitizeInput(quantity || '1 lote', 60);
+    const safeLocation = sanitizeInput(location || 'Região Sul / Paraná', 100);
+    const safeBudget = budget ? Number(String(budget).replace(/[^\d.-]/g, '')) : null;
 
     const prompt = `Você é um motor de cotações industriais e busca de suprimentos B2B da plataforma Cooprail.
-O comprador abriu uma requisição de cotação para:
-- Item/Material: "${item}"
-- Quantidade: "${quantity || '1 lote'}"
-- Local de Entrega / Região: "${location || 'Região Sul / Paraná'}"
-${budget ? `- Teto Orçamentário Estimado: R$ ${budget}` : ''}
+O comprador abriu uma requisição de cotação para os seguintes parâmetros rigorosamente delimitados:
+<requisicao_compra>
+- Item/Material: ${safeItem}
+- Quantidade: ${safeQuantity}
+- Local de Entrega / Região: ${safeLocation}
+${safeBudget && !isNaN(safeBudget) ? `- Teto Orçamentário Estimado: R$ ${safeBudget.toFixed(2)}` : ''}
+</requisicao_compra>
 
 Sua tarefa:
 1. Realize uma pesquisa em tempo real por FORNECEDORES REAIS DE MERCADO ABERTO (distribuidoras, fabricantes, lojas de materiais industriais/construção) localizados na cidade/região citada ou que façam entrega no local.

@@ -11,11 +11,26 @@ export interface UserWorkspaceData {
   sectors: Sector[];
   chatMessages: ChatMessage[];
   isNewUser: boolean;
+  is_initialized?: boolean;
+  deleted_rfq_ids?: string[];
 }
 
 export interface RegisteredAccount extends UserProfile {
   company_name: string;
+  password_hash?: string;
   password?: string;
+}
+
+// Função de Hashing Criptográfico SHA-256 no Navegador (Web Crypto API)
+export async function hashPassword(plainText: string): Promise<string> {
+  if (!plainText) return '';
+  if (typeof window === 'undefined' || !window.crypto?.subtle) {
+    return `sha256_${plainText}`;
+  }
+  const msgUint8 = new TextEncoder().encode(plainText);
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Contas registradas vazias por padrão (sem dados mockados)
@@ -47,6 +62,7 @@ export function registerNewAccount(account: {
   role: string;
   avatar_url?: string;
   password?: string;
+  password_hash?: string;
 }): RegisteredAccount {
   const accounts = getRegisteredAccounts();
   const existing = accounts.find((a) => a.email.toLowerCase() === account.email.toLowerCase());
@@ -62,7 +78,7 @@ export function registerNewAccount(account: {
     role: account.role.trim() || 'Gestor de Suprimentos',
     avatar_url: account.avatar_url || '',
     preferred_language: 'Português (BR)',
-    password: account.password,
+    password_hash: account.password_hash,
   };
 
   const updated = [...accounts, newAccount];
@@ -93,8 +109,25 @@ Posso cotar materiais na região, localizar fornecedores industriais ou analisar
   };
 }
 
-// Inicializa workspace 100% limpo para usuário novo
+export function getNewUserWelcomeMessage(userName: string, companyName: string): ChatMessage {
+  const firstName = userName ? userName.split(' ')[0] : 'Comprador';
+  return {
+    id: `msg-welcome-new-${Date.now()}`,
+    sender_role: 'assistant',
+    content: `Olá, ${firstName}! Bem-vindo ao painel corporativo da **${companyName}** na plataforma Cooprail.
 
+Seu workspace está **100% ativo e configurado**. Estou pronto para operar suas aquisições e engenharia de suprimentos:
+
+• **Nova Cotação:** Digite o que sua obra necessita (ex: *"Cotar 50 sacos de cimento em Umuarama"*)
+• **Leitura de Memorial:** Anexe um projeto ou memorial descritivo em PDF para extração automática
+• **Portal de Fornecedores:** Seus editais públicos já geram link seguro instantâneo para fornecedores
+
+Como deseja iniciar hoje?`,
+    timestamp: 'Agora',
+  };
+}
+
+// Inicializa workspace 100% limpo para usuário novo (sem dados mockados forçados)
 function initializeCleanWorkspace(user: RegisteredAccount): UserWorkspaceData {
   const cleanOrg: Organization = {
     id: `org-${user.id}`,
@@ -108,29 +141,19 @@ function initializeCleanWorkspace(user: RegisteredAccount): UserWorkspaceData {
     },
   };
 
-  const initialWelcomeMessage = getHelpAgentInitialMessage();
-
-  const defaultUmuRFQ = DEFAULT_PUBLISHED_RFQS[0];
-  const initialTask: Task = {
-    id: `task-rfq-init-umu`,
-    title: `Cotação Ativa: Propostas para ${defaultUmuRFQ.code}`,
-    description: `Requisição de compra aberta para 50 sacos de cimento em Umuarama/PR. Envie o link do Portal do Parceiro aos fornecedores ou avalie cotações de mercado.`,
-    status: 'needs_you',
-    priority: 'high',
-    category: 'quote_decision',
-    due_date: defaultUmuRFQ.deadline,
-    badge_text: 'Cotação em Andamento',
-  };
+  const initialWelcomeMessage = getNewUserWelcomeMessage(user.full_name, user.company_name);
 
   const cleanData: UserWorkspaceData = {
     organization: cleanOrg,
     user: user,
-    tasks: [initialTask],
-    rfqs: [defaultUmuRFQ],
+    tasks: [],
+    rfqs: [],
     orders: [],
     sectors: [],
     chatMessages: [initialWelcomeMessage],
-    isNewUser: false,
+    isNewUser: true,
+    is_initialized: true,
+    deleted_rfq_ids: [],
   };
 
   if (typeof window !== 'undefined') {
@@ -140,6 +163,79 @@ function initializeCleanWorkspace(user: RegisteredAccount): UserWorkspaceData {
   return cleanData;
 }
 
+// Carregar dados guiados de demonstração sob demanda (quando o usuário pedir)
+export function loadDemoDataIntoWorkspace(userId: string): { rfq: RFQ; task: Task } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const key = getWorkspaceStorageKey(userId);
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const ws: UserWorkspaceData = JSON.parse(raw);
+    const defaultUmuRFQ = {
+      ...DEFAULT_PUBLISHED_RFQS[0],
+      id: `rfq-demo-${Date.now()}`,
+    };
+    const demoTask: Task = {
+      id: `task-rfq-demo-${Date.now()}`,
+      title: `Cotação Ativa: Propostas para ${defaultUmuRFQ.code}`,
+      description: `Requisição de compra aberta para 50 sacos de cimento em Umuarama/PR. Envie o link do Portal do Parceiro aos fornecedores ou avalie cotações de mercado.`,
+      status: 'needs_you',
+      priority: 'high',
+      category: 'quote_decision',
+      due_date: defaultUmuRFQ.deadline,
+      badge_text: 'Cotação em Andamento',
+    };
+    ws.rfqs = [defaultUmuRFQ, ...(ws.rfqs || [])];
+    ws.tasks = [demoTask, ...(ws.tasks || [])];
+    ws.isNewUser = false;
+    ws.is_initialized = true;
+    localStorage.setItem(key, JSON.stringify(ws));
+    return { rfq: defaultUmuRFQ, task: demoTask };
+  } catch (err) {
+    console.error('Erro ao carregar dados de demonstração:', err);
+    return null;
+  }
+}
+
+// Redefinição rápida de senha local para primeiro acesso / recuperação
+export async function resetAccountPassword(email: string, newPasswordPlain: string): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  try {
+    const accounts = getRegisteredAccounts();
+    const idx = accounts.findIndex((a) => a.email.toLowerCase() === email.trim().toLowerCase());
+    if (idx < 0) return false;
+    const hash = await hashPassword(newPasswordPlain);
+    accounts[idx].password_hash = hash;
+    accounts[idx].password = newPasswordPlain;
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(accounts));
+    return true;
+  } catch (e) {
+    console.error('Erro ao redefinir senha:', e);
+    return false;
+  }
+}
+
+// Conta de Demonstração Rápida de 1 Clique (Homologada para Apresentações)
+export const DEMO_ACCOUNT_EMAIL = 'compras@cooprail.com.br';
+export const DEMO_ACCOUNT_PASSWORD = 'cooprail2026';
+
+export async function ensureDemoAccount(): Promise<RegisteredAccount> {
+  const accounts = getRegisteredAccounts();
+  const existing = accounts.find((a) => a.email.toLowerCase() === DEMO_ACCOUNT_EMAIL.toLowerCase());
+  if (existing) {
+    return existing;
+  }
+  const hashed = await hashPassword(DEMO_ACCOUNT_PASSWORD);
+  return registerNewAccount({
+    full_name: 'Juliano Brustolin',
+    email: DEMO_ACCOUNT_EMAIL,
+    company_name: 'Cooprail Alimentos & Logística',
+    role: 'Diretor de Suprimentos & Engenharia',
+    password_hash: hashed,
+    password: DEMO_ACCOUNT_PASSWORD,
+  });
+}
+
 // Carregar workspace isolado do usuário
 export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
   if (typeof window === 'undefined') {
@@ -147,11 +243,13 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
       organization: { ...initialOrganization, name: user.company_name },
       user,
       tasks: [],
-      rfqs: [DEFAULT_PUBLISHED_RFQS[0]],
+      rfqs: [],
       orders: [],
       sectors: [],
       chatMessages: [getHelpAgentInitialMessage()],
       isNewUser: false,
+      is_initialized: true,
+      deleted_rfq_ids: [],
     };
   }
 
@@ -161,33 +259,54 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
   if (raw) {
     try {
       const parsed: UserWorkspaceData = JSON.parse(raw);
-      // Se não tiver a RFQ de Umuarama no workspace, insere com os fornecedores
-      if (!parsed.rfqs || parsed.rfqs.length === 0) {
-        parsed.rfqs = [DEFAULT_PUBLISHED_RFQS[0]];
+      if (!parsed.deleted_rfq_ids) {
+        parsed.deleted_rfq_ids = [];
+      }
+
+      // Se for primeira inicialização de usuário novo/legado sem a flag
+      if (!parsed.is_initialized) {
+        parsed.is_initialized = true;
+        if (!parsed.rfqs || parsed.rfqs.length === 0) {
+          parsed.rfqs = [DEFAULT_PUBLISHED_RFQS[0]];
+        }
         localStorage.setItem(key, JSON.stringify(parsed));
       } else {
-        // Limpa quaisquer propostas sintéticas/mockadas que tenham ficado salvas em RFQs anteriores
-        let changed = false;
-        parsed.rfqs.forEach((r) => {
-          if (r.quotes && r.quotes.length > 0) {
-            const cleaned = r.quotes.filter(
-              (q) =>
-                !q.id.startsWith('quote-umu-') &&
-                !q.id.startsWith('quote-auto-') &&
-                !q.id.startsWith('quote-init-') &&
-                !q.supplier_name.includes('Depósito & Distribuidora Umuarama Materiais') &&
-                !q.supplier_name.includes('Votoran / Constrular Paraná') &&
-                !q.supplier_name.includes('Cimento Itambé / Rede Oeste') &&
-                !q.supplier_name.includes('Distribuidora Regional Líder') &&
-                !q.supplier_name.includes('Comercial & Insumos Industriais Sul') &&
-                !q.supplier_name.includes('Materiais & Logística Canteiro Express')
-            );
-            if (cleaned.length !== r.quotes.length) {
-              r.quotes = cleaned;
-              changed = true;
-            }
+        // Se já foi inicializado: RESPEITA a deleção do usuário!
+        // Filtra quaisquer RFQs que estejam na lista de excluídos
+        if (parsed.rfqs && parsed.deleted_rfq_ids.length > 0) {
+          const filtered = parsed.rfqs.filter(
+            (r) => !parsed.deleted_rfq_ids!.includes(r.id) && !parsed.deleted_rfq_ids!.includes(r.code)
+          );
+          if (filtered.length !== parsed.rfqs.length) {
+            parsed.rfqs = filtered;
+            localStorage.setItem(key, JSON.stringify(parsed));
           }
-        });
+        }
+
+        // Limpa quaisquer propostas sintéticas/mockadas residuais
+        let changed = false;
+        if (parsed.rfqs) {
+          parsed.rfqs.forEach((r) => {
+            if (r.quotes && r.quotes.length > 0) {
+              const cleaned = r.quotes.filter(
+                (q) =>
+                  !q.id.startsWith('quote-umu-') &&
+                  !q.id.startsWith('quote-auto-') &&
+                  !q.id.startsWith('quote-init-') &&
+                  !q.supplier_name.includes('Depósito & Distribuidora Umuarama Materiais') &&
+                  !q.supplier_name.includes('Votoran / Constrular Paraná') &&
+                  !q.supplier_name.includes('Cimento Itambé / Rede Oeste') &&
+                  !q.supplier_name.includes('Distribuidora Regional Líder') &&
+                  !q.supplier_name.includes('Comercial & Insumos Industriais Sul') &&
+                  !q.supplier_name.includes('Materiais & Logística Canteiro Express')
+              );
+              if (cleaned.length !== r.quotes.length) {
+                r.quotes = cleaned;
+                changed = true;
+              }
+            }
+          });
+        }
         if (changed) {
           localStorage.setItem(key, JSON.stringify(parsed));
         }
@@ -344,11 +463,64 @@ export function savePublishedRFQ(rfq: RFQ | PublishedRFQ): void {
   }
 }
 
+export function deletePublishedRFQ(rfqId: string, rfqCode?: string, userId?: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    // 1. Marca no set global de RFQs excluídas
+    const globalDeletedIds = new Set<string>();
+    const rawDeleted = localStorage.getItem('cooprail_deleted_rfq_ids');
+    if (rawDeleted) {
+      try {
+        const arr = JSON.parse(rawDeleted);
+        if (Array.isArray(arr)) arr.forEach((id: string) => globalDeletedIds.add(id));
+      } catch {}
+    }
+    globalDeletedIds.add(rfqId);
+    if (rfqCode) globalDeletedIds.add(rfqCode);
+    localStorage.setItem('cooprail_deleted_rfq_ids', JSON.stringify(Array.from(globalDeletedIds)));
+
+    // 2. Remove de SHARED_RFQS_KEY
+    const rawShared = localStorage.getItem(SHARED_RFQS_KEY);
+    if (rawShared) {
+      const shared: PublishedRFQ[] = JSON.parse(rawShared);
+      const filtered = shared.filter((r) => r.id !== rfqId && r.code !== rfqCode && r.code !== rfqId);
+      localStorage.setItem(SHARED_RFQS_KEY, JSON.stringify(filtered));
+    }
+
+    // 3. Atualiza no workspace do usuário atual se informado
+    if (userId) {
+      const key = getWorkspaceStorageKey(userId);
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const ws: UserWorkspaceData = JSON.parse(raw);
+        ws.rfqs = (ws.rfqs || []).filter((r) => r.id !== rfqId && r.code !== rfqCode);
+        ws.tasks = (ws.tasks || []).filter((t) => !t.id.includes(rfqId) && (!rfqCode || !t.title.includes(rfqCode)));
+        if (!ws.deleted_rfq_ids) ws.deleted_rfq_ids = [];
+        if (!ws.deleted_rfq_ids.includes(rfqId)) ws.deleted_rfq_ids.push(rfqId);
+        if (rfqCode && !ws.deleted_rfq_ids.includes(rfqCode)) ws.deleted_rfq_ids.push(rfqCode);
+        ws.is_initialized = true;
+        localStorage.setItem(key, JSON.stringify(ws));
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao excluir RFQ compartilhada:', err);
+  }
+}
+
 export function getAllPublishedRFQs(): PublishedRFQ[] {
   if (typeof window === 'undefined') return DEFAULT_PUBLISHED_RFQS;
   try {
     const raw = localStorage.getItem(SHARED_RFQS_KEY);
     const shared: PublishedRFQ[] = raw ? JSON.parse(raw) : [];
+
+    const globalDeletedIds = new Set<string>();
+    const rawDeleted = localStorage.getItem('cooprail_deleted_rfq_ids');
+    if (rawDeleted) {
+      try {
+        const arr = JSON.parse(rawDeleted);
+        if (Array.isArray(arr)) arr.forEach((id: string) => globalDeletedIds.add(id));
+      } catch {}
+    }
 
     const tenantRfqs: PublishedRFQ[] = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -358,6 +530,9 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
           const val = localStorage.getItem(k);
           if (val) {
             const parsed = JSON.parse(val);
+            if (Array.isArray(parsed.deleted_rfq_ids)) {
+              parsed.deleted_rfq_ids.forEach((id: string) => globalDeletedIds.add(id));
+            }
             if (Array.isArray(parsed.rfqs)) {
               tenantRfqs.push(...parsed.rfqs);
             }
@@ -367,12 +542,20 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
     }
 
     const map = new Map<string, PublishedRFQ>();
-    DEFAULT_PUBLISHED_RFQS.forEach((d) => map.set(d.code, d));
+    DEFAULT_PUBLISHED_RFQS.forEach((d) => {
+      if (!globalDeletedIds.has(d.id) && !globalDeletedIds.has(d.code)) {
+        map.set(d.code, d);
+      }
+    });
     tenantRfqs.forEach((t) => {
-      if (t.code) map.set(t.code, { ...map.get(t.code), ...t });
+      if (t.code && !globalDeletedIds.has(t.id) && !globalDeletedIds.has(t.code)) {
+        map.set(t.code, { ...map.get(t.code), ...t });
+      }
     });
     shared.forEach((s) => {
-      if (s.code) map.set(s.code, { ...map.get(s.code), ...s });
+      if (s.code && !globalDeletedIds.has(s.id) && !globalDeletedIds.has(s.code)) {
+        map.set(s.code, { ...map.get(s.code), ...s });
+      }
     });
 
     return Array.from(map.values());
@@ -383,9 +566,12 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
 
 export function getPublishedRFQByCode(code?: string | null): PublishedRFQ {
   const all = getAllPublishedRFQs();
+  if (all.length === 0) {
+    return DEFAULT_PUBLISHED_RFQS[0];
+  }
   if (!code) {
     const umu = all.find((r) => r.code.includes('UMU') || r.title.toLowerCase().includes('cimento'));
-    return umu || all[0] || DEFAULT_PUBLISHED_RFQS[0];
+    return umu || all[0];
   }
 
   const clean = code.trim().toLowerCase();
@@ -403,7 +589,7 @@ export function getPublishedRFQByCode(code?: string | null): PublishedRFQ {
     if (copMatch) return copMatch;
   }
 
-  return all[0] || DEFAULT_PUBLISHED_RFQS[0];
+  return all[0];
 }
 
 // Salvar workspace isolado do usuário

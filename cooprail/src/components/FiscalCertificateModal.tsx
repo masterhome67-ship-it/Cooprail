@@ -76,6 +76,11 @@ export function FiscalCertificateModal({
         setSelectedFile(null);
         return;
       }
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorMsg('Arquivo muito grande. O certificado digital A1 deve ter no máximo 5MB.');
+        setSelectedFile(null);
+        return;
+      }
       setSelectedFile(file);
     }
   };

@@ -33,6 +33,7 @@ export function DocumentUploadModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [rawText, setRawText] = useState('');
   const [showRawText, setShowRawText] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   // Campos extraídos e editáveis pelo usuário
   const [formData, setFormData] = useState({
@@ -73,6 +74,24 @@ export function DocumentUploadModal({
   };
 
   const handleFileSelected = (file: File) => {
+    setFileError(null);
+
+    // Validação de tamanho máximo (15MB)
+    if (file.size > 15 * 1024 * 1024) {
+      setFileError('Arquivo muito grande. O limite máximo permitido para análise é de 15MB.');
+      setSelectedFile(null);
+      return;
+    }
+
+    const name = file.name.toLowerCase();
+    const validExts = ['.pdf', '.png', '.jpg', '.jpeg', '.xlsx', '.csv', '.docx', '.txt'];
+    const isValid = validExts.some((ext) => name.endsWith(ext));
+    if (!isValid) {
+      setFileError('Formato de arquivo não suportado. Por favor, envie PDF, imagem, planilha ou documento de texto.');
+      setSelectedFile(null);
+      return;
+    }
+
     setSelectedFile(file);
     setRawText('');
     setFormData({
@@ -243,6 +262,13 @@ export function DocumentUploadModal({
               </p>
             )}
           </div>
+
+          {fileError && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+              <span>{fileError}</span>
+            </div>
+          )}
 
           {/* Botão de Processamento */}
           {selectedFile && !formData.supplierName && !isProcessing && (

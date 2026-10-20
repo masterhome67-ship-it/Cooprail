@@ -164,6 +164,7 @@ function SupplierPortalContent() {
   // 1. Estado de Autenticação Segura do Fornecedor & Reconhecimento de Novos Parceiros
   const [isSupplierAuthenticated, setIsSupplierAuthenticated] = useState(false);
   const [authCnpj, setAuthCnpj] = useState('');
+  const [authPin, setAuthPin] = useState('');
   const [authRfqCode, setAuthRfqCode] = useState(() => activeRfq.code);
   const [authContactName, setAuthContactName] = useState('');
   const [authEmail, setAuthEmail] = useState('');
@@ -182,6 +183,7 @@ function SupplierPortalContent() {
         if (sess && sess.cnpj) {
           setAuthCnpj(sess.cnpj);
           setCnpj(sess.cnpj);
+          if (sess.pin) setAuthPin(sess.pin);
           if (sess.receitaData) setReceitaData(sess.receitaData);
           if (sess.contactName) {
             setAuthContactName(sess.contactName);
@@ -276,6 +278,10 @@ function SupplierPortalContent() {
       setReceitaError('Informe o e-mail corporativo para contato e recibo técnico.');
       return;
     }
+    if (!authPin || authPin.length < 4) {
+      setReceitaError('Defina um PIN de segurança de 4 a 6 dígitos para proteger sua proposta contra acesso por concorrentes.');
+      return;
+    }
 
     setContactName(authContactName);
     setEmail(authEmail);
@@ -287,6 +293,7 @@ function SupplierPortalContent() {
         'cooprail_partner_session',
         JSON.stringify({
           cnpj: authCnpj,
+          pin: authPin,
           supplierName: receitaData?.name || supplierName,
           contactName: authContactName,
           email: authEmail,
@@ -334,10 +341,11 @@ function SupplierPortalContent() {
       const clean = cnpj.replace(/\D/g, '');
       let found: any = null;
 
-      // 1. Tenta API centralizada no servidor
+      // 1. Tenta API centralizada no servidor enviando PIN de segurança
       try {
+        const pinParam = authPin ? `&pin=${encodeURIComponent(authPin)}` : '';
         const res = await fetch(
-          `/api/partner-quotes?rfq_id=${encodeURIComponent(activeRfq.code)}&cnpj=${clean}`
+          `/api/partner-quotes?rfq_id=${encodeURIComponent(activeRfq.code)}&cnpj=${clean}${pinParam}`
         );
         if (res.ok) {
           const data = await res.json();
@@ -349,7 +357,7 @@ function SupplierPortalContent() {
         console.warn('Erro ao consultar API de propostas:', err);
       }
 
-      // 2. Fallback no localStorage
+      // 2. Fallback no localStorage (respeitando PIN do parceiro)
       if (!found) {
         try {
           const raw = localStorage.getItem('cooprail_partner_quotes');
@@ -357,10 +365,10 @@ function SupplierPortalContent() {
             const list: any[] = JSON.parse(raw);
             found = list.find((q) => {
               const qClean = (q.cnpj || '').replace(/\D/g, '');
-              return (
-                (q.rfq_id === activeRfq.code || q.rfq_code === activeRfq.code) &&
-                qClean === clean
-              );
+              const matchesCnpj = (q.rfq_id === activeRfq.code || q.rfq_code === activeRfq.code) && qClean === clean;
+              if (!matchesCnpj) return false;
+              if (q.access_pin && q.access_pin !== authPin) return false;
+              return true;
             });
           }
         } catch {}
@@ -368,7 +376,7 @@ function SupplierPortalContent() {
 
       if (!isMounted) return;
 
-      if (found) {
+      if (found && !found.has_pin_locked) {
         setExistingQuote(found);
         setIsSubmitted(true);
         if (found.supplier_name) setSupplierName(found.supplier_name);
@@ -424,6 +432,17 @@ function SupplierPortalContent() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 15 * 1024 * 1024) {
+      alert('O arquivo selecionado excede o limite máximo permitido de 15MB.');
+      return;
+    }
+    const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.txt', '.docx'];
+    const hasValidExt = allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext));
+    if (!hasValidExt) {
+      alert('Formato de arquivo não suportado. Por favor, envie um arquivo em PDF, imagem ou DOCX.');
+      return;
+    }
+
     setIsParsingProposal(true);
     setProposalPdfName(file.name);
 
@@ -474,8 +493,16 @@ function SupplierPortalContent() {
 
   // Enviar Dúvida Técnica (IA Travada Somente no Memorial)
   const handleSendQuestion = async (customQuestion?: string) => {
-    const q = (customQuestion || chatInput).trim();
-    if (!q || isChatLoading) return;
+    const rawQ = (customQuestion || chatInput).trim();
+    if (!rawQ || isChatLoading) return;
+
+    if (rawQ.length > 600) {
+      alert('A dúvida técnica deve conter no máximo 600 caracteres.');
+      return;
+    }
+
+    // Sanitização e prevenção contra prompt injection
+    const q = rawQ.replace(/[\r\n\t]+/g, ' ').slice(0, 600);
 
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -537,6 +564,7 @@ function SupplierPortalContent() {
 
     const quoteRecord = {
       id: existingQuote?.id || `quote-${Date.now()}`,
+      access_pin: authPin || existingQuote?.access_pin || undefined,
       rfq_id: activeRfq.code,
       supplier_name: supplierName,
       cnpj: cnpj || 'Não informado',
@@ -855,6 +883,26 @@ function SupplierPortalContent() {
                     value={authPhone}
                     onChange={(e) => setAuthPhone(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-[#0284c7] focus:bg-white"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-[#0284c7]" />
+                      PIN de Segurança da Proposta (4 a 6 dígitos) <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500">
+                      Garante sigilo contra concorrentes
+                    </span>
+                  </div>
+                  <input
+                    type="password"
+                    maxLength={6}
+                    placeholder="Defina um PIN (ex: 7392)"
+                    value={authPin}
+                    onChange={(e) => setAuthPin(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-[#0284c7] focus:bg-white font-mono tracking-widest"
+                    required
                   />
                 </div>
               </div>

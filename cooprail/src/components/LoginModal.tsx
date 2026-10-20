@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Lock,
@@ -11,6 +11,9 @@ import {
   UserPlus,
   Briefcase,
   User,
+  Zap,
+  KeyRound,
+  CheckCircle2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { UserProfile } from '@/lib/mockData';
@@ -20,6 +23,10 @@ import {
   defaultAccounts,
   getRegisteredAccounts,
   registerNewAccount,
+  hashPassword,
+  ensureDemoAccount,
+  resetAccountPassword,
+  DEMO_ACCOUNT_EMAIL,
 } from '@/lib/userWorkspace';
 
 interface LoginModalProps {
@@ -27,6 +34,7 @@ interface LoginModalProps {
   onClose: () => void;
   onLoginSuccess: (user: RegisteredAccount) => void;
   lang?: Language;
+  initialTab?: 'signin' | 'signup' | 'forgot';
 }
 
 // Carregador assíncrono garantido da biblioteca Google Identity Services (GIS)
@@ -53,8 +61,22 @@ function loadGoogleScript(): Promise<any> {
   });
 }
 
-export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: LoginModalProps) {
-  const [tab, setTab] = useState<'signin' | 'signup'>('signin');
+export function LoginModal({
+  isOpen,
+  onClose,
+  onLoginSuccess,
+  lang = 'pt',
+  initialTab = 'signin',
+}: LoginModalProps) {
+  const [tab, setTab] = useState<'signin' | 'signup' | 'forgot'>(initialTab);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTab(initialTab);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+    }
+  }, [isOpen, initialTab]);
 
   // Login form state
   const [email, setEmail] = useState('');
@@ -67,8 +89,13 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
   const [newRole, setNewRole] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
+  // Forgot password form state
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -77,9 +104,16 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
     setLoading(true);
     setErrorMsg(null);
 
-    const googleClientId =
-      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-      '1055689936073-mh4d40hb2rch5cs3h81g5sbk138t64e0.apps.googleusercontent.com';
+    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!googleClientId) {
+      setLoading(false);
+      setErrorMsg(
+        lang === 'pt'
+          ? 'Google OAuth Client ID não configurado no ambiente de produção.'
+          : 'Google OAuth Client ID not configured in production environment.'
+      );
+      return;
+    }
 
     try {
       const google = await loadGoogleScript();
@@ -146,38 +180,59 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
     }
   };
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
+    if (!email.trim()) {
       setErrorMsg(lang === 'pt' ? 'Informe seu e-mail corporativo.' : 'Enter your corporate email.');
+      return;
+    }
+    if (!password) {
+      setErrorMsg(lang === 'pt' ? 'Informe sua senha de acesso.' : 'Enter your password.');
       return;
     }
     setLoading(true);
     setErrorMsg(null);
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
       const accounts = getRegisteredAccounts();
       const matched = accounts.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());
 
-      if (matched) {
-        onLoginSuccess(matched);
-      } else {
-        const created = registerNewAccount({
-          full_name: email.split('@')[0],
-          email: email.trim(),
-          company_name: 'Minha Empresa Global',
-          role: 'Diretor de Suprimentos',
-          password,
-        });
-        onLoginSuccess(created);
+      if (!matched) {
+        setLoading(false);
+        setErrorMsg(
+          lang === 'pt'
+            ? 'Conta corporativa não encontrada. Crie uma nova conta na aba "Criar Conta".'
+            : 'Corporate account not found. Please register in the Sign Up tab.'
+        );
+        return;
       }
-    }, 400);
+
+      const hashedInput = await hashPassword(password);
+      const isPasswordValid =
+        (matched.password_hash && matched.password_hash === hashedInput) ||
+        (matched.password && matched.password === password);
+
+      if (!isPasswordValid) {
+        setLoading(false);
+        setErrorMsg(
+          lang === 'pt'
+            ? 'Senha incorreta. Verifique suas credenciais corporativas.'
+            : 'Incorrect password. Check your corporate credentials.'
+        );
+        return;
+      }
+
+      setLoading(false);
+      onLoginSuccess(matched);
+    } catch (err) {
+      setLoading(false);
+      setErrorMsg(lang === 'pt' ? 'Falha ao validar credenciais.' : 'Failed to validate credentials.');
+    }
   };
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName || !newEmail || !newCompany) {
+    if (!newName.trim() || !newEmail.trim() || !newCompany.trim()) {
       setErrorMsg(
         lang === 'pt'
           ? 'Por favor, preencha todos os campos obrigatórios.'
@@ -186,21 +241,87 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
       return;
     }
 
+    if (!newPassword || newPassword.length < 6) {
+      setErrorMsg(
+        lang === 'pt'
+          ? 'A senha deve conter no mínimo 6 caracteres.'
+          : 'Password must be at least 6 characters.'
+      );
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const hashed = await hashPassword(newPassword);
       const created = registerNewAccount({
         full_name: newName,
         email: newEmail,
         company_name: newCompany,
         role: newRole || (lang === 'pt' ? 'Diretor de Suprimentos' : 'Head of Procurement'),
-        password: newPassword,
+        password_hash: hashed,
       });
 
+      setLoading(false);
       onLoginSuccess(created);
-    }, 450);
+    } catch (err) {
+      setLoading(false);
+      setErrorMsg(lang === 'pt' ? 'Falha ao registrar conta.' : 'Failed to register account.');
+    }
+  };
+
+  const handleQuickDemoLogin = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const demoAccount = await ensureDemoAccount();
+      setLoading(false);
+      onLoginSuccess(demoAccount);
+    } catch (err) {
+      setLoading(false);
+      setErrorMsg(lang === 'pt' ? 'Falha ao acessar conta de demonstração.' : 'Failed to access demo account.');
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim() || !forgotNewPassword) {
+      setErrorMsg(lang === 'pt' ? 'Preencha o e-mail e a nova senha.' : 'Enter email and new password.');
+      return;
+    }
+    if (forgotNewPassword.length < 6) {
+      setErrorMsg(
+        lang === 'pt'
+          ? 'A nova senha deve ter no mínimo 6 caracteres.'
+          : 'New password must be at least 6 characters.'
+      );
+      return;
+    }
+    setLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const ok = await resetAccountPassword(forgotEmail, forgotNewPassword);
+    setLoading(false);
+    if (ok) {
+      setSuccessMsg(
+        lang === 'pt'
+          ? 'Senha corporativa redefinida com sucesso! Redirecionando para login...'
+          : 'Corporate password reset successfully! Redirecting to sign in...'
+      );
+      setTimeout(() => {
+        setEmail(forgotEmail);
+        setTab('signin');
+        setSuccessMsg(null);
+      }, 1500);
+    } else {
+      setErrorMsg(
+        lang === 'pt'
+          ? 'E-mail corporativo não localizado na base. Verifique ou crie uma nova conta.'
+          : 'Corporate email not found. Please register a new account.'
+      );
+    }
   };
 
   return (
@@ -231,6 +352,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
             onClick={() => {
               setTab('signin');
               setErrorMsg(null);
+              setSuccessMsg(null);
             }}
             className={`flex-1 py-3 text-center transition-all cursor-pointer border-b-2 ${
               tab === 'signin'
@@ -238,12 +360,13 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            {lang === 'pt' ? 'Entrar na Plataforma' : 'Sign In'}
+            {lang === 'pt' ? 'Já sou Cadastrado' : 'Sign In'}
           </button>
           <button
             onClick={() => {
               setTab('signup');
               setErrorMsg(null);
+              setSuccessMsg(null);
             }}
             className={`flex-1 py-3 text-center transition-all cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
               tab === 'signup'
@@ -252,19 +375,25 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>{lang === 'pt' ? 'Criar Conta' : 'Sign Up'}</span>
+            <span>{lang === 'pt' ? 'Primeiro Acesso / Cadastrar' : 'Sign Up'}</span>
           </button>
         </div>
 
         {/* Corpo */}
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-4">
           {errorMsg && (
-            <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+            <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
               {errorMsg}
             </div>
           )}
+          {successMsg && (
+            <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
 
-          {/* TAB 1: SIGN IN */}
+          {/* TAB 1: SIGN IN (JÁ SOU CADASTRADO) */}
           {tab === 'signin' && (
             <div className="space-y-4">
               {/* Botão Oficial Google */}
@@ -282,7 +411,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 <span>{lang === 'pt' ? 'Continuar com o Google' : 'Continue with Google'}</span>
               </button>
 
-              <div className="relative flex py-1 items-center">
+              <div className="relative flex py-0.5 items-center">
                 <div className="flex-grow border-t border-slate-200"></div>
                 <span className="flex-shrink mx-3 text-[10px] text-slate-400 uppercase font-mono">
                   {lang === 'pt' ? 'ou entre com e-mail corporativo' : 'or enter with work email'}
@@ -290,7 +419,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 <div className="flex-grow border-t border-slate-200"></div>
               </div>
 
-              {/* Formulário */}
+              {/* Formulário de Login */}
               <form onSubmit={handleSignIn} className="space-y-3.5 text-xs">
                 <div>
                   <label className="text-slate-700 block mb-1 font-semibold">
@@ -310,9 +439,22 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 </div>
 
                 <div>
-                  <label className="text-slate-700 block mb-1 font-semibold">
-                    {lang === 'pt' ? 'Senha' : 'Password'}
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-700 font-semibold">
+                      {lang === 'pt' ? 'Senha' : 'Password'}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTab('forgot');
+                        setForgotEmail(email);
+                        setErrorMsg(null);
+                      }}
+                      className="text-[11px] text-slate-500 hover:text-[#0284c7] underline cursor-pointer"
+                    >
+                      {lang === 'pt' ? 'Esqueci minha senha' : 'Forgot password?'}
+                    </button>
+                  </div>
                   <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
                     <Lock className="w-4 h-4 text-slate-400" />
                     <input
@@ -329,22 +471,40 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs transition-all shadow-md shadow-sky-600/20 cursor-pointer disabled:opacity-50"
                 >
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>{lang === 'pt' ? 'Entrar no Portal' : 'Sign In'}</span>
+                      <span>{lang === 'pt' ? 'Entrar no Portal Corporativo' : 'Sign In'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>
               </form>
+
+              {/* Botão de Demonstração Rápida (1 Clique) */}
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleQuickDemoLogin}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-all shadow-2xs cursor-pointer group"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500 group-hover:scale-110 transition-transform" />
+                  <span>{lang === 'pt' ? '⚡ Acesso Rápido de Demonstração (1 Clique)' : '⚡ Quick Demo Access (1 Click)'}</span>
+                </button>
+                <p className="text-[10px] text-slate-500 text-center mt-1">
+                  {lang === 'pt'
+                    ? 'Acesso instantâneo homologado como Diretor de Suprimentos da Cooprail'
+                    : 'Instant access as approved Cooprail Procurement Director'}
+                </p>
+              </div>
             </div>
           )}
 
-          {/* TAB 2: SIGN UP */}
+          {/* TAB 2: SIGN UP (PRIMEIRO ACESSO) */}
           {tab === 'signup' && (
             <div className="space-y-3.5 text-xs">
               {/* Botão Oficial Google para Cadastro */}
@@ -362,18 +522,18 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 <span>{lang === 'pt' ? 'Cadastrar com o Google' : 'Sign Up with Google'}</span>
               </button>
 
-              <div className="relative flex py-1 items-center">
+              <div className="relative flex py-0.5 items-center">
                 <div className="flex-grow border-t border-slate-200"></div>
                 <span className="flex-shrink mx-3 text-[10px] text-slate-400 uppercase font-mono">
-                  {lang === 'pt' ? 'ou preencha os dados da organização' : 'or enter details manually'}
+                  {lang === 'pt' ? 'ou preencha os dados da sua empresa' : 'or enter details manually'}
                 </span>
                 <div className="flex-grow border-t border-slate-200"></div>
               </div>
 
-              <form onSubmit={handleSignUp} className="space-y-3.5 text-xs">
+              <form onSubmit={handleSignUp} className="space-y-3 text-xs">
                 <div>
                   <label className="text-slate-700 block mb-1 font-semibold">
-                    {lang === 'pt' ? 'Nome Completo' : 'Full Name'} *
+                    {lang === 'pt' ? 'Nome do Gestor / Responsável' : 'Full Name'} *
                   </label>
                   <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
                     <User className="w-4 h-4 text-slate-400" />
@@ -383,7 +543,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                      placeholder="Ex: Carlos Oliveira"
+                      placeholder="Ex: Carlos Eduardo de Oliveira"
                     />
                   </div>
                 </div>
@@ -400,14 +560,14 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                       value={newEmail}
                       onChange={(e) => setNewEmail(e.target.value)}
                       className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                      placeholder="carlos@empresa.com"
+                      placeholder="carlos@minhaempresa.com.br"
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="text-slate-700 block mb-1 font-semibold">
-                    {lang === 'pt' ? 'Nome da Empresa / Organização' : 'Company / Organization Name'} *
+                    {lang === 'pt' ? 'Razão Social / Nome da Empresa' : 'Company / Organization Name'} *
                   </label>
                   <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
                     <Building2 className="w-4 h-4 text-slate-400" />
@@ -417,7 +577,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                       value={newCompany}
                       onChange={(e) => setNewCompany(e.target.value)}
                       className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                      placeholder="Ex: PetroIndústria Global S.A."
+                      placeholder="Ex: Construtora Paranaense Ltda"
                     />
                   </div>
                 </div>
@@ -434,23 +594,25 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                         value={newRole}
                         onChange={(e) => setNewRole(e.target.value)}
                         className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                        placeholder="Ex: Diretor de Compras"
+                        placeholder="Ex: Diretor de Obras"
                       />
                     </div>
                   </div>
 
                   <div>
                     <label className="text-slate-700 block mb-1 font-semibold">
-                      {lang === 'pt' ? 'Senha' : 'Password'}
+                      {lang === 'pt' ? 'Senha' : 'Password'} *
                     </label>
                     <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
                       <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <input
                         type="password"
+                        required
+                        minLength={6}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="bg-transparent border-none outline-none w-full text-xs text-slate-900 placeholder:text-slate-400"
-                        placeholder="••••••••"
+                        placeholder="Mín. 6 dígitos"
                       />
                     </div>
                   </div>
@@ -459,14 +621,14 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50 mt-1"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs transition-all shadow-md shadow-sky-600/20 cursor-pointer disabled:opacity-50 mt-1"
                 >
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
                       <span>
-                        {lang === 'pt' ? 'Criar Conta Corporativa' : 'Create Corporate Account'}
+                        {lang === 'pt' ? 'Concluir Cadastro & Abrir Painel' : 'Create Corporate Account'}
                       </span>
                       <ArrowRight className="w-4 h-4" />
                     </>
@@ -474,6 +636,82 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, lang = 'pt' }: Log
                 </button>
               </form>
             </div>
+          )}
+
+          {/* TAB 3: FORGOT PASSWORD (REDEFINIR SENHA) */}
+          {tab === 'forgot' && (
+            <form onSubmit={handleResetPassword} className="space-y-3.5 text-xs">
+              <div className="text-center space-y-1 pb-1">
+                <div className="w-10 h-10 bg-sky-50 rounded-xl mx-auto flex items-center justify-center text-[#0284c7] border border-sky-100">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <h4 className="text-xs font-bold text-slate-900">
+                  {lang === 'pt' ? 'Redefinir Senha de Acesso' : 'Reset Account Password'}
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  {lang === 'pt'
+                    ? 'Informe seu e-mail corporativo cadastrado para definir uma nova senha.'
+                    : 'Enter your registered work email to set a new password.'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-slate-700 block mb-1 font-semibold">
+                  {lang === 'pt' ? 'E-mail Corporativo' : 'Work Email'} *
+                </label>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
+                  <Mail className="w-4 h-4 text-slate-400" />
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="bg-transparent border-none outline-none w-full text-xs text-slate-900"
+                    placeholder="seu.email@empresa.com"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-700 block mb-1 font-semibold">
+                  {lang === 'pt' ? 'Nova Senha (Mínimo 6 caracteres)' : 'New Password (Min 6 chars)'} *
+                </label>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus-within:border-[#0284c7] focus-within:bg-white">
+                  <Lock className="w-4 h-4 text-slate-400" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={forgotNewPassword}
+                    onChange={(e) => setForgotNewPassword(e.target.value)}
+                    className="bg-transparent border-none outline-none w-full text-xs text-slate-900"
+                    placeholder="••••••••••••"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs shadow-md shadow-sky-600/20 cursor-pointer disabled:opacity-50"
+              >
+                {lang === 'pt' ? 'Salvar Nova Senha' : 'Save New Password'}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab('signin');
+                    setErrorMsg(null);
+                    setSuccessMsg(null);
+                  }}
+                  className="text-[11px] text-slate-500 hover:text-[#0284c7] underline cursor-pointer"
+                >
+                  {lang === 'pt' ? '← Voltar para o Login' : '← Back to Sign In'}
+                </button>
+              </div>
+            </form>
           )}
         </div>
 

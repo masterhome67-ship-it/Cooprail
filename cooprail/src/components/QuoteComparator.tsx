@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RFQ, Quote } from '@/lib/mockData';
 import { formatCurrencyBRLInput, parseCurrencyBRL } from '@/lib/userWorkspace';
 import {
@@ -77,7 +77,11 @@ export function QuoteComparator({
     });
   };
 
+  // Rastreia IDs de cotações excluídas para evitar ressuscitação via polling
+  const deletedQuoteIdsRef = useRef<Set<string>>(new Set());
+
   const handleDeleteQuote = (quoteId: string) => {
+    deletedQuoteIdsRef.current.add(quoteId);
     const quoteToDelete = localQuotes.find((q) => q.id === quoteId);
     const updated = localQuotes.filter((q) => q.id !== quoteId);
     setLocalQuotes(updated);
@@ -104,8 +108,13 @@ export function QuoteComparator({
       console.error('Erro ao remover do storage de parceiros:', e);
     }
 
-    // Deleta também no backend centralizado
-    fetch(`/api/partner-quotes?id=${encodeURIComponent(quoteId)}`, { method: 'DELETE' }).catch((err) => {
+    // Deleta também no backend centralizado com autorização de comprador
+    fetch(`/api/partner-quotes?id=${encodeURIComponent(quoteId)}`, {
+      method: 'DELETE',
+      headers: {
+        'x-buyer-auth': 'true',
+      },
+    }).catch((err) => {
       console.warn('Falha ao remover cotação na API central:', err);
     });
 
@@ -151,9 +160,13 @@ export function QuoteComparator({
       try {
         let partnerQuotes: any[] = [];
 
-        // 1. Busca da API centralizada no servidor
+        // 1. Busca da API centralizada no servidor com autorização de comprador
         try {
-          const res = await fetch(`/api/partner-quotes?rfq_id=${encodeURIComponent(rfq.code)}`);
+          const res = await fetch(`/api/partner-quotes?rfq_id=${encodeURIComponent(rfq.code)}`, {
+            headers: {
+              'x-buyer-auth': 'true',
+            },
+          });
           if (res.ok) {
             const data = await res.json();
             if (Array.isArray(data.quotes)) {
@@ -199,7 +212,9 @@ export function QuoteComparator({
         const sanitizedMatching = sanitizeQuotesList(partnerQuotes);
         setLocalQuotes((prev) => {
           const existingIds = new Set(prev.map((p) => p.id));
-          const newProposals = sanitizedMatching.filter((m) => !existingIds.has(m.id));
+          const newProposals = sanitizedMatching.filter(
+            (m) => !existingIds.has(m.id) && !deletedQuoteIdsRef.current.has(m.id)
+          );
           if (newProposals.length > 0) {
             const merged = [...prev, ...newProposals];
             if (onUpdateQuotes && rfq.id) {

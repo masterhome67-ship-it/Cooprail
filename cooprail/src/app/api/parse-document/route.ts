@@ -13,10 +13,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 });
     }
 
+    // Proteção contra DoS e esgotamento de memória (limite de 15MB)
+    const MAX_FILE_SIZE = 15 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: 'Arquivo excede o limite máximo permitido de 15MB.' },
+        { status: 413 }
+      );
+    }
+
+    const fileName = (file.name || '').toLowerCase();
+    const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.csv', '.txt'];
+    const hasAllowedExtension = allowedExtensions.some((ext) => fileName.endsWith(ext));
+
+    if (!hasAllowedExtension) {
+      return NextResponse.json(
+        { error: 'Extensão de arquivo não permitida. Envie arquivos nos formatos: PDF, PNG, JPG, CSV ou TXT.' },
+        { status: 415 }
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64Data = buffer.toString('base64');
-    const fileName = file.name.toLowerCase();
 
     let mimeType = file.type || 'application/pdf';
     if (fileName.endsWith('.pdf')) mimeType = 'application/pdf';

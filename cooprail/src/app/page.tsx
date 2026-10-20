@@ -28,6 +28,8 @@ import {
   defaultAccounts,
   loadUserWorkspace,
   saveUserWorkspace,
+  deletePublishedRFQ,
+  loadDemoDataIntoWorkspace,
   getActiveSessionUserId,
   setActiveSessionUserId,
   getRegisteredAccounts,
@@ -90,6 +92,7 @@ export default function Home() {
   const [lang, setLang] = useState<Language>('pt');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
+  const [loginInitialTab, setLoginInitialTab] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [currentUser, setCurrentUser] = useState<RegisteredAccount | null>(null);
   const [organization, setOrganization] = useState<Organization>(initialOrganization);
 
@@ -366,11 +369,30 @@ export default function Home() {
 
   const handleDeleteRFQ = (rfqId: string, rfqTitle: string) => {
     if (window.confirm(`Deseja realmente excluir a requisição "${rfqTitle}"?`)) {
+      const targetRfq = rfqs.find((r) => r.id === rfqId);
+      const targetCode = targetRfq?.code || rfqId;
+
       setRfqs((prev) => prev.filter((r) => r.id !== rfqId));
+      setTasks((prev) => prev.filter((t) => !t.id.includes(rfqId) && !t.title.includes(targetCode)));
+
       if (selectedRfqId === rfqId) {
         setSelectedRfqId('');
       }
-      showToast('Requisição de compra excluída.');
+
+      // Persiste a remoção permanente para não ressuscitar no reload
+      deletePublishedRFQ(rfqId, targetCode, currentUser?.id);
+
+      // Limpa do storage de parceiros do navegador
+      try {
+        const raw = localStorage.getItem('cooprail_partner_quotes');
+        if (raw) {
+          const list: any[] = JSON.parse(raw);
+          const filtered = list.filter((q) => q.rfq_id !== targetCode && q.rfq_code !== targetCode && q.rfq_id !== rfqId);
+          localStorage.setItem('cooprail_partner_quotes', JSON.stringify(filtered));
+        }
+      } catch {}
+
+      showToast('Requisição de compra excluída com sucesso.');
     }
   };
 
@@ -390,6 +412,16 @@ export default function Home() {
     setSelectedRfqId(rfqId);
     setActiveTab('comparator');
     showToast('Requisição carregada no Comparador de Cotações!');
+  };
+
+  const handleLoadDemoData = () => {
+    if (!currentUser) return;
+    const res = loadDemoDataIntoWorkspace(currentUser.id);
+    if (res) {
+      setRfqs((prev) => [res.rfq, ...prev]);
+      setTasks((prev) => [res.task, ...prev]);
+      showToast('Cotação guiada de exemplo (Umuarama/PR) carregada com sucesso!');
+    }
   };
 
   // Escuta atalho Cmd+K / Ctrl+K
@@ -708,11 +740,19 @@ export default function Home() {
         <LandingPage
           lang={lang}
           onToggleLang={setLang}
-          onOpenLogin={() => setIsLoginOpen(true)}
+          onOpenLogin={() => {
+            setLoginInitialTab('signin');
+            setIsLoginOpen(true);
+          }}
+          onOpenSignup={() => {
+            setLoginInitialTab('signup');
+            setIsLoginOpen(true);
+          }}
         />
 
         <LoginModal
           isOpen={isLoginOpen}
+          initialTab={loginInitialTab}
           onClose={() => setIsLoginOpen(false)}
           onLoginSuccess={handleLoginSuccess}
           lang={lang}
@@ -888,21 +928,36 @@ export default function Home() {
               </div>
 
               {rfqs.length === 0 ? (
-                <div className="p-8 text-center rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
-                  <FileText className="w-8 h-8 text-slate-400 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-700">Nenhum pedido de orçamento registrado ainda</p>
-                  <div className="flex items-center justify-center gap-2 pt-2">
+                <div className="p-8 text-center rounded-xl border border-slate-200 bg-white space-y-4 shadow-xs">
+                  <div className="w-12 h-12 rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center mx-auto text-[#0284c7]">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-slate-800">Nenhum pedido de orçamento registrado ainda</p>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      Seu espaço está 100% limpo e pronto para cotações da sua empresa. Você pode cadastrar uma requisição manual, importar planilha/PDF ou carregar uma cotação guiada de exemplo.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
                     <button
                       onClick={() => setIsCreateRFQOpen(true)}
-                      className="px-3.5 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold cursor-pointer shadow-xs"
+                      className="px-3.5 py-2 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold cursor-pointer shadow-xs transition-colors"
                     >
                       Criar RFQ Manualmente
                     </button>
                     <button
                       onClick={() => setIsUploadDocOpen(true)}
-                      className="px-3.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer shadow-xs"
+                      className="px-3.5 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer shadow-xs transition-colors"
                     >
                       Importar por Documento
+                    </button>
+                    <button
+                      onClick={handleLoadDemoData}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-semibold cursor-pointer shadow-xs transition-colors"
+                      title="Carrega a cotação de exemplo de Cimento CP-II em Umuarama/PR para testes guiados"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Carregar Cotação de Exemplo (Umuarama/PR)</span>
                     </button>
                   </div>
                 </div>
