@@ -207,6 +207,81 @@ export async function ensureDemoAccount(): Promise<RegisteredAccount> {
   });
 }
 
+// Purga proativa de dados mockados e de exemplo residuais no navegador do usuário
+export function purgeLegacyMockDataFromLocalStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    // 1. Limpa SHARED_RFQS_KEY
+    const rawShared = localStorage.getItem(SHARED_RFQS_KEY);
+    if (rawShared) {
+      const shared: PublishedRFQ[] = JSON.parse(rawShared);
+      if (Array.isArray(shared)) {
+        const cleaned = shared.filter(
+          (s) =>
+            s &&
+            s.id !== 'rfq-umu-cimento-01' &&
+            s.code !== 'RFQ-2026-UMU-01' &&
+            !s.id?.toLowerCase().includes('umu') &&
+            !s.code?.toLowerCase().includes('umu') &&
+            !s.title?.toLowerCase().includes('umuarama') &&
+            !s.scope_description?.toLowerCase().includes('umuarama') &&
+            !s.code?.toLowerCase().includes('copacol') &&
+            !s.title?.toLowerCase().includes('copacol') &&
+            !s.title?.toLowerCase().includes('preciso que estruture')
+        );
+        localStorage.setItem(SHARED_RFQS_KEY, JSON.stringify(cleaned));
+      }
+    }
+
+    // 2. Limpa todos os tenants de usuário no localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('cooprail_workspace_tenant_')) {
+        const val = localStorage.getItem(k);
+        if (val) {
+          const ws: UserWorkspaceData = JSON.parse(val);
+          let modified = false;
+          if (Array.isArray(ws.rfqs)) {
+            const before = ws.rfqs.length;
+            ws.rfqs = ws.rfqs.filter(
+              (r) =>
+                r &&
+                r.id !== 'rfq-umu-cimento-01' &&
+                r.code !== 'RFQ-2026-UMU-01' &&
+                !r.id?.toLowerCase().includes('umu') &&
+                !r.code?.toLowerCase().includes('umu') &&
+                !r.title?.toLowerCase().includes('umuarama') &&
+                !r.scope_description?.toLowerCase().includes('umuarama') &&
+                !r.title?.toLowerCase().includes('copacol') &&
+                !r.code?.toLowerCase().includes('copacol') &&
+                !r.title?.toLowerCase().includes('preciso que estruture')
+            );
+            if (ws.rfqs.length !== before) modified = true;
+          }
+          if (Array.isArray(ws.tasks)) {
+            const beforeT = ws.tasks.length;
+            ws.tasks = ws.tasks.filter(
+              (t) =>
+                t &&
+                !t.id?.toLowerCase().includes('umu') &&
+                !t.title?.toLowerCase().includes('umuarama') &&
+                !t.description?.toLowerCase().includes('umuarama') &&
+                !t.title?.toLowerCase().includes('copacol') &&
+                !t.description?.toLowerCase().includes('copacol')
+            );
+            if (ws.tasks.length !== beforeT) modified = true;
+          }
+          if (modified) {
+            localStorage.setItem(k, JSON.stringify(ws));
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Erro na purga de dados legados:', e);
+  }
+}
+
 // Carregar workspace isolado do usuário
 export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
   if (typeof window === 'undefined') {
@@ -224,6 +299,9 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
     };
   }
 
+  // Purga proativamente dados residuais de exemplo do navegador
+  purgeLegacyMockDataFromLocalStorage();
+
   const key = getWorkspaceStorageKey(user.id);
   const raw = localStorage.getItem(key);
 
@@ -234,25 +312,47 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
         parsed.deleted_rfq_ids = [];
       }
 
+      // PURGA INCONDICIONAL DE RFQs E TAREFAS DE EXEMPLO/MOCK (Umuarama/Copacol)
+      if (parsed.rfqs && Array.isArray(parsed.rfqs)) {
+        parsed.rfqs = parsed.rfqs.filter(
+          (r) =>
+            r &&
+            r.id !== 'rfq-umu-cimento-01' &&
+            r.code !== 'RFQ-2026-UMU-01' &&
+            !r.id?.toLowerCase().includes('umu') &&
+            !r.code?.toLowerCase().includes('umu') &&
+            !r.title?.toLowerCase().includes('umuarama') &&
+            !r.scope_description?.toLowerCase().includes('umuarama') &&
+            !r.title?.toLowerCase().includes('copacol') &&
+            !r.code?.toLowerCase().includes('copacol') &&
+            !r.title?.toLowerCase().includes('preciso que estruture')
+        );
+      }
+      if (parsed.tasks && Array.isArray(parsed.tasks)) {
+        parsed.tasks = parsed.tasks.filter(
+          (t) =>
+            t &&
+            !t.id?.toLowerCase().includes('umu') &&
+            !t.title?.toLowerCase().includes('umuarama') &&
+            !t.description?.toLowerCase().includes('umuarama') &&
+            !t.title?.toLowerCase().includes('copacol') &&
+            !t.description?.toLowerCase().includes('copacol')
+        );
+      }
+
       // Se for primeira inicialização de usuário novo/legado sem a flag
       if (!parsed.is_initialized) {
         parsed.is_initialized = true;
-        if (!parsed.rfqs || parsed.rfqs.length === 0) {
-          parsed.rfqs = [DEFAULT_PUBLISHED_RFQS[0]];
-        }
         localStorage.setItem(key, JSON.stringify(parsed));
       } else {
-        // Se já foi inicializado: RESPEITA a deleção do usuário!
-        // Filtra quaisquer RFQs que estejam na lista de excluídos
+        // Respeita a deleção do usuário
         if (parsed.rfqs && parsed.deleted_rfq_ids.length > 0) {
-          const filtered = parsed.rfqs.filter(
+          parsed.rfqs = parsed.rfqs.filter(
             (r) => !parsed.deleted_rfq_ids!.includes(r.id) && !parsed.deleted_rfq_ids!.includes(r.code)
           );
-          if (filtered.length !== parsed.rfqs.length) {
-            parsed.rfqs = filtered;
-            localStorage.setItem(key, JSON.stringify(parsed));
-          }
         }
+        localStorage.setItem(key, JSON.stringify(parsed));
+      }
 
         // Limpa quaisquer propostas sintéticas/mockadas residuais
         let changed = false;
@@ -281,7 +381,6 @@ export function loadUserWorkspace(user: RegisteredAccount): UserWorkspaceData {
         if (changed) {
           localStorage.setItem(key, JSON.stringify(parsed));
         }
-      }
 
       // Limpa consultas e respostas anteriores para iniciar nova pesquisa do zero
       if (parsed.chatMessages && parsed.chatMessages.length > 0) {
@@ -486,30 +585,32 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
   }
 }
 
+export const EMPTY_PUBLISHED_RFQ: PublishedRFQ = {
+  id: 'rfq-none',
+  code: 'SEM-RFQ',
+  title: 'Nenhuma Cotação Selecionada',
+  scope_description: 'Nenhum edital ou cotação ativa no momento.',
+  status: 'published',
+  deadline: 'A definir',
+  target_delivery_date: 'A definir',
+  estimated_budget: 0,
+  items: [],
+  quotes: [],
+  location: 'Local a combinar',
+};
+
 export function getPublishedRFQByCode(code?: string | null): PublishedRFQ {
   const all = getAllPublishedRFQs();
   if (all.length === 0) {
-    return DEFAULT_PUBLISHED_RFQS[0];
+    return EMPTY_PUBLISHED_RFQ;
   }
   if (!code) {
-    const umu = all.find((r) => r.code.includes('UMU') || r.title.toLowerCase().includes('cimento'));
-    return umu || all[0];
+    return all[0];
   }
 
   const clean = code.trim().toLowerCase();
-  const direct = all.find((r) => r.code.toLowerCase() === clean);
+  const direct = all.find((r) => r.code.toLowerCase() === clean || r.id.toLowerCase() === clean);
   if (direct) return direct;
-
-  if (clean.includes('umu') || clean.includes('cimento')) {
-    const umuMatch = all.find(
-      (r) => r.code.includes('UMU') || r.title.toLowerCase().includes('cimento')
-    );
-    if (umuMatch) return umuMatch;
-  }
-  if (clean.includes('copacol') || clean.includes('cafel')) {
-    const copMatch = all.find((r) => r.code.includes('COPACOL'));
-    if (copMatch) return copMatch;
-  }
 
   return all[0];
 }

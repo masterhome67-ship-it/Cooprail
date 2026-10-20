@@ -132,9 +132,9 @@ function SupplierPortalContent() {
   const searchParams = useSearchParams();
   const rawRfqParam = searchParams.get('rfq');
 
-  // Cotação ativa carregada dinamicamente (Umuarama cimento, Copacol ou criada no sistema)
+  // Cotação ativa carregada dinamicamente
   const [availableRfqs, setAvailableRfqs] = useState<PublishedRFQ[]>([]);
-  const [selectedRfqCode, setSelectedRfqCode] = useState<string>(rawRfqParam || 'RFQ-2026-UMU-01');
+  const [selectedRfqCode, setSelectedRfqCode] = useState<string>(rawRfqParam || '');
   const [activeRfq, setActiveRfq] = useState<PublishedRFQ>(() => getPublishedRFQByCode(rawRfqParam));
 
   // Modalidade de Fornecimento Selecionada pelo Parceiro

@@ -178,8 +178,26 @@ export default function Home() {
     setActiveSessionUserId(account.id);
     const ws = loadUserWorkspace(account);
     setOrganization(ws.organization);
-    setTasks(ws.tasks);
-    setRfqs(ws.rfqs);
+    const cleanTasks = (ws.tasks || []).filter(
+      (t) =>
+        t &&
+        !t.id?.toLowerCase().includes('umu') &&
+        !t.title?.toLowerCase().includes('umuarama') &&
+        !t.description?.toLowerCase().includes('umuarama') &&
+        !t.title?.toLowerCase().includes('copacol')
+    );
+    const cleanRfqs = (ws.rfqs || []).filter(
+      (r) =>
+        r &&
+        r.id !== 'rfq-umu-cimento-01' &&
+        r.code !== 'RFQ-2026-UMU-01' &&
+        !r.id?.toLowerCase().includes('umu') &&
+        !r.code?.toLowerCase().includes('umu') &&
+        !r.title?.toLowerCase().includes('umuarama') &&
+        !r.title?.toLowerCase().includes('copacol')
+    );
+    setTasks(cleanTasks);
+    setRfqs(cleanRfqs);
     setOrders(ws.orders);
     setSectors(ws.sectors);
     setChatMessages(ws.chatMessages);
@@ -238,8 +256,26 @@ export default function Home() {
         setCurrentUser(user);
         const ws = loadUserWorkspace(user);
         setOrganization(ws.organization);
-        setTasks(ws.tasks);
-        setRfqs(ws.rfqs);
+        const cleanTasks = (ws.tasks || []).filter(
+          (t) =>
+            t &&
+            !t.id?.toLowerCase().includes('umu') &&
+            !t.title?.toLowerCase().includes('umuarama') &&
+            !t.description?.toLowerCase().includes('umuarama') &&
+            !t.title?.toLowerCase().includes('copacol')
+        );
+        const cleanRfqs = (ws.rfqs || []).filter(
+          (r) =>
+            r &&
+            r.id !== 'rfq-umu-cimento-01' &&
+            r.code !== 'RFQ-2026-UMU-01' &&
+            !r.id?.toLowerCase().includes('umu') &&
+            !r.code?.toLowerCase().includes('umu') &&
+            !r.title?.toLowerCase().includes('umuarama') &&
+            !r.title?.toLowerCase().includes('copacol')
+        );
+        setTasks(cleanTasks);
+        setRfqs(cleanRfqs);
         setOrders(ws.orders);
         setSectors(ws.sectors);
         setChatMessages(ws.chatMessages);
