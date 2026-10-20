@@ -688,21 +688,30 @@ function SupplierPortalContent() {
           )}
 
           {/* Seletor de Cotação Ativa */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-400 text-[10px] hidden md:inline">Cotação:</span>
-            <select
-              value={selectedRfqCode}
-              onChange={(e) => setSelectedRfqCode(e.target.value)}
-              className="bg-slate-100 hover:bg-slate-200/80 border border-slate-300 text-slate-800 font-mono text-[11px] font-bold px-2 py-1 rounded cursor-pointer outline-none transition-colors max-w-[200px] sm:max-w-[280px] truncate"
-              title="Alternar cotação ativa"
-            >
-              {availableRfqs.map((r) => (
-                <option key={r.code} value={r.code}>
-                  {r.code} • {r.title}
-                </option>
-              ))}
-            </select>
-          </div>
+          {availableRfqs.length > 1 ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-400 text-[10px] hidden md:inline">Cotação:</span>
+              <select
+                value={selectedRfqCode}
+                onChange={(e) => setSelectedRfqCode(e.target.value)}
+                className="bg-slate-100 hover:bg-slate-200/80 border border-slate-300 text-slate-800 font-mono text-[11px] font-bold px-2 py-1 rounded cursor-pointer outline-none transition-colors max-w-[200px] sm:max-w-[280px] truncate"
+                title="Alternar cotação ativa"
+              >
+                {availableRfqs.map((r) => (
+                  <option key={r.code} value={r.code}>
+                    {r.code} • {r.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-400 text-[10px] hidden md:inline">Cotação:</span>
+              <span className="bg-sky-50 border border-sky-200 text-[#0284c7] font-mono text-[11px] font-bold px-2.5 py-1 rounded max-w-[240px] truncate">
+                {activeRfq.code}
+              </span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -731,17 +740,23 @@ function SupplierPortalContent() {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Demanda / Cotação Selecionada
                 </label>
-                <select
-                  value={selectedRfqCode}
-                  onChange={(e) => setSelectedRfqCode(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#0284c7] cursor-pointer"
-                >
-                  {availableRfqs.map((r) => (
-                    <option key={r.code} value={r.code}>
-                      {r.code} — {r.title}
-                    </option>
-                  ))}
-                </select>
+                {availableRfqs.length > 1 ? (
+                  <select
+                    value={selectedRfqCode}
+                    onChange={(e) => setSelectedRfqCode(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#0284c7] cursor-pointer"
+                  >
+                    {availableRfqs.map((r) => (
+                      <option key={r.code} value={r.code}>
+                        {r.code} — {r.title}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800">
+                    {activeRfq.code} — {activeRfq.title}
+                  </div>
+                )}
               </div>
 
               {/* Campo CNPJ + Consulta Receita */}

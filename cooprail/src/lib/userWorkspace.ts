@@ -381,68 +381,6 @@ export const DEFAULT_PUBLISHED_RFQS: PublishedRFQ[] = [
     location: 'Umuarama - PR',
     hasCopacolDrawings: false,
   },
-  {
-    id: 'rfq-copacol-01',
-    code: 'RFQ-2026-COPACOL-01',
-    title:
-      'Substituição Parcial de Tubulação da Rede de Águas Pluviais da Indústria de Cafelândia - PR',
-    scope_description:
-      'Contratação de empresa de engenharia para execução de valas, caixas de inspeção estruturadas, assentamento de 740m de tubos PEAD DN 1.000mm e canal de descida 3x3m na Unidade Industrial da Copacol em Cafelândia/PR.',
-    status: 'published',
-    deadline: 'Em 48 horas',
-    target_delivery_date: 'Conclusão em 45 dias',
-    estimated_budget: 185000,
-    items: [
-      {
-        id: 'cop-1',
-        item_name: 'Escavação de Vala para Drenagem',
-        specification:
-          '370m lineares, 1,5m prof. x 2,5m larg. Fornecido pela Contratada.',
-        quantity: 370,
-        unit: 'm lineares',
-        target_unit_price: 95.0,
-      },
-      {
-        id: 'cop-2',
-        item_name: 'Execução de 05 Caixas de Inspeção Estruturadas',
-        specification:
-          '2,50m x 1,50m x 2,00m prof., bloco dissipador em concreto 70cm sobre estaca armada.',
-        quantity: 5,
-        unit: 'unidades',
-        target_unit_price: 11000.0,
-      },
-      {
-        id: 'cop-3',
-        item_name: 'Locação e Assentamento de Tubos PEAD DN 1000mm',
-        specification:
-          '740m lineares. Material PEAD fornecido pela Copacol (Contratante). Cotação de mão de obra e maquinário.',
-        quantity: 740,
-        unit: 'm lineares',
-        target_unit_price: 65.0,
-      },
-      {
-        id: 'cop-4',
-        item_name: 'Reaterro de Vala e Regularização do Solo',
-        specification:
-          '370 metros de extensão com compactação mecânica em camadas sucessivas.',
-        quantity: 1,
-        unit: 'serviço global',
-        target_unit_price: 28000.0,
-      },
-      {
-        id: 'cop-5',
-        item_name: 'Execução de Canal de Descida Revestido em Concreto',
-        specification:
-          'Canal 3,00m x 3,00m em concreto armado 10cm com malha até corpo receptor.',
-        quantity: 1,
-        unit: 'estrutura',
-        target_unit_price: 38000.0,
-      },
-    ],
-    quotes: [],
-    location: 'Cafelândia - PR (Unidade Industrial Copacol)',
-    hasCopacolDrawings: true,
-  },
 ];
 
 const SHARED_RFQS_KEY = 'cooprail_shared_rfqs_v1';
@@ -514,6 +452,10 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
     const shared: PublishedRFQ[] = raw ? JSON.parse(raw) : [];
 
     const globalDeletedIds = new Set<string>();
+    // Bloqueia permanentemente resquícios de Copacol e IDs deletados
+    globalDeletedIds.add('rfq-copacol-01');
+    globalDeletedIds.add('RFQ-2026-COPACOL-01');
+
     const rawDeleted = localStorage.getItem('cooprail_deleted_rfq_ids');
     if (rawDeleted) {
       try {
@@ -534,7 +476,17 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
               parsed.deleted_rfq_ids.forEach((id: string) => globalDeletedIds.add(id));
             }
             if (Array.isArray(parsed.rfqs)) {
-              tenantRfqs.push(...parsed.rfqs);
+              // Somente RFQs com status 'published' explícito (NUNCA rascunhos) e sem Copacol
+              const publishedOnly = parsed.rfqs.filter(
+                (r: any) =>
+                  r.status === 'published' &&
+                  !r.code?.toLowerCase().includes('copacol') &&
+                  !r.title?.toLowerCase().includes('copacol') &&
+                  !r.title?.toLowerCase().includes('preciso que estruture') &&
+                  !globalDeletedIds.has(r.id) &&
+                  !globalDeletedIds.has(r.code)
+              );
+              tenantRfqs.push(...publishedOnly);
             }
           }
         } catch {}
@@ -543,20 +495,46 @@ export function getAllPublishedRFQs(): PublishedRFQ[] {
 
     const map = new Map<string, PublishedRFQ>();
     DEFAULT_PUBLISHED_RFQS.forEach((d) => {
-      if (!globalDeletedIds.has(d.id) && !globalDeletedIds.has(d.code)) {
+      if (
+        !globalDeletedIds.has(d.id) &&
+        !globalDeletedIds.has(d.code) &&
+        !d.code.toLowerCase().includes('copacol') &&
+        !d.title.toLowerCase().includes('copacol')
+      ) {
         map.set(d.code, d);
       }
     });
+
     tenantRfqs.forEach((t) => {
-      if (t.code && !globalDeletedIds.has(t.id) && !globalDeletedIds.has(t.code)) {
+      if (
+        t.code &&
+        t.status === 'published' &&
+        !globalDeletedIds.has(t.id) &&
+        !globalDeletedIds.has(t.code) &&
+        !t.code.toLowerCase().includes('copacol') &&
+        !t.title.toLowerCase().includes('copacol')
+      ) {
         map.set(t.code, { ...map.get(t.code), ...t });
       }
     });
-    shared.forEach((s) => {
-      if (s.code && !globalDeletedIds.has(s.id) && !globalDeletedIds.has(s.code)) {
-        map.set(s.code, { ...map.get(s.code), ...s });
-      }
+
+    const validShared = shared.filter(
+      (s) =>
+        s.code &&
+        s.status === 'published' &&
+        !globalDeletedIds.has(s.id) &&
+        !globalDeletedIds.has(s.code) &&
+        !s.code.toLowerCase().includes('copacol') &&
+        !s.title.toLowerCase().includes('copacol') &&
+        !s.title.toLowerCase().includes('preciso que estruture')
+    );
+    validShared.forEach((s) => {
+      map.set(s.code, { ...map.get(s.code), ...s });
     });
+
+    if (raw && validShared.length !== shared.length) {
+      localStorage.setItem(SHARED_RFQS_KEY, JSON.stringify(validShared));
+    }
 
     return Array.from(map.values());
   } catch {
