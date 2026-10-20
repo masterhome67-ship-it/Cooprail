@@ -101,7 +101,9 @@ export function LoginModal({
     setLoading(true);
     setErrorMsg(null);
 
-    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const googleClientId =
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+      '1055689936073-mh4d40hb2rch5cs3h81g5sbk138t64e0.apps.googleusercontent.com';
     if (!googleClientId) {
       setLoading(false);
       setErrorMsg(
