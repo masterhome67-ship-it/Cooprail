@@ -3,9 +3,9 @@ export type Language = 'pt' | 'en';
 export const translations = {
   pt: {
     // Landing Page Navigation
-    navOnSite: 'Funcionalidades',
+    navOnSite: 'Diferenciais',
     navGovernance: 'Governança',
-    navHowItWorks: 'Modelo Operacional',
+    navHowItWorks: 'Como funciona',
     navFaq: 'Dúvidas Frequentes',
     navEnter: 'Acessar Plataforma',
     navSignIn: 'Entrar',
@@ -57,7 +57,7 @@ export const translations = {
     diff1Desc:
       'Suba arquivos em PDF ou planilhas de projetos. Nossa Inteligência Artificial identifica escopos, quantitativos e normas regulatórias em segundos, eliminando a digitação manual.',
     diff1Bullet1: 'Extração instantânea de itens, tolerâncias e memoriais de cálculo',
-    diff1Bullet2: 'Zero cotações fictícias: demandas reais formatadas para concorrência',
+    diff1Bullet2: 'Demandas reais, prontas para concorrência',
     diff1Bullet3: 'Dossiê técnico padronizado pronto para envio imediato aos fornecedores',
 
     // Diferencial 2: Equalização Automática de Propostas
@@ -77,6 +77,7 @@ export const translations = {
     diff3Bullet1: 'Abertura rápida de chamados com fotos e especificações in-loco',
     diff3Bullet2: 'Mesa de suprimentos centraliza a negociação e concorrência comercial',
     diff3Bullet3: 'Rastreabilidade com data, hora e responsável por cada liberação',
+    diffLinkWorkflow: 'Ver no fluxo completo',
 
     // 2.4 Funcionalidades de Apoio (4 Colunas)
     supportHeading: 'RECURSOS DE APOIO',
@@ -94,7 +95,7 @@ export const translations = {
       'Custódia financeira flexível (Smart Escrow): os recursos ficam protegidos e só são liberados após o aceite técnico.',
     support4Title: 'Trilha de Auditoria',
     support4Desc:
-      'Histórico imutável de acessos, cotações recebidas, pareceres e assinaturas digitais com conformidade corporativa.',
+      'Histórico completo e rastreável de acessos, cotações recebidas, pareceres técnicos e aprovações corporativas.',
 
     // 2.6 FAQ Reformulado (Acordeão)
     faqHeading: 'TIRA-DÚVIDAS',
@@ -141,9 +142,9 @@ export const translations = {
 
   en: {
     // Landing Page Navigation
-    navOnSite: 'Features',
+    navOnSite: 'Differentiators',
     navGovernance: 'Governance',
-    navHowItWorks: 'Operating Model',
+    navHowItWorks: 'How it works',
     navFaq: 'FAQ',
     navEnter: 'Launch Platform',
     navSignIn: 'Sign In',
@@ -195,7 +196,7 @@ export const translations = {
     diff1Desc:
       'Upload technical PDFs and project spreadsheets. Our AI parses scopes, bill-of-quantities, and regulatory standards in seconds, eliminating manual data entry.',
     diff1Bullet1: 'Instant parsing of technical scopes, tables, and tolerances',
-    diff1Bullet2: 'Zero fictitious data: genuine demands structured for market bidding',
+    diff1Bullet2: 'Genuine demands, structured for competitive bidding',
     diff1Bullet3: 'Standardized bidding dossier ready for immediate vendor dispatch',
 
     // Differential 2: Automated Proposal Equalization
@@ -215,6 +216,7 @@ export const translations = {
     diff3Bullet1: 'Fast mobile ticket creation with on-site photos and specs',
     diff3Bullet2: 'Central procurement desk conducts commercial negotiations',
     diff3Bullet3: 'Complete audit trail with timestamps and sign-off identification',
+    diffLinkWorkflow: 'View full workflow',
 
     // 2.4 Support Features (4 Columns)
     supportHeading: 'SUPPORT CAPABILITIES',
@@ -232,7 +234,7 @@ export const translations = {
       'Flexible escrow protection: funds stay locked and are only released after formal site delivery acceptance.',
     support4Title: 'Tamper-Proof Audit Trail',
     support4Desc:
-      'Immutable logs of RFQ submissions, technical reviews, and digital sign-offs for oversight committees.',
+      'Complete and traceable audit trail of RFQ submissions, technical reviews, and managerial sign-offs.',
 
     // 2.6 Revamped FAQ (Accordion)
     faqHeading: 'FAQ',

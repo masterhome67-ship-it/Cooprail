@@ -183,7 +183,7 @@ export function WorkflowShowcase({ lang = 'pt' }: { lang?: 'pt' | 'en' }) {
   const current = lang === 'en' ? stepDef.en : stepDef.pt;
 
   return (
-    <section id="comofunciona" className="py-24 bg-[#f8fafc] border-t border-slate-200 px-6 lg:px-12 scroll-mt-16">
+    <section id="comofunciona" className="py-24 bg-[#f8fafc] border-t border-slate-200 px-6 lg:px-12 scroll-mt-20">
       <div className="max-w-6xl mx-auto space-y-12">
         {/* Cabeçalho */}
         <div className="text-center space-y-3 max-w-3xl mx-auto">
@@ -204,7 +204,7 @@ export function WorkflowShowcase({ lang = 'pt' }: { lang?: 'pt' | 'en' }) {
 
         {/* Barra de Passos Interativa: Carrossel Horizontal com Indicadores no Mobile e Grade de 5 no Desktop */}
         <div className="space-y-3">
-          <div className="flex sm:grid sm:grid-cols-5 gap-2.5 sm:gap-3 p-2 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory">
+          <div className="flex flex-nowrap sm:grid sm:grid-cols-5 gap-2.5 sm:gap-3 p-2 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory">
             {STEP_DEFINITIONS.map((def, idx) => {
               const StepIcon = def.icon;
               const stepContent = lang === 'en' ? def.en : def.pt;

@@ -14,8 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cooprail • Gestão de Suprimentos Industriais & Pagamentos B2B",
-  description: "Plataforma corporativa de suprimentos com mapeamento de prestadores in-loco, governança de chamados de campo e pagamentos garantidos.",
+  title: "Cooprail • Cotações e suprimentos para obras e indústria",
+  description: "Plataforma inteligente de suprimentos para obras e indústria. Cotações integradas, equalização técnica automática e governança rigorosa de chamados de campo.",
+  openGraph: {
+    title: "Cooprail • Cotações e suprimentos para obras e indústria",
+    description: "Plataforma inteligente de suprimentos para obras e indústria. Cotações integradas, equalização técnica automática e governança rigorosa de chamados de campo.",
+  },
 };
 
 export default function RootLayout({

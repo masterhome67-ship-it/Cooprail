@@ -18,6 +18,8 @@ import {
   BarChart3,
   CheckCheck,
   Globe,
+  Menu,
+  X,
 } from 'lucide-react';
 import { Language, translations } from '@/lib/translations';
 import { WorkflowShowcase } from '@/components/WorkflowShowcase';
@@ -32,6 +34,7 @@ interface LandingPageProps {
 export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: LandingPageProps) {
   const t = translations[lang];
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 
   return (
@@ -100,16 +103,80 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
 
           <button
             onClick={onOpenLogin}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all cursor-pointer"
+            className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all cursor-pointer"
           >
             <span>{t.navEnter}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
+
+          {/* Botão Hambúrguer Mobile */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Menu principal"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </header>
 
+      {/* Menu Mobile Drawer Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden sticky top-16 z-30 bg-white/98 backdrop-blur-md border-b border-slate-200 px-6 py-5 shadow-lg space-y-3">
+          <nav className="flex flex-col gap-2 font-semibold text-sm text-slate-700">
+            <a
+              href="#diferenciais"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="py-2.5 px-3 rounded-lg hover:bg-sky-50 hover:text-[#0284c7] transition-colors"
+            >
+              {t.navOnSite}
+            </a>
+            <a
+              href="#governanca"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="py-2.5 px-3 rounded-lg hover:bg-sky-50 hover:text-[#0284c7] transition-colors"
+            >
+              {t.navGovernance}
+            </a>
+            <a
+              href="#comofunciona"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="py-2.5 px-3 rounded-lg hover:bg-sky-50 hover:text-[#0284c7] transition-colors"
+            >
+              {t.navHowItWorks}
+            </a>
+            <a
+              href="/portal-parceiro"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-sky-50 border border-sky-200 text-[#0284c7] font-bold"
+            >
+              <div className="flex items-center gap-2">
+                <ExternalLink className="w-4 h-4" />
+                <span>{t.heroCtaSupplier}</span>
+              </div>
+              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-sky-100">Portal</span>
+            </a>
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onOpenLogin();
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold text-center shadow-md shadow-sky-600/20"
+              >
+                {t.navEnter}
+              </button>
+            </div>
+          </nav>
+        </div>
+      )}
+
       {/* 2. Hero Section Moderna em Duas Colunas com Fundo Fluido & Mockup 3D */}
-      <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-sky-50/70 via-white to-[#f8fafc] border-b border-slate-200/80 pt-16 lg:pt-20 pb-12 lg:pb-14 scroll-mt-16">
+      <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-sky-50/70 via-white to-[#f8fafc] border-b border-slate-200/80 pt-16 lg:pt-20 pb-12 lg:pb-14 scroll-mt-20">
         {/* Elementos Decorativos de Fundo (Gradientes Suaves & Formas Fluidas SaaS) */}
         <div className="absolute -top-32 -right-32 w-[620px] h-[620px] rounded-full bg-gradient-to-br from-sky-200/50 via-sky-100/25 to-transparent blur-3xl pointer-events-none" />
         <div className="absolute top-1/2 -left-40 w-[540px] h-[540px] rounded-full bg-gradient-to-tr from-sky-100/40 via-indigo-50/30 to-transparent blur-3xl pointer-events-none" />
@@ -121,8 +188,8 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
             <div className="flex flex-col gap-6 lg:gap-8 text-left max-w-xl">
               {/* Título Principal Alinhado à Esquerda com Peso 900 (font-black), leading-[1.12] e degradê uniforme nas duas palavras */}
               <h1
-                style={{ fontWeight: 900 }}
-                className="text-3xl sm:text-4xl md:text-5xl lg:text-[46px] xl:text-[50px] font-black tracking-tight text-slate-900 leading-[1.12]"
+                style={{ fontWeight: 900, textWrap: 'balance' }}
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-[46px] xl:text-[50px] font-black tracking-tight text-slate-900 leading-[1.12] [text-wrap:balance]"
               >
                 {t.heroTitlePrefix}
                 <span className="bg-gradient-to-r from-[#0284c7] to-[#0369a1] bg-clip-text text-transparent block sm:inline">
@@ -495,7 +562,7 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
       </section>
 
       {/* 2.2 Três Diferenciais em Destaque (Layout Zig-Zag) */}
-      <section id="diferenciais" className="py-24 border-t border-slate-200 bg-[#f8fafc] px-6 lg:px-12 space-y-24 scroll-mt-16">
+      <section id="diferenciais" className="py-24 border-t border-slate-200 bg-[#f8fafc] px-6 lg:px-12 space-y-24 scroll-mt-20">
         <div className="max-w-6xl mx-auto space-y-20">
           {/* Cabeçalho da Seção de Diferenciais */}
           <div className="text-center space-y-3 max-w-3xl mx-auto">
@@ -539,11 +606,11 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
               </div>
               <div className="pt-2">
                 <a
-                  href="#hero"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all cursor-pointer"
+                  href="#comofunciona"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-bold transition-all shadow-xs cursor-pointer group"
                 >
-                  <span>{t.heroCtaPrimary}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>{t.diffLinkWorkflow}</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </a>
               </div>
             </div>
@@ -657,7 +724,7 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
                     <span className="text-xs md:text-sm font-extrabold text-emerald-700 block font-mono">
                       R$ 84.500
                     </span>
-                    <span className="text-[9px] text-emerald-600 font-semibold font-mono">100% Conforme</span>
+                    <span className="text-[9px] text-emerald-600 font-semibold font-mono">{lang === 'pt' ? '98% Conforme' : '98% Compliant'}</span>
                   </div>
                 </div>
 
@@ -746,18 +813,18 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
               </div>
               <div className="pt-2">
                 <a
-                  href="#hero"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all cursor-pointer"
+                  href="#comofunciona"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-bold transition-all shadow-xs cursor-pointer group"
                 >
-                  <span>{t.heroCtaPrimary}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>{t.diffLinkWorkflow}</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </a>
               </div>
             </div>
           </div>
 
           {/* Diferencial 3: Segregação Canteiro × Compras (Texto na Esquerda, Mockup Split na Direita) */}
-          <div id="governanca" className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center scroll-mt-16 pt-4">
+          <div id="governanca" className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center scroll-mt-20 pt-4">
             {/* Coluna Texto */}
             <div className="space-y-6">
               <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
@@ -785,11 +852,11 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
               </div>
               <div className="pt-2">
                 <a
-                  href="#hero"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all cursor-pointer"
+                  href="#comofunciona"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[#0284c7] text-xs font-bold transition-all shadow-xs cursor-pointer group"
                 >
-                  <span>{t.heroCtaPrimary}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>{t.diffLinkWorkflow}</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </a>
               </div>
             </div>
@@ -948,7 +1015,7 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
       })()}
 
       {/* 2.6 FAQ Reformulado (Acordeão Acessível) */}
-      <section id="faq" className="py-20 border-t border-slate-200 bg-[#f8fafc] px-6 lg:px-12 scroll-mt-16">
+      <section id="faq" className="py-20 border-t border-slate-200 bg-[#f8fafc] px-6 lg:px-12 scroll-mt-20">
         <div className="max-w-4xl mx-auto space-y-10">
           <div className="text-center space-y-3 max-w-2xl mx-auto">
             <span className="text-[11px] font-mono font-bold text-[#0284c7] uppercase tracking-wider bg-sky-50 px-3 py-1 rounded-full border border-sky-200 inline-block">
@@ -1020,7 +1087,7 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
       </section>
 
       {/* 2.7 CTA Final com Alto Impacto Visual (Destino da âncora #contato) */}
-      <section id="contato" className="py-24 border-t border-slate-200 px-6 lg:px-12 text-center bg-gradient-to-b from-white to-sky-50/50 scroll-mt-16">
+      <section id="contato" className="py-24 border-t border-slate-200 px-6 lg:px-12 text-center bg-gradient-to-b from-white to-sky-50/50 scroll-mt-20">
         <div className="max-w-3xl mx-auto space-y-8">
           <img
             src="/cooprail-logo.png"
@@ -1034,21 +1101,21 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
             {t.ctaFinalSubtitle}
           </p>
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-            {/* CTA Primário: Solicitar demonstração (Rola suavemente para o topo do hero) */}
-            {/* TODO: Usuário informará canal de contato real (e-mail comercial, formulário ou WhatsApp). Até lá, o botão rola suavemente para o topo do hero. */}
+            {/* CTA Primário Consolidado: Contato / Demonstração */}
             <a
-              href="#hero"
+              href="mailto:contato@cooprail.com.br?subject=Solicitar%20Demonstra%C3%A7%C3%A3o%20Cooprail"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] text-white text-xs md:text-sm font-bold shadow-lg shadow-sky-600/30 hover:shadow-sky-600/40 hover:-translate-y-0.5 transition-all cursor-pointer group"
             >
               <span>{t.heroCtaPrimary}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
             </a>
-            <a
-              href="#diferenciais"
+            <button
+              type="button"
+              onClick={onOpenLogin}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs md:text-sm font-bold transition-all shadow-xs hover:-translate-y-0.5 cursor-pointer"
             >
-              <span>{t.heroCtaSecondary}</span>
-            </a>
+              <span>{t.navEnter}</span>
+            </button>
           </div>
         </div>
       </section>
@@ -1078,7 +1145,7 @@ export function LandingPage({ lang, onToggleLang, onOpenLogin, onEnterDemo }: La
           <span>{t.footerSub}</span>
           <span>•</span>
           <span className="font-semibold text-[#0284c7]">
-            {lang === 'pt' ? 'Disponível em Nuvem 24/7' : 'Cloud Available 24/7'}
+            {lang === 'pt' ? 'Plataforma 100% web' : '100% web platform'}
           </span>
         </div>
       </footer>
