@@ -125,7 +125,7 @@ export async function executeMultiModelChat(payload: AIRequestPayload): Promise<
  * Chamada Multimodal ao Gemini (Texto + Foto de Peça)
  */
 async function callGeminiVision(payload: AIRequestPayload, apiKey: string): Promise<AIResponsePayload | null> {
-  const models = ['gemini-3.8-flash', 'gemini-3-flash-preview', 'gemini-flash-latest'];
+  const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
   const cleanBase64 = payload.imageBase64?.replace(/^data:image\/\w+;base64,/, '') || '';
   const mimeType = payload.imageMimeType || 'image/jpeg';
 
@@ -203,7 +203,7 @@ Responda em português com linguagem executiva e técnica.`;
  * Chamada de Texto ao Gemini para busca e diagnóstico técnico de mercado
  */
 async function callGemini(payload: AIRequestPayload, apiKey: string): Promise<AIResponsePayload | null> {
-  const models = ['gemini-3.8-flash', 'gemini-3-flash-preview', 'gemini-flash-latest'];
+  const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
 
   const body = {
     contents: [

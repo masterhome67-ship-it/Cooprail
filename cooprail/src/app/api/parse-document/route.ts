@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 // @ts-ignore
 import pdfParse from 'pdf-parse-fork';
 
-const GEMINI_API_KEY =
-  process.env.GEMINI_API_KEY || 'AQ.Ab8RN6ItAV-vgZyBqp4DL6JTY-95Aeftxv_8nI0banuSct8z-w';
-const DEEPSEEK_API_KEY =
-  process.env.DEEPSEEK_API_KEY || 'sk-4077c9902d66496ebba33169f354754d';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
 export async function POST(req: NextRequest) {
   try {
@@ -123,7 +121,8 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
       }
 
       const candidateModels = [
-        'gemini-3.8-flash',
+        'gemini-1.5-flash',
+        'gemini-2.0-flash',
         'gemini-flash-latest',
         'gemini-pro-latest',
       ];
