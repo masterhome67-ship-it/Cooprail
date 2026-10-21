@@ -33,6 +33,7 @@ export function DocumentUploadModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const isImportingRef = useRef(false);
   const [isAIAgentActive, setIsAIAgentActive] = useState(true);
   const [rawText, setRawText] = useState('');
   const [showRawText, setShowRawText] = useState(false);
@@ -162,7 +163,8 @@ export function DocumentUploadModal({
   };
 
   const handleConfirmImport = () => {
-    if (!selectedFile || isImporting) return;
+    if (!selectedFile || isImportingRef.current) return;
+    isImportingRef.current = true;
     setIsImporting(true);
 
     const generatedCode = `RFQ-DOC-${Math.floor(100 + Math.random() * 900)}`;

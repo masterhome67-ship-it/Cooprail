@@ -113,6 +113,7 @@ export default function Home() {
   const [selectedOrderForSettlement, setSelectedOrderForSettlement] = useState<PurchaseOrderRecord | null>(null);
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const lastDocImportRef = useRef<{ title: string; time: number }>({ title: '', time: 0 });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
   const [supplierFilter, setSupplierFilter] = useState<'all' | 'nearby' | 'mobilized'>('all');
@@ -315,17 +316,17 @@ export default function Home() {
   };
 
   const handleDocumentExtracted = (newRFQ: RFQ, isAIAgentActive = true) => {
-    // Evita duplicidade de inserção da mesma RFQ/upload
-    setRfqs((prev) => {
-      const alreadyExists = prev.some(
-        (r) =>
-          r.id === newRFQ.id ||
-          (r.title.toLowerCase() === newRFQ.title.toLowerCase() &&
-            r.scope_description === newRFQ.scope_description)
-      );
-      if (alreadyExists) return prev;
-      return [newRFQ, ...prev];
-    });
+    // Bloqueia duplo disparo acidental dentro de 4 segundos, sem impedir futuras revisões do memorial
+    const nowMs = Date.now();
+    if (
+      lastDocImportRef.current.title.toLowerCase() === newRFQ.title.toLowerCase() &&
+      nowMs - lastDocImportRef.current.time < 4000
+    ) {
+      return;
+    }
+    lastDocImportRef.current = { title: newRFQ.title, time: nowMs };
+
+    setRfqs((prev) => [newRFQ, ...prev]);
 
     const newTask: Task = {
       id: `task-doc-${Date.now()}`,
