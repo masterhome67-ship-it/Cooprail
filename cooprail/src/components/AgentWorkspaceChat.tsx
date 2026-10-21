@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { ChatMessage } from '@/lib/mockData';
 import { Language } from '@/lib/translations';
+import ReactMarkdown from 'react-markdown';
 
 export interface SpecializedAgent {
   id: string;
@@ -328,23 +329,41 @@ export function AgentWorkspaceChat({
                       : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs'
                   }`}
                 >
-                  {/* Badge de papel/comando se houver */}
-                  {msg.slash_command && (
+                  {/* Topo da Mensagem: Badge de comando / Selo de IA / Timestamp */}
+                  {!isUser && (
+                    <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                      {msg.slash_command && (
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border font-semibold bg-slate-100 border-slate-200 text-slate-700">
+                          {msg.slash_command}
+                        </span>
+                      )}
+
+                      {/* Selo pequeno de IA ou Modo Contingência */}
+                      {msg.provider && msg.provider !== 'local_fallback' ? (
+                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-sky-50 text-[#0284c7] border border-sky-200">
+                          IA · {msg.modelUsed || 'Online'}
+                        </span>
+                      ) : msg.provider === 'local_fallback' ? (
+                        <span
+                          title={msg.fallbackReason || 'IA temporariamente indisponível'}
+                          className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 cursor-help"
+                        >
+                          ⚠ Modo contingência
+                        </span>
+                      ) : null}
+
+                      <span className="text-[9px] text-slate-500">
+                        {msg.timestamp}
+                      </span>
+                    </div>
+                  )}
+
+                  {isUser && msg.slash_command && (
                     <div className="flex items-center gap-1.5 mb-1">
-                      <span
-                        className={`text-[9px] font-mono px-1.5 py-0.2 rounded border font-semibold ${
-                          isUser
-                            ? 'bg-sky-600 border-sky-500 text-white'
-                            : 'bg-slate-100 border-slate-200 text-slate-600'
-                        }`}
-                      >
+                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded border font-semibold bg-sky-600 border-sky-500 text-white">
                         {msg.slash_command}
                       </span>
-                      <span
-                        className={`text-[9px] ${
-                          isUser ? 'text-sky-200' : 'text-slate-600'
-                        }`}
-                      >
+                      <span className="text-[9px] text-sky-200">
                         {msg.timestamp}
                       </span>
                     </div>
@@ -361,8 +380,37 @@ export function AgentWorkspaceChat({
                     </div>
                   )}
 
-                  <div className="whitespace-pre-wrap leading-relaxed text-xs">
-                    {msg.content}
+                  {/* Conteúdo da mensagem (ReactMarkdown para o assistente) */}
+                  <div className="leading-relaxed text-xs">
+                    {isUser ? (
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                    ) : (
+                      <div className="space-y-1.5 break-words">
+                        <ReactMarkdown
+                          components={{
+                            p: ({ node, ...props }) => <p className="mb-1.5 last:mb-0 leading-relaxed" {...props} />,
+                            strong: ({ node, ...props }) => (
+                              <strong className="font-semibold text-slate-900" {...props} />
+                            ),
+                            ul: ({ node, ...props }) => (
+                              <ul className="list-disc pl-4 space-y-0.5 my-1 text-slate-700" {...props} />
+                            ),
+                            ol: ({ node, ...props }) => (
+                              <ol className="list-decimal pl-4 space-y-0.5 my-1 text-slate-700" {...props} />
+                            ),
+                            li: ({ node, ...props }) => <li className="leading-relaxed" {...props} />,
+                            code: ({ node, ...props }) => (
+                              <code
+                                className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono text-slate-800"
+                                {...props}
+                              />
+                            ),
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                   </div>
 
                   {/* Card Interativo de Decisão */}

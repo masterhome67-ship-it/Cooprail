@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 // @ts-ignore
 import pdfParse from 'pdf-parse-fork';
+import { GEMINI_MODELS } from '@/lib/geminiModels';
+import { normalizeTitleFromFilename } from '@/lib/titleNormalizer';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
@@ -120,20 +122,18 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
         });
       }
 
-      const candidateModels = [
-        'gemini-1.5-flash',
-        'gemini-2.0-flash',
-        'gemini-flash-latest',
-        'gemini-pro-latest',
-      ];
+      const candidateModels = GEMINI_MODELS;
 
       for (const model of candidateModels) {
         try {
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
           const geminiRes = await fetch(geminiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': GEMINI_API_KEY,
+            },
             body: JSON.stringify({
               contents: [{ parts }],
               generationConfig: {
@@ -141,6 +141,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
                 temperature: 0.1,
               },
             }),
+            signal: AbortSignal.timeout(20000),
           });
 
           if (geminiRes.ok) {
@@ -169,7 +170,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
                 aiModel: `${model} (Google AI Oficial)`,
                 rawText: localText.slice(0, 4000) || 'Documento analisado diretamente via visão multimodal.',
                 extracted: {
-                  rfqTitle: extractedData.rfqTitle || `Demanda: ${file.name.replace(/\.[^/.]+$/, '')}`,
+                  rfqTitle: extractedData.rfqTitle || normalizeTitleFromFilename(file.name),
                   supplierName: cleanSupplier,
                   quoteCode: extractedData.quoteCode || 'Não informado',
                   totalAmount: Number(extractedData.totalAmount) || 0,
@@ -182,9 +183,12 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
                 },
               });
             }
+          } else {
+            const err = await geminiRes.json().catch(() => ({}));
+            console.error(`[parse-document] Erro no Gemini (${model}):`, err.error?.message || geminiRes.status);
           }
-        } catch (modelErr) {
-          console.warn(`Tentativa com Gemini ${model} falhou:`, modelErr);
+        } catch (modelErr: any) {
+          console.error(`[parse-document] Falha no fetch Gemini (${model}):`, modelErr.message);
         }
       }
     }
@@ -213,6 +217,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
               },
             ],
           }),
+          signal: AbortSignal.timeout(20000),
         });
 
         if (deepseekRes.ok) {
@@ -232,7 +237,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
               aiModel: 'DeepSeek V3 (Oficial)',
               rawText: localText.slice(0, 4000),
               extracted: {
-                rfqTitle: dsParsed.rfqTitle || `Demanda: ${file.name.replace(/\.[^/.]+$/, '')}`,
+                rfqTitle: dsParsed.rfqTitle || normalizeTitleFromFilename(file.name),
                 supplierName: cleanSupplier,
                 quoteCode: dsParsed.quoteCode || 'Não informado',
                 totalAmount: Number(dsParsed.totalAmount) || 0,
@@ -245,14 +250,17 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
               },
             });
           }
+        } else {
+          const err = await deepseekRes.json().catch(() => ({}));
+          console.error('[parse-document] Erro no DeepSeek:', err.error?.message || deepseekRes.status);
         }
-      } catch (dsErr) {
-        console.warn('Tentativa com DeepSeek falhou:', dsErr);
+      } catch (dsErr: any) {
+        console.error('[parse-document] Falha no fetch DeepSeek:', dsErr.message);
       }
     }
 
     // 3. PROCESSADOR INTELIGENTE LOCAL (Heurística sem "1 lote" genérico)
-    const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+    const cleanTitle = normalizeTitleFromFilename(file.name);
     const extractedItems: any[] = [];
 
     if (localText) {
@@ -269,7 +277,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
       for (const sent of sentences) {
         const lowerSent = sent.toLowerCase();
         const matchesKey = technicalKeywords.some((k) => lowerSent.includes(k));
-        if (matchesKey && extractedItems.length < 10) {
+        if (matchesKey && extractedItems.length < 40) {
           // Extrai número se houver
           const numMatch = sent.match(/(\d+)/);
           const qty = numMatch ? parseInt(numMatch[1], 10) : 1;
@@ -304,7 +312,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
       aiModel: 'Processador Estrutural de Documentos',
       rawText: localText.slice(0, 3000),
       extracted: {
-        rfqTitle: `Projeto: ${cleanTitle}`,
+        rfqTitle: cleanTitle,
         supplierName: 'Demanda Interna / Projeto',
         quoteCode: `REQ-${Math.floor(1000 + Math.random() * 9000)}`,
         totalAmount: 0,
@@ -313,7 +321,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
         validUntil: 'A definir',
         items: extractedItems,
         aiScore: 8.5,
-        aiAnalysisSummary: `Documento "${file.name}" analisado. ${extractedItems.length} componentes e especificações técnicas foram estruturados para cotação.`,
+        aiAnalysisSummary: `Leitura simplificada do documento (IA indisponível). ${extractedItems.length} componentes estruturados para cotação.`,
       },
     });
   } catch (error: any) {

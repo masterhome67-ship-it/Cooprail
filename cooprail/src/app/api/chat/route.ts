@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { qualifiedSuppliers } from '@/lib/suppliersData';
 import { executeMultiModelChat } from '@/lib/aiProviders';
+import { routeUserMessage } from '@/lib/chatRouter';
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,50 +36,10 @@ export async function POST(req: NextRequest) {
       content: String(h?.content || '').slice(0, 3000),
     }));
 
-    // Determina o agente ativo com base no slash command ou no conteúdo
-    let activeAgent = 'Módulo de Busca de Fornecedores & Peças';
-    let agentRoleTag = slashCommand || '/busca';
-
-    if (
-      slashCommand === '/demandas' ||
-      lower.startsWith('/demandas') ||
-      lower.includes('demanda') ||
-      lower.includes('rfq') ||
-      lower.includes('edital')
-    ) {
-      activeAgent = 'Módulo de Organização de Demandas';
-      agentRoleTag = '/demandas';
-    } else if (
-      slashCommand === '/controle' ||
-      lower.startsWith('/controle') ||
-      lower.includes('controle') ||
-      lower.includes('compliance') ||
-      lower.includes('orçamento')
-    ) {
-      activeAgent = 'Módulo de Controle & Compliance';
-      agentRoleTag = '/controle';
-    } else if (
-      slashCommand === '/pedido' ||
-      lower.startsWith('/pedido') ||
-      lower.includes('pedido') ||
-      lower.includes('ordem') ||
-      lower.includes('po-')
-    ) {
-      activeAgent = 'Módulo de Pedidos & Ordens de Compra';
-      agentRoleTag = '/pedido';
-    } else if (
-      slashCommand === '/compare' ||
-      lower.startsWith('/compare') ||
-      lower.includes('compare') ||
-      lower.includes('proposta') ||
-      lower.includes('comparador')
-    ) {
-      activeAgent = 'Módulo de Comparação de Cotações & Propostas';
-      agentRoleTag = '/compare';
-    } else {
-      activeAgent = 'Módulo de Busca de Fornecedores & Peças';
-      agentRoleTag = '/busca';
-    }
+    // Roteamento inteligente de agentes (normalizado, com radicais e padrão geral)
+    const routing = routeUserMessage({ message: trimmedMsg, slashCommand });
+    const activeAgent = routing.activeAgent;
+    const agentRoleTag = routing.agentRoleTag;
 
     // 1. Contexto dos Fornecedores Homologados
     const suppliersContext = qualifiedSuppliers.map((s) => ({
@@ -105,51 +66,49 @@ export async function POST(req: NextRequest) {
       })),
     }));
 
-    // 3. Contexto das Requisições e Memoriais do Usuário (Filtra rigorosamente qualquer resquício de teste de Umuarama/Cimento)
-    const userRfqsContext = (Array.isArray(rfqs) ? rfqs : [])
-      .filter(
-        (r: any) =>
-          r &&
-          r.code !== 'RFQ-2026-UMU-01' &&
-          r.id !== 'rfq-umu-cimento-01' &&
-          !r.code?.toLowerCase().includes('umu') &&
-          !r.id?.toLowerCase().includes('umu') &&
-          !r.title?.toLowerCase().includes('umuarama') &&
-          !r.scope_description?.toLowerCase().includes('umuarama') &&
-          !r.title?.toLowerCase().includes('copacol')
-      )
-      .map((r: any) => ({
-        codigo: r.code,
-        titulo: r.title,
-        escopo: r.scope_description,
-        localizacao: r.location,
-        status: r.status,
-        itens: Array.isArray(r.items)
-          ? r.items.map((it: any) => ({
-              item: it.item_name,
-              especificacao: it.specification,
-              quantidade: `${it.quantity} ${it.unit}`,
-              preco_alvo: it.target_unit_price,
-            }))
-          : [],
-      }));
+    // 3. Contexto das Requisições e Memoriais do Usuário
+    const userRfqsContext = (Array.isArray(rfqs) ? rfqs : []).map((r: any) => ({
+      codigo: r.code,
+      titulo: r.title,
+      escopo: r.scope_description,
+      localizacao: r.location,
+      status: r.status,
+      itens: Array.isArray(r.items)
+        ? r.items.map((it: any) => ({
+            item: it.item_name,
+            especificacao: it.specification,
+            quantidade: `${it.quantity} ${it.unit}`,
+            preco_alvo: it.target_unit_price,
+          }))
+        : [],
+    }));
 
     // 4. Instrução de Sistema Enriquecida com Foco Estrito no Pedido do Usuário
     const systemInstruction = `Você é o ${activeAgent} da plataforma corporativa Cooprail (Enterprise Industrial Procurement).
 Você responde em português do Brasil com rigor executivo, linguagem de Diretoria de Suprimentos e foco técnico direto ao ponto.
 
-REGRAS MANDATÓRIAS DE FORMATO E SÍNTESE EXECUTIVA (SEM TEXTÃO):
-- NUNCA cuspa textos longos, parágrafos teóricos ou disclaimers extensos.
-- NUNCA use expressões vagas ou termos infantis.
-- NUNCA mencione termos de blockchain, Solana, criptomoedas ou Smart Escrow. A plataforma opera em modelo B2B tradicional brasileiro (Boleto Bancário 30dd / TED / PIX Corporativo).
-- NUNCA invente itens ou materiais não solicitados.
-- Se o usuário perguntar sobre itens do memorial ou demanda cadastrada (ex: "quais são os itens do memorial", "separe os itens"), CONSULTE EXCLUSIVAMENTE OS DADOS DE "REQUISIÇÕES E MEMORIAIS DO USUÁRIO" ABAIXO e responda listando fielmente os itens, quantitativos e especificações cadastrados no memorial do documento anexado pelo usuário.
-- Se o usuário perguntar se o cimento estava no documento ou sobre Umuarama: esclareça de forma direta que NÃO, o documento anexado é estritamente de instalações elétricas (UNESPAR Campus Paranaguá) e que cimento/Umuarama era um resquício de teste do sistema anterior que não faz parte do documento.
-- Limite sua resposta a NO MÁXIMO 150 a 200 palavras, estruturada em blocos visuais e compactos:
-  1. 📦 **Demanda Técnica:** [Material/Peça, Quantitativo, Local de Entrega e Norma ABNT/NBR pertinente].
-  2. 💰 **Estimativa de Preço:** [Preço de mercado médio / balizador regional por unidade e total].
-  3. 🏢 **Fornecedores Disponíveis:** [Lista ou tabela curta com 2 a 3 empresas da região com Nome, Cidade, Preço estimado, Prazo em dias e Contato público].
-- Se a demanda for fora do escopo de suprimentos industriais (ex: esportes, entretenimento, pessoal), recuse de forma suscinta em 2 frases objetivas.
+REGRAS MANDATÓRIAS:
+- NUNCA mencione termos de blockchain, Solana, criptomoedas ou Smart Escrow. A plataforma opera em modelo B2B corporativo brasileiro tradicional (Boleto Bancário 30dd / TED / PIX Corporativo).
+- NUNCA invente itens, quantidades, fornecedores, telefones ou preços fora das bases fornecidas abaixo. Se não houver dados, informe com clareza técnica que a informação não consta na base ativa.
+- Se o usuário perguntar sobre itens do memorial, demandas cadastradas ou o que vamos utilizar/comprar (ex: "quais materiais vamos utilizar?", "quais são os itens do memorial?", "o que comprar?"), CONSULTE OBRIGATORIAMENTE OS DADOS DE "REQUISIÇÕES E MEMORIAIS DO USUÁRIO" ABAIXO e responda listando com fidelidade os itens, tipos de materiais, quantitativos e especificações cadastrados.
+- Responda de forma direta e objetiva à dúvida apresentada.
+
+DIRETRIZES DE FORMATO POR AGENTE:
+- Se for AGENTE DE BUSCA (/busca):
+  * Estruture sua resposta em NO MÁXIMO 150 a 200 palavras, dividida estritamente nestes 3 blocos visuais:
+    1. 📦 **Demanda Técnica:** [Material/Peça, Quantitativo, Local de Entrega e Norma ABNT pertinente].
+    2. 💰 **Estimativa de Preço:** [Preço de mercado médio / balizador regional].
+    3. 🏢 **Fornecedores Disponíveis:** [Liste os fornecedores homologados na base para o item específico com contato. Se não houver homologado na base, informe que não há fornecedor homologado cadastrado na base interna].
+- Se for Assistente de Suprimentos (geral):
+  * Responda diretamente à pergunta feita. Se a pergunta for sobre os materiais do projeto ou memorial, consulte as RFQs cadastradas e liste os materiais e quantidades dos itens da RFQ mais recente ou de todas as ativas.
+- Se for Módulo de Organização de Demandas (/demandas):
+  * Estruture os dados para abertura da RFQ com memorial e itens especificados.
+- Se for Módulo de Comparação de Cotações & Propostas (/compare):
+  * Aponte comparativo de preços e percentual de economia (savings).
+- Se for Módulo de Controle & Compliance (/controle):
+  * Verifique conformidade cadastral e saldo orçamentário.
+- Se for Módulo de Pedidos & Ordens de Compra (/pedido):
+  * Resuma as condições de faturamento corporativo para emissão do Pedido de Compra (PO).
 
 BASE DE DADOS CORPORATIVA COOPRAIL:
 1. REQUISIÇÕES E MEMORIAIS DO USUÁRIO CADASTRADOS NO WORKSPACE:
@@ -159,26 +118,12 @@ ${JSON.stringify(userRfqsContext, null, 2)}
 ${JSON.stringify(sectorsContext, null, 2)}
 
 3. CATÁLOGO DE FORNECEDORES HOMOLOGADOS:
-${JSON.stringify(suppliersContext, null, 2)}
+${JSON.stringify(suppliersContext, null, 2)}`;
 
-DIRETRIZES DE ATUAÇÃO POR AGENTE:
-- Se for AGENTE DE BUSCA (/busca):
-  * Identifique o material ou peça solicitada.
-  * Se houver fornecedor homologado na base para aquele item específico, aponte.
-  * Se NÃO houver homologado para o item, liste distribuidores reais de MERCADO ABERTO no Paraná/região com telefone e prazo.
-- Se for AGENTE DE ORGANIZAÇÃO DE DEMANDAS (/demandas):
-  * Estruture os dados para abertura da RFQ com memorial e itens especificados.
-- Se for AGENTE DE COMPARAÇÃO (/compare):
-  * Aponte comparativo de preços e percentual de economia (savings).
-- Se for AGENTE DE CONTROLE (/controle):
-  * Verifique conformidade cadastral e saldo orçamentário.
-- Se for AGENTE DE PEDIDOS (/pedido):
-  * Resuma as condições de faturamento corporativo para emissão do Pedido de Compra (PO).`;
-
-    // 4. Executa chamada Multi-Model (Gemini com Vision/Search, DeepSeek, Groq ou OpenRouter)
+    // 4. Executa chamada Multi-Model (Gemini, DeepSeek, Groq ou OpenRouter)
     const aiResult = await executeMultiModelChat({
       message: trimmedMsg || 'Por favor, identifique esta peça e sugira fornecedores.',
-      slashCommand: agentRoleTag,
+      slashCommand: routing.explicitSlashCommand,
       imageBase64,
       imageMimeType,
       systemInstruction,

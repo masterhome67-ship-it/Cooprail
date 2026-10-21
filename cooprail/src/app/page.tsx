@@ -314,8 +314,18 @@ export default function Home() {
     showToast(lang === 'pt' ? 'Sessão encerrada com sucesso.' : 'Logged out successfully.');
   };
 
-  const handleDocumentExtracted = (newRFQ: RFQ) => {
-    setRfqs((prev) => [newRFQ, ...prev]);
+  const handleDocumentExtracted = (newRFQ: RFQ, isAIAgentActive = true) => {
+    // Evita duplicidade de inserção da mesma RFQ/upload
+    setRfqs((prev) => {
+      const alreadyExists = prev.some(
+        (r) =>
+          r.id === newRFQ.id ||
+          (r.title.toLowerCase() === newRFQ.title.toLowerCase() &&
+            r.scope_description === newRFQ.scope_description)
+      );
+      if (alreadyExists) return prev;
+      return [newRFQ, ...prev];
+    });
 
     const newTask: Task = {
       id: `task-doc-${Date.now()}`,
@@ -337,8 +347,13 @@ export default function Home() {
     const docChatMsg: ChatMessage = {
       id: `msg-doc-${Date.now()}`,
       sender_role: 'assistant',
-      content: `O memorial técnico do projeto "${newRFQ.title}" foi processado e auditado com sucesso pelo Motor de Conformidade Cooprail! Foram identificados ${newRFQ.items.length} itens e especificações técnicas. A demanda está pronta para envio aos fornecedores homologados para recebermos propostas reais.`,
+      content: isAIAgentActive
+        ? `O memorial técnico do projeto "${newRFQ.title}" foi processado e auditado com sucesso pelo Motor de Conformidade Cooprail! Foram identificados ${newRFQ.items.length} itens e especificações técnicas. A demanda está pronta para envio aos fornecedores homologados para recebermos propostas reais.`
+        : `Leitura simplificada do documento (IA indisponível). Revise os itens antes de enviar. Identificamos ${newRFQ.items.length} itens e especificações técnicas no memorial "${newRFQ.title}".`,
       timestamp: timeStr,
+      provider: isAIAgentActive ? 'gemini' : 'local_fallback',
+      modelUsed: isAIAgentActive ? 'Google AI Oficial' : 'Processador Estrutural de Documentos',
+      fallbackReason: isAIAgentActive ? undefined : 'IA indisponível',
       action_card: {
         type: 'rfq_scope',
         title: `Demanda Técnica: ${newRFQ.title}`,
@@ -709,6 +724,9 @@ export default function Home() {
           content: data.reply || 'Consulta processada.',
           timestamp: timeStr,
           slash_command: data.agentRole || slashCommand,
+          provider: data.provider,
+          modelUsed: data.modelUsed,
+          fallbackReason: data.fallbackReason,
           action_card: data.unhomologatedSuppliersFound ? {
             type: 'rfq_scope',
             title: 'Fornecedores de Mercado Identificados',
@@ -735,6 +753,9 @@ export default function Home() {
       content:
         'Consulta recebida. Não identificamos fornecedor específico para esse material no cadastro local. Recomenda-se registrar um novo RFQ para cotação direta no mercado.',
       timestamp: timeStr,
+      provider: 'local_fallback',
+      modelUsed: 'Cooprail Engineering Engine v2.0',
+      fallbackReason: 'Erro de conexão com o servidor',
     };
     setChatMessages((prev) => [...prev, fallbackMsg]);
   };

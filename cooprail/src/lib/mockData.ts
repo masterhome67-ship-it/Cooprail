@@ -105,6 +105,9 @@ export interface ChatMessage {
   timestamp: string;
   slash_command?: string;
   image_url?: string;
+  provider?: string;
+  modelUsed?: string;
+  fallbackReason?: string;
   action_card?: {
     type: 'quote_recommendation' | 'rfq_scope';
     title: string;

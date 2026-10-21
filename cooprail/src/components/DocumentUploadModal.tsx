@@ -16,11 +16,12 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { RFQ, Quote } from '@/lib/mockData';
+import { normalizeTitleFromFilename } from '@/lib/titleNormalizer';
 
 interface DocumentUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onDocumentExtracted: (newRFQ: RFQ) => void;
+  onDocumentExtracted: (newRFQ: RFQ, isAIAgentActive?: boolean) => void;
 }
 
 export function DocumentUploadModal({
@@ -31,6 +32,8 @@ export function DocumentUploadModal({
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isAIAgentActive, setIsAIAgentActive] = useState(true);
   const [rawText, setRawText] = useState('');
   const [showRawText, setShowRawText] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -124,10 +127,11 @@ export function DocumentUploadModal({
       const data = await res.json();
 
       if (data.success && data.extracted) {
+        setIsAIAgentActive(data.isAIAgentActive ?? true);
         setRawText(data.rawText || 'Documento analisado diretamente via visão multimodal.');
         setFormData({
           supplierName: data.extracted.supplierName || 'Fornecedor Identificado no Documento',
-          rfqTitle: data.extracted.rfqTitle || `Cotação: ${selectedFile.name}`,
+          rfqTitle: data.extracted.rfqTitle || normalizeTitleFromFilename(selectedFile.name),
           totalAmount: data.extracted.totalAmount || 0,
           leadTimeDays: data.extracted.leadTimeDays || 15,
           paymentTerms: data.extracted.paymentTerms || '30 dias',
@@ -140,10 +144,11 @@ export function DocumentUploadModal({
       }
     } catch (err) {
       console.warn('Leitura automática concluída com parser de contingência:', err);
-      const cleanName = selectedFile.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      setIsAIAgentActive(false);
+      const cleanName = normalizeTitleFromFilename(selectedFile.name);
       setFormData({
         supplierName: '',
-        rfqTitle: `Cotação: ${cleanName}`,
+        rfqTitle: cleanName,
         totalAmount: 0,
         leadTimeDays: 0,
         paymentTerms: 'Não informado',
@@ -157,7 +162,8 @@ export function DocumentUploadModal({
   };
 
   const handleConfirmImport = () => {
-    if (!selectedFile) return;
+    if (!selectedFile || isImporting) return;
+    setIsImporting(true);
 
     const generatedCode = `RFQ-DOC-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -182,13 +188,13 @@ export function DocumentUploadModal({
             },
           ];
 
-    const cleanName = selectedFile.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+    const cleanName = normalizeTitleFromFilename(selectedFile.name);
 
     const newRFQ: RFQ = {
       id: `rfq-doc-${Date.now()}`,
       code: generatedCode,
-      title: formData.rfqTitle || `Demanda: ${cleanName}`,
-      scope_description: `Demanda técnica estruturada a partir do memorial "${selectedFile.name}". Especificações e quantitativos auditados pelo Motor de Conformidade Cooprail.`,
+      title: formData.rfqTitle || cleanName,
+      scope_description: `Demanda técnica estruturada a partir do memorial "${selectedFile.name}".`,
       status: 'draft',
       deadline: 'Em 7 dias',
       target_delivery_date: formData.leadTimeDays > 0 ? `Em ${formData.leadTimeDays} dias` : 'A definir com fornecedores',
@@ -197,7 +203,7 @@ export function DocumentUploadModal({
       quotes: [], // ZERO cotações simuladas! A demanda aguarda cotação real dos parceiros.
     };
 
-    onDocumentExtracted(newRFQ);
+    onDocumentExtracted(newRFQ, isAIAgentActive);
     onClose();
   };
 
@@ -286,11 +292,8 @@ export function DocumentUploadModal({
             <div className="p-4 rounded-xl border border-sky-200 bg-sky-50 space-y-2 text-center">
               <div className="flex items-center justify-center gap-2 text-slate-800 font-bold">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] animate-ping" />
-                <span>Processando e conferindo dados do documento...</span>
+                <span>Extraindo itens e quantitativos do documento...</span>
               </div>
-              <p className="text-[11px] text-slate-600">
-                Identificando propostas, fornecedores homologados, valores e prazos de entrega.
-              </p>
             </div>
           )}
 
@@ -434,10 +437,11 @@ export function DocumentUploadModal({
               {/* Botão de Importação */}
               <button
                 onClick={handleConfirmImport}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold transition-colors shadow-xs cursor-pointer"
+                disabled={isImporting}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold transition-colors shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Salvar & Importar Cotação para o Comparador</span>
+                <span>{isImporting ? 'Salvando Demanda...' : 'Salvar & Importar Cotação para o Comparador'}</span>
               </button>
             </div>
           )}
