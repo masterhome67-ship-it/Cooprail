@@ -190,7 +190,7 @@ Responda em português com linguagem executiva e técnica.`;
           'x-goog-api-key': apiKey,
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(12000),
       });
 
       if (!res.ok) {
@@ -262,7 +262,7 @@ async function callGemini(payload: AIRequestPayload, apiKey: string): Promise<AI
           'x-goog-api-key': apiKey,
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(12000),
       });
 
       if (!res.ok) {
@@ -328,7 +328,7 @@ async function callOpenAICompatible(options: {
         temperature: 0.3,
         max_tokens: 2500,
       }),
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(12000),
     });
 
     if (!res.ok) {
@@ -468,18 +468,22 @@ function generateDeterministicFallback(payload: AIRequestPayload): string {
       return `[Módulo de Suprimentos & Engenharia]\n\n📦 **Produtos e Insumos:**\n• Nenhuma demanda foi carregada ainda no sistema.\n• Para extrair os produtos automaticamente, anexe seu memorial descritivo em PDF pelo botão "Importar por Documento".`;
     }
 
-    let out = `[Módulo de Suprimentos & Engenharia]\n\n📦 **Relação de Materiais e Insumos Cadastrados nas Demandas:**\n\n`;
-    rfqs.forEach((r: any) => {
+    // Identifica prioritariamente a RFQ ativa (selecionada ou recém-importada) para evitar misturar projetos
+    const activeRfq = rfqs.find((r: any) => r.rfq_ativa) || rfqs[0];
+    const targetRfqs = activeRfq ? [activeRfq] : rfqs;
+
+    let out = `[Módulo de Suprimentos & Engenharia]\n\n📦 **Relação de Materiais e Insumos Cadastrados no Projeto Ativo:**\n\n`;
+    targetRfqs.forEach((r: any) => {
       const itemList = Array.isArray(r.itens) ? r.itens : Array.isArray(r.items) ? r.items : [];
       out += `📁 **Demanda ${r.codigo || r.code}** — *${r.titulo || r.title}* (${r.localizacao || r.location || 'Canteiro'}):\n`;
       if (itemList.length > 0) {
-        itemList.slice(0, 10).forEach((it: any, i: number) => {
+        itemList.slice(0, 15).forEach((it: any, i: number) => {
           const qty = it.quantidade || (it.quantity ? `${it.quantity} ${it.unit || 'un'}` : '');
           const spec = it.especificacao || it.specification ? ` — ${it.especificacao || it.specification}` : '';
           out += `  ${i + 1}. **${it.item || it.item_name}** ${qty ? `(${qty})` : ''}${spec}\n`;
         });
-        if (itemList.length > 10) {
-          out += `  *(... e mais ${itemList.length - 10} itens cadastrados no memorial completo)*\n`;
+        if (itemList.length > 15) {
+          out += `  *(... e mais ${itemList.length - 15} itens cadastrados no memorial completo)*\n`;
         }
       } else {
         out += `  • Demanda em estruturação de escopo.\n`;

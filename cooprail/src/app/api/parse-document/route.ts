@@ -7,6 +7,8 @@ import { normalizeTitleFromFilename } from '@/lib/titleNormalizer';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -141,7 +143,7 @@ Retorne OBRIGATORIAMENTE um JSON estrito:
                 temperature: 0.1,
               },
             }),
-            signal: AbortSignal.timeout(20000),
+            signal: AbortSignal.timeout(12000),
           });
 
           if (geminiRes.ok) {

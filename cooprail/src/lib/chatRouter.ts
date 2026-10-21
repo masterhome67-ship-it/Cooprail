@@ -52,13 +52,13 @@ export function routeUserMessage(params: {
     normalizedMsg.includes('cotac') ||
     normalizedMsg.includes('proposta');
 
-  // 4. Pedidos / Ordens de Compra (radical pedido, ordem, po-)
+  // 4. Pedidos / Ordens de Compra (radical pedido, ordem, po-123)
   const isPedido =
     explicitSlash === '/pedido' ||
     normalizedMsg.startsWith('/pedido') ||
     normalizedMsg.includes('pedido') ||
     normalizedMsg.includes('ordem') ||
-    normalizedMsg.includes('po-');
+    /\bpo-\d+/i.test(normalizedMsg);
 
   // 5. Controle & Compliance / Orçamento (radicais compliance, orcament, controle)
   const isControle =

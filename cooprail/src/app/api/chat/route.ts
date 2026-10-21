@@ -3,10 +3,21 @@ import { qualifiedSuppliers } from '@/lib/suppliersData';
 import { executeMultiModelChat } from '@/lib/aiProviders';
 import { routeUserMessage } from '@/lib/chatRouter';
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
-    const { message, slashCommand, history, rfqs, orders, sectors, imageBase64, imageMimeType } =
-      await req.json();
+    const {
+      message,
+      slashCommand,
+      history,
+      rfqs,
+      selectedRfqId,
+      orders,
+      sectors,
+      imageBase64,
+      imageMimeType,
+    } = await req.json();
 
     if ((!message || typeof message !== 'string') && !imageBase64) {
       return NextResponse.json({ error: 'Mensagem ou imagem necessária' }, { status: 400 });
@@ -66,22 +77,36 @@ export async function POST(req: NextRequest) {
       })),
     }));
 
-    // 3. Contexto das Requisições e Memoriais do Usuário
-    const userRfqsContext = (Array.isArray(rfqs) ? rfqs : []).map((r: any) => ({
-      codigo: r.code,
-      titulo: r.title,
-      escopo: r.scope_description,
-      localizacao: r.location,
-      status: r.status,
-      itens: Array.isArray(r.items)
-        ? r.items.map((it: any) => ({
-            item: it.item_name,
-            especificacao: it.specification,
-            quantidade: `${it.quantity} ${it.unit}`,
-            preco_alvo: it.target_unit_price,
-          }))
-        : [],
-    }));
+    // 3. Contexto das Requisições e Memoriais do Usuário (com sinalização de RFQ Ativa / Mais Recente)
+    const rawRfqs = Array.isArray(rfqs) ? rfqs : [];
+    const formattedRfqs = rawRfqs.map((r: any, idx: number) => {
+      const isActive = selectedRfqId ? r.id === selectedRfqId : idx === 0;
+      return {
+        rfq_ativa: isActive,
+        rfq_mais_recente: idx === 0,
+        codigo: r.code,
+        titulo: r.title,
+        escopo: r.scope_description,
+        localizacao: r.location,
+        status: r.status,
+        itens: Array.isArray(r.items)
+          ? r.items.map((it: any) => ({
+              item: it.item_name,
+              especificacao: it.specification,
+              quantidade: `${it.quantity} ${it.unit}`,
+              preco_alvo: it.target_unit_price,
+            }))
+          : Array.isArray(r.itens)
+          ? r.itens
+          : [],
+      };
+    });
+
+    // Coloca a RFQ ativa no topo para priorização do modelo
+    const userRfqsContext = [
+      ...formattedRfqs.filter((r) => r.rfq_ativa),
+      ...formattedRfqs.filter((r) => !r.rfq_ativa),
+    ];
 
     // 4. Instrução de Sistema Enriquecida com Foco Estrito no Pedido do Usuário
     const systemInstruction = `Você é o ${activeAgent} da plataforma corporativa Cooprail (Enterprise Industrial Procurement).
@@ -90,7 +115,10 @@ Você responde em português do Brasil com rigor executivo, linguagem de Diretor
 REGRAS MANDATÓRIAS:
 - NUNCA mencione termos de blockchain, Solana, criptomoedas ou Smart Escrow. A plataforma opera em modelo B2B corporativo brasileiro tradicional (Boleto Bancário 30dd / TED / PIX Corporativo).
 - NUNCA invente itens, quantidades, fornecedores, telefones ou preços fora das bases fornecidas abaixo. Se não houver dados, informe com clareza técnica que a informação não consta na base ativa.
-- Se o usuário perguntar sobre itens do memorial, demandas cadastradas ou o que vamos utilizar/comprar (ex: "quais materiais vamos utilizar?", "quais são os itens do memorial?", "o que comprar?"), CONSULTE OBRIGATORIAMENTE OS DADOS DE "REQUISIÇÕES E MEMORIAIS DO USUÁRIO" ABAIXO e responda listando com fidelidade os itens, tipos de materiais, quantitativos e especificações cadastrados.
+- Se o usuário perguntar sobre itens do memorial, demandas cadastradas, insumos ou o que vamos utilizar/comprar (ex: "quais materiais vamos utilizar?", "quais são os itens do memorial?", "o que comprar?"):
+  * Identifique a RFQ que possui "rfq_ativa: true" (a recém-importada ou selecionada pelo usuário) e RESPONDA EXCLUSIVAMENTE COM OS ITENS DESTA RFQ ATIVA.
+  * NÃO misture com materiais de outros projetos ou memoriais secundários cadastrados no histórico do workspace.
+  * Liste com fidelidade os itens, tipos de materiais, quantitativos e especificações cadastrados.
 - Responda de forma direta e objetiva à dúvida apresentada.
 
 DIRETRIZES DE FORMATO POR AGENTE:
@@ -100,11 +128,11 @@ DIRETRIZES DE FORMATO POR AGENTE:
     2. 💰 **Estimativa de Preço:** [Preço de mercado médio / balizador regional].
     3. 🏢 **Fornecedores Disponíveis:** [Liste os fornecedores homologados na base para o item específico com contato. Se não houver homologado na base, informe que não há fornecedor homologado cadastrado na base interna].
 - Se for Assistente de Suprimentos (geral):
-  * Responda diretamente à pergunta feita. Se a pergunta for sobre os materiais do projeto ou memorial, consulte as RFQs cadastradas e liste os materiais e quantidades dos itens da RFQ mais recente ou de todas as ativas.
+  * Responda diretamente à pergunta feita. Se a pergunta for sobre os materiais do projeto ou memorial, consulte as RFQs cadastradas e liste os materiais e quantidades dos itens da RFQ ativa (rfq_ativa: true).
 - Se for Módulo de Organização de Demandas (/demandas):
   * Estruture os dados para abertura da RFQ com memorial e itens especificados.
 - Se for Módulo de Comparação de Cotações & Propostas (/compare):
-  * Aponte comparativo de preços e percentual de economia (savings).
+  * Aponte comparativo de preços e percentual de economia (savings). Se houver zero propostas recebidas, explique claramente que a cotação aguarda propostas de fornecedores e que ainda não há propostas recebidas para gerar o comparativo numérico.
 - Se for Módulo de Controle & Compliance (/controle):
   * Verifique conformidade cadastral e saldo orçamentário.
 - Se for Módulo de Pedidos & Ordens de Compra (/pedido):

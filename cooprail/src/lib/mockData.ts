@@ -146,7 +146,7 @@ export const initialChatMessages: ChatMessage[] = [
     id: 'm-welcome',
     sender_role: 'assistant',
     content:
-      'Olá Juliano. O painel Cooprail Enterprise está ativo. Você pode abrir uma requisição de compras, importar documentos comerciais (PDF de propostas, editais ou planilhas) para conferência automática de conformidade ou emitir liquidações on-chain via Solana.',
+      'Olá Juliano. O painel Cooprail Enterprise está ativo. Você pode abrir uma requisição de compras, importar documentos comerciais (PDF de propostas, editais ou planilhas) para conferência automática de conformidade ou emitir ordens de compra e liquidações B2B.',
     timestamp: 'Agora',
   },
 ];

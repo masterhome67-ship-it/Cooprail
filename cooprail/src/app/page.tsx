@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { QuoteComparator } from '@/components/QuoteComparator';
@@ -327,6 +327,7 @@ export default function Home() {
     lastDocImportRef.current = { title: newRFQ.title, time: nowMs };
 
     setRfqs((prev) => [newRFQ, ...prev]);
+    setSelectedRfqId(newRFQ.id);
 
     const newTask: Task = {
       id: `task-doc-${Date.now()}`,
@@ -702,6 +703,7 @@ export default function Home() {
           slashCommand,
           imageBase64,
           history: chatMessages.slice(-6),
+          selectedRfqId: selectedRfqId || (rfqs && rfqs.length > 0 ? rfqs[0]?.id : undefined),
           rfqs: (rfqs || []).filter(
             (r) =>
               r &&
